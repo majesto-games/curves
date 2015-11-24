@@ -1,0 +1,33 @@
+{
+  "name": "curves",
+  "version": "0.0.1",
+  "description": "HTML5 implementation of the popular multiplayer games 'achtung die kurve'",
+  "main": "index.js",
+  "scripts": {
+    "build": "webpack",
+    "watch": "webpack-dev-server --progress --colors --inline",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bengt-games/curves.git"
+  },
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/bengt-games/curves/issues"
+  },
+  "homepage": "https://github.com/bengt-games/curves#readme",
+  "dependencies": {
+    "keyboardjs": "^2.2.0",
+    "keypress.js": "^2.1.0",
+    "pixi.js": "^3.0.8"
+  },
+  "devDependencies": {
+    "babel-loader": "^6.2.0",
+    "babel-preset-es2015": "^6.1.18",
+    "imports-loader": "^0.6.5",
+    "json-loader": "^0.5.3",
+    "webpack": "^1.12.8",
+    "webpack-dev-server": "^1.12.1"
+  }
+}
