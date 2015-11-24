@@ -1,20 +1,21 @@
 import { Graphics, Sprite, Texture, autoDetectRenderer, Container, utils } from 'pixi.js'
 import keys from './keys.js' 
+import p2 from 'p2'
 
 // Remove pesky pixi.js banner from console
 utils._saidHello = true
 
 const renderer = autoDetectRenderer(window.innerWidth, window.innerHeight, { backgroundColor: 0x000000 })
 
-const texture = Texture.fromImage('bengt.jpg')
-const bengt = new Sprite(texture)
-
-bengt.position.x = window.innerWidth / 2 - (46/2)
-bengt.position.y = window.innerHeight / 2 - (64/2)
-bengt.anchor = { x: 0.5, y: 0.5 }
+const player = new Graphics()
+player.beginFill(0xffffff)
+player.drawCircle(0, 0, 2.5)
+player.position.x = window.innerWidth / 2 - (46/2)
+player.position.y = window.innerHeight / 2 - (64/2)
+player.endFill()
+// player.anchor = { x: 0.5, y: 0.5 }
 
 const c = new Container()
-c.addChild(bengt)
 
 const graphics = new Graphics()
 
@@ -24,43 +25,93 @@ const rotationSpeed = 0.05
 const moveSpeed = 4
 const keydown = { left: false, right: false }
 
-function createTrailPoint (x, y) {
-  let circle = new Graphics()
+let trail = []
+let line = new Graphics()
+let tail = new Graphics()
+c.addChild(line)
+c.addChild(tail)
+line.lineStyle(5, 0xffff00)
+tail.lineStyle(5, 0xffffff)
+line.moveTo(player.x, player.y)
+tail.moveTo(player.x, player.y)
 
-  circle.beginFill(0xff0000)
-  circle.drawCircle(x, y, 10)
-  circle.anchor = { x: 0.5, y: 0.5 }
-  c.addChildAt(circle, c.children.length - 1)
+function funColor () {
+  return superFunColor(((0x80 + Math.random() * 0x80) << 16) | ((0x80 + Math.random() * 0x80) << 8) | ((0x80 + Math.random() * 0x80)))
 }
+
+function superFunColor (input) {
+  let choices = [0xff00ff, 0xffff00, 0x00ffff, 0x0000ff, 0x00ff00, 0xff0000]
+
+  return input & choices[Math.floor(Math.random() * choices.length)]
+}
+
+let lx = player.x
+let ly = player.y
+let color = funColor()
+
+console.log(color.toString(16))
+
+function createTrailPoint (x, y) {
+  let r = Math.random()
+
+  if (r < 0.9) {
+    line.lineStyle(5, color)
+    line.moveTo(lx, ly)
+    line.lineTo(x, y)
+  }
+
+  lx = x
+  ly = y
+
+  color = funColor()
+}
+
+c.addChild(player)
 
 let trailCounter = 0
 
 const draw = function () {
-  bengt.x += Math.sin(bengt.rotation) * moveSpeed
-  bengt.y -= Math.cos(bengt.rotation) * moveSpeed
+  player.x += Math.sin(player.rotation) * moveSpeed
+  player.y -= Math.cos(player.rotation) * moveSpeed
 
   if (keys.left.pressed)
-    bengt.rotation = (bengt.rotation - rotationSpeed) % (2 * Math.PI)
+    player.rotation = (player.rotation - rotationSpeed) % (2 * Math.PI)
   if (keys.right.pressed)
-    bengt.rotation = (bengt.rotation + rotationSpeed) % (2 * Math.PI)
+    player.rotation = (player.rotation + rotationSpeed) % (2 * Math.PI)
 
-  if (bengt.rotation < 0)
-    bengt.rotation += 2 * Math.PI
+  if (player.rotation < 0)
+    player.rotation += 2 * Math.PI
 
-  if (bengt.x > window.innerWidth + 32)
-    bengt.x = -32
-  if (bengt.y > window.innerHeight + 32)
-    bengt.y = -32
-  if (bengt.x < -32)
-    bengt.x = window.innerWidth + 32
-  if (bengt.y < -32)
-    bengt.y = window.innerHeight + 32
+  if (player.x > window.innerWidth + 32) {
+    player.x = -32
+    lx = player.x
+  }
+
+  if (player.y > window.innerHeight + 32) {
+    player.y = -32
+    ly = player.y
+  }
+
+  if (player.x < -32) {
+    player.x = window.innerWidth + 32
+    lx = player.x
+  }
+
+  if (player.y < -32) {
+    player.y = window.innerHeight + 32
+    ly = player.y
+  }
+
+  tail.clear()
+  tail.lineStyle(5, color)
+  tail.moveTo(player.x, player.y)
+  tail.lineTo(lx, ly)
 
   if (trailCounter <= 0) {
-    let x = bengt.x - Math.sin(bengt.rotation) * 64
-    let y = bengt.y + Math.cos(bengt.rotation) * 64
-    createTrailPoint(x, y)
-    trailCounter = 10
+    // let x = player.x - Math.sin(player.rotation) * 64
+    // let y = player.y + Math.cos(player.rotation) * 64
+    createTrailPoint(player.x, player.y)
+    trailCounter = 5
   }
 
   trailCounter--

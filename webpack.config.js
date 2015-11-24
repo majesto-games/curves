@@ -12,7 +12,7 @@ module.exports = {
     loaders: [
       { test: /\.js$/, exclude: /node_modules/, loader: 'babel-loader', query: { presets: ['es2015'] } },
       { test: /\.json$/, exclude: /node_modules/, loader: 'json' },
-      { test: /\.json$/, include: path.join(__dirname, 'node_modules', 'pixi.js'), loader: 'json' }
+      { test: /\.json$/, include: /node_modules\/(pixi.js|p2)/, loader: 'json' }
     ]
   }
 }
