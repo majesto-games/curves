@@ -20,6 +20,7 @@
   "dependencies": {
     "keyboardjs": "^2.2.0",
     "keypress.js": "^2.1.0",
+    "p2": "^0.7.1",
     "pixi.js": "^3.0.8",
     "ramda": "^0.18.0"
   },

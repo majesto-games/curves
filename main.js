@@ -1,4 +1,4 @@
-import { Sprite, Texture, autoDetectRenderer, Container, utils } from 'pixi.js'
+import { Graphics, Sprite, Texture, autoDetectRenderer, Container, utils } from 'pixi.js'
 import keys from './keys.js' 
 
 // Remove pesky pixi.js banner from console
@@ -16,16 +16,26 @@ bengt.anchor = { x: 0.5, y: 0.5 }
 const c = new Container()
 c.addChild(bengt)
 
+const graphics = new Graphics()
+
 document.getElementById('game').appendChild(renderer.view)
 
 const rotationSpeed = 0.05
 const moveSpeed = 4
 const keydown = { left: false, right: false }
 
-const draw = function () {
-  renderer.render(c)
-  requestAnimationFrame(draw)
+function createTrailPoint (x, y) {
+  let circle = new Graphics()
 
+  circle.beginFill(0xff0000)
+  circle.drawCircle(x, y, 10)
+  circle.anchor = { x: 0.5, y: 0.5 }
+  c.addChildAt(circle, c.children.length - 1)
+}
+
+let trailCounter = 0
+
+const draw = function () {
   bengt.x += Math.sin(bengt.rotation) * moveSpeed
   bengt.y -= Math.cos(bengt.rotation) * moveSpeed
 
@@ -45,6 +55,18 @@ const draw = function () {
     bengt.x = window.innerWidth + 32
   if (bengt.y < -32)
     bengt.y = window.innerHeight + 32
+
+  if (trailCounter <= 0) {
+    let x = bengt.x - Math.sin(bengt.rotation) * 64
+    let y = bengt.y + Math.cos(bengt.rotation) * 64
+    createTrailPoint(x, y)
+    trailCounter = 10
+  }
+
+  trailCounter--
+
+  renderer.render(c)
+  requestAnimationFrame(draw)
 }
 
 window.onresize = (e) => {
