@@ -1,7 +1,5 @@
 import { Sprite, Texture, autoDetectRenderer, Container, utils } from 'pixi.js'
-import keypress from 'keypress.js'
-
-const listener = new keypress.Listener()
+import keys from './keys.js' 
 
 // Remove pesky pixi.js banner from console
 utils._saidHello = true
@@ -24,30 +22,6 @@ const rotationSpeed = 0.05
 const moveSpeed = 4
 const keydown = { left: false, right: false }
 
-listener.register_combo({
-  keys: 'left',
-  on_keydown: (a, b, c) => {
-    if (c) return
-    
-    keydown.left = true
-  },
-  on_keyup: (a, b, c) => {
-    keydown.left = false
-  }
-})
-
-listener.register_combo({
-  keys: 'right',
-  on_keydown: (a, b, c) => {
-    if (c) return
-    
-    keydown.right = true
-  },
-  on_keyup: (a, b, c) => {
-    keydown.right = false
-  }
-})
-
 const draw = function () {
   renderer.render(c)
   requestAnimationFrame(draw)
@@ -55,9 +29,9 @@ const draw = function () {
   bengt.x += Math.sin(bengt.rotation) * moveSpeed
   bengt.y -= Math.cos(bengt.rotation) * moveSpeed
 
-  if (keydown.left)
+  if (keys.left.pressed)
     bengt.rotation = (bengt.rotation - rotationSpeed) % (2 * Math.PI)
-  if (keydown.right)
+  if (keys.right.pressed)
     bengt.rotation = (bengt.rotation + rotationSpeed) % (2 * Math.PI)
 
   if (bengt.rotation < 0)

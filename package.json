@@ -20,7 +20,8 @@
   "dependencies": {
     "keyboardjs": "^2.2.0",
     "keypress.js": "^2.1.0",
-    "pixi.js": "^3.0.8"
+    "pixi.js": "^3.0.8",
+    "ramda": "^0.18.0"
   },
   "devDependencies": {
     "babel-loader": "^6.2.0",
