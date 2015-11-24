@@ -25,13 +25,14 @@ const rotationSpeed = 0.05
 const moveSpeed = 4
 const keydown = { left: false, right: false }
 
+let fatness = 5
 let trail = []
 let line = new Graphics()
 let tail = new Graphics()
 c.addChild(line)
 c.addChild(tail)
-line.lineStyle(5, 0xffff00)
-tail.lineStyle(5, 0xffffff)
+line.lineStyle(fatness, 0xffff00)
+tail.lineStyle(fatness, 0xffffff)
 line.moveTo(player.x, player.y)
 tail.moveTo(player.x, player.y)
 
@@ -55,7 +56,7 @@ function createTrailPoint (x, y) {
   let r = Math.random()
 
   if (r < 0.9) {
-    line.lineStyle(5, color)
+    line.lineStyle(fatness, color)
     line.moveTo(lx, ly)
     line.lineTo(x, y)
   }
@@ -76,8 +77,15 @@ const draw = function () {
 
   if (keys.left.pressed)
     player.rotation = (player.rotation - rotationSpeed) % (2 * Math.PI)
+
   if (keys.right.pressed)
     player.rotation = (player.rotation + rotationSpeed) % (2 * Math.PI)
+
+  if (keys.up.pressed)
+    fatness += 0.1
+
+  if (keys.down.pressed)
+    fatness -= 0.1
 
   if (player.rotation < 0)
     player.rotation += 2 * Math.PI
@@ -103,7 +111,7 @@ const draw = function () {
   }
 
   tail.clear()
-  tail.lineStyle(5, color)
+  tail.lineStyle(fatness, color)
   tail.moveTo(player.x, player.y)
   tail.lineTo(lx, ly)
 
@@ -111,7 +119,7 @@ const draw = function () {
     // let x = player.x - Math.sin(player.rotation) * 64
     // let y = player.y + Math.cos(player.rotation) * 64
     createTrailPoint(player.x, player.y)
-    trailCounter = 5
+    trailCounter = Math.floor(fatness)
   }
 
   trailCounter--
