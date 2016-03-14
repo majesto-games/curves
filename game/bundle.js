@@ -44,28 +44,342 @@
 /* 0 */
 /***/ function(module, exports, __webpack_require__) {
 
-	'use strict';
+	"use strict";
 
 	var _pixi = __webpack_require__(1);
 
-	var renderer = new _pixi.CanvasRenderer(window.innerWidth, window.innerHeight);
+	var _sillyname = __webpack_require__(134);
 
-	document.getElementById('game').appendChild(renderer.view);
+	var _sillyname2 = _interopRequireDefault(_sillyname);
 
-	var stage = new _pixi.Stage();
+	var _util = __webpack_require__(135);
 
-	var texture = _pixi.Texture.fromImage('bengt.jpg');
-	var bengt = new _pixi.Sprite(texture);
+	var _game = __webpack_require__(136);
 
-	bengt.position.x = window.innerWidth / 2 - 46 / 2;
-	bengt.position.y = window.innerHeight / 2 - 64 / 2;
+	var _keys = __webpack_require__(137);
 
-	stage.addChild(bengt);
+	var _keys2 = _interopRequireDefault(_keys);
+
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+	var middle = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+
+	var Client = function Client(index) {
+	  var _this = this;
+
+	  _classCallCheck(this, Client);
+
+	  this.updatePlayers = function (player_updates) {
+	    for (var i = 0; i < player_updates.length; i++) {
+	      var update = player_updates[i];
+	      var player = _this.players[i];
+
+	      player.x = update.x;
+	      player.y = update.y;
+	      player.rotation = update.rotation;
+
+	      if (update.tail_part) {
+	        graphics.beginFill(player.color);
+	        graphics.drawPolygon(update.tail_part);
+	        graphics.endFill();
+	      }
+	    }
+	  };
+
+	  this.init = function (players, server) {
+	    _this.players = players.map(function (player) {
+	      return createPlayer(player.name, player.start_point, player.color, player.rotation);
+	    });
+	    _this.server = server;
+	  };
+
+	  this.rotateLeft = function () {
+	    _this.server.rotateLeft(_this.index);
+	  };
+
+	  this.rotateRight = function () {
+	    _this.server.rotateRight(_this.index);
+	  };
+
+	  this.index = index;
+	  this.players = [];
+	  this.keys = null;
+	};
+
+	var Server = function Server(clients) {
+	  var _this2 = this;
+
+	  _classCallCheck(this, Server);
+
+	  this.createPlayers = function () {
+	    var colors = (0, _util.getColors)(_this2.clients.length);
+
+	    return _this2.clients.map(function (client) {
+	      var name = "#{client.index}";
+	      var start_point = { x: window.innerWidth / 2 + 300 * (client.index ? 1 : -1), y: window.innerHeight / 2 };
+	      var color = colors.pop();
+	      var rotation = Math.random() * Math.PI * 2;
+
+	      return { name: name, start_point: start_point, color: color, rotation: rotation };
+	    });
+	  };
+
+	  this.serverTick = function () {
+	    var player_updates = [];
+
+	    var _iteratorNormalCompletion = true;
+	    var _didIteratorError = false;
+	    var _iteratorError = undefined;
+
+	    try {
+	      for (var _iterator = _this2.players[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+	        var player = _step.value;
+
+	        // Update player positions
+	        player.x += Math.sin(player.rotation) * player.speed;
+	        player.y -= Math.cos(player.rotation) * player.speed;
+
+	        // Edge wrapping
+	        if (player.x > window.innerWidth + player.fatness) {
+	          player.x = -player.fatness;
+	          player.last_x = player.x - 1;
+	          player.last_end = null;
+	        }
+
+	        if (player.y > window.innerHeight + player.fatness) {
+	          player.y = -player.fatness;
+	          player.last_y = player.y - 1;
+	          player.last_end = null;
+	        }
+
+	        if (player.x < -player.fatness) {
+	          player.x = window.innerWidth + player.fatness;
+	          player.last_x = player.x + 1;
+	          player.last_end = null;
+	        }
+
+	        if (player.y < -player.fatness) {
+	          player.y = window.innerHeight + player.fatness;
+	          player.last_y = player.y + 1;
+	          player.last_end = null;
+	        }
+
+	        // Create tail polygon, this returns null if it's supposed to be a hole
+	        var p = player.createTail();
+
+	        if (p !== null) {
+	          player.polygon_tail.push(p);
+	        }
+
+	        player_updates.push({
+	          x: player.x,
+	          y: player.y,
+	          rotation: player.rotation,
+	          tail_part: p
+	        });
+	      }
+	    } catch (err) {
+	      _didIteratorError = true;
+	      _iteratorError = err;
+	    } finally {
+	      try {
+	        if (!_iteratorNormalCompletion && _iterator.return) {
+	          _iterator.return();
+	        }
+	      } finally {
+	        if (_didIteratorError) {
+	          throw _iteratorError;
+	        }
+	      }
+	    }
+
+	    _this2.clients.map(function (client) {
+	      return client.updatePlayers(player_updates);
+	    });
+	  };
+
+	  this.rotateLeft = function (index) {
+	    _this2.players[index].rotateLeft();
+	  };
+
+	  this.rotateRight = function (index) {
+	    _this2.players[index].rotateRight();
+	  };
+
+	  this.clients = clients;
+
+	  var players = this.createPlayers();
+	  this.clients.forEach(function (client) {
+	    return client.init(players, _this2);
+	  });
+
+	  this.players = players.map(function (obj) {
+	    return new _game.Player(obj.name, obj.start_point, obj.color, obj.rotation);
+	  });
+	};
+
+	var clients = [new Client(0), new Client(1)];
+
+	clients[0].keys = { left: _keys2.default.A, right: _keys2.default.D };
+	clients[1].keys = { left: _keys2.default.LEFT, right: _keys2.default.RIGHT };
+
+	var server = new Server(clients);
+
+	// Browser renderer stuff below
+
+	function createPlayer(name, start_point, color, rotation) {
+	  var player = new _game.Player(name, start_point, color, rotation);
+
+	  var graphics = new _pixi.Graphics();
+	  graphics.beginFill(color);
+	  graphics.drawCircle(0, 0, 0.5);
+	  graphics.position.x = start_point.x;
+	  graphics.position.y = start_point.x;
+	  graphics.endFill();
+
+	  player.graphics = graphics;
+
+	  return player;
+	}
+
+	function updatePlayerGraphics(player) {
+	  player.graphics.x = player.x;
+	  player.graphics.y = player.y;
+	  player.graphics.scale = { x: player.fatness, y: player.fatness };
+	}
+
+	var container = new _pixi.Container();
+	var graphics = new _pixi.Graphics();
+
+	var _iteratorNormalCompletion2 = true;
+	var _didIteratorError2 = false;
+	var _iteratorError2 = undefined;
+
+	try {
+	  for (var _iterator2 = clients[0].players[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+	    var player = _step2.value;
+
+	    container.addChild(player.graphics);
+	  }
+	} catch (err) {
+	  _didIteratorError2 = true;
+	  _iteratorError2 = err;
+	} finally {
+	  try {
+	    if (!_iteratorNormalCompletion2 && _iterator2.return) {
+	      _iterator2.return();
+	    }
+	  } finally {
+	    if (_didIteratorError2) {
+	      throw _iteratorError2;
+	    }
+	  }
+	}
+
+	container.addChild(graphics);
+
+	var pause_timer = 3; // Seconds
+
+	// Draw initial state to show the position of the players
+	server.serverTick();
+
+	// Set a freeze time of 2 seconds
+	var timer = setInterval(function () {
+	  pause_timer--;
+	  pausedText.text = "GAME STARTS IN " + pause_timer;
+
+	  if (pause_timer <= 0) {
+	    clearInterval(timer);
+	    graphics.removeChild(backdrop);
+	    graphics.removeChild(pausedText);
+	    setInterval(server.serverTick, 50);
+	  }
+	}, 1000);
+
+	var pausedText = new PIXI.Text("GAME STARTS IN " + pause_timer, { font: "64px Impact", fill: "white" });
+	pausedText.x = window.innerWidth / 2 - pausedText.width / 2;
+	pausedText.y = window.innerHeight / 2 - pausedText.height / 2;
+
+	var backdrop = new _pixi.Graphics();
+	backdrop.beginFill(0x000000, 0.5);
+	backdrop.drawRect(0, 0, window.innerWidth, window.innerHeight);
+	backdrop.endFill();
+
+	graphics.addChild(backdrop);
+	graphics.addChild(pausedText);
+
+	var renderer = (0, _pixi.autoDetectRenderer)(window.innerWidth, window.innerHeight, { backgroundColor: 0x000000 });
+
+	// Remove pesky pixi.js banner from console
+	_pixi.utils._saidHello = true;
 
 	var draw = function draw() {
-	  renderer.render(stage);
+
+	  // Just render the players from client #0
+	  // The other client has keyboard control though.
+	  var players = clients[0].players;
+
+	  // const alive = players.filter(p => !p.dead)
+
+	  // if (alive.length < 2) {
+	  //   graphics.beginFill(0x000000, 0.85)
+	  //   graphics.drawRect(0, 0, window.innerWidth, window.innerHeight)
+	  //   graphics.endFill()
+	  //   graphics.addChild(winnerText(alive[0]))
+	  //   running = false
+	  // } else
+
+	  if (pause_timer === 0) {
+	    clients.forEach(function (client) {
+	      if (client.keys.left.pressed) {
+	        client.rotateLeft();
+	      }
+
+	      if (client.keys.right.pressed) {
+	        client.rotateRight();
+	      }
+	    });
+
+	    var _iteratorNormalCompletion3 = true;
+	    var _didIteratorError3 = false;
+	    var _iteratorError3 = undefined;
+
+	    try {
+	      for (var _iterator3 = players[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+	        var player = _step3.value;
+
+	        updatePlayerGraphics(player);
+	      }
+	    } catch (err) {
+	      _didIteratorError3 = true;
+	      _iteratorError3 = err;
+	    } finally {
+	      try {
+	        if (!_iteratorNormalCompletion3 && _iterator3.return) {
+	          _iterator3.return();
+	        }
+	      } finally {
+	        if (_didIteratorError3) {
+	          throw _iteratorError3;
+	        }
+	      }
+	    }
+	  }
+
+	  renderer.render(container);
 	  requestAnimationFrame(draw);
 	};
+
+	window.onresize = function (e) {
+	  renderer.view.style.width = window.innerWidth + "px";
+	  renderer.view.style.height = window.innerHeight + "px";
+
+	  renderer.resize(window.innerWidth, window.innerHeight);
+	};
+
+	document.getElementById("game").appendChild(renderer.view);
 
 	draw();
 
@@ -28535,6 +28849,361 @@
 	    return core.utils.uid();
 	};
 
+
+/***/ },
+/* 134 */
+/***/ function(module, exports) {
+
+	var defaultPlayerName = 'Player Name';
+
+	var adjectives = ["Black","White","Gray","Brown","Red","Pink","Crimson","Carnelian","Orange","Yellow","Ivory","Cream","Green","Viridian","Aquamarine","Cyan","Blue","Cerulean","Azure","Indigo","Navy","Violet","Purple","Lavender","Magenta","Rainbow","Iridescent","Spectrum","Prism","Bold","Vivid","Pale","Clear","Glass","Translucent","Misty","Dark","Light","Gold","Silver","Copper","Bronze","Steel","Iron","Brass","Mercury","Zinc","Chrome","Platinum","Titanium","Nickel","Lead","Pewter","Rust","Metal","Stone","Quartz","Granite","Marble","Alabaster","Agate","Jasper","Pebble","Pyrite","Crystal","Geode","Obsidian","Mica","Flint","Sand","Gravel","Boulder","Basalt","Ruby","Beryl","Scarlet","Citrine","Sulpher","Topaz","Amber","Emerald","Malachite","Jade","Abalone","Lapis","Sapphire","Diamond","Peridot","Gem","Jewel","Bevel","Coral","Jet","Ebony","Wood","Tree","Cherry","Maple","Cedar","Branch","Bramble","Rowan","Ash","Fir","Pine","Cactus","Alder","Grove","Forest","Jungle","Palm","Bush","Mulberry","Juniper","Vine","Ivy","Rose","Lily","Tulip","Daffodil","Honeysuckle","Fuschia","Hazel","Walnut","Almond","Lime","Lemon","Apple","Blossom","Bloom","Crocus","Rose","Buttercup","Dandelion","Iris","Carnation","Fern","Root","Branch","Leaf","Seed","Flower","Petal","Pollen","Orchid","Mangrove","Cypress","Sequoia","Sage","Heather","Snapdragon","Daisy","Mountain","Hill","Alpine","Chestnut","Valley","Glacier","Forest","Grove","Glen","Tree","Thorn","Stump","Desert","Canyon","Dune","Oasis","Mirage","Well","Spring","Meadow","Field","Prairie","Grass","Tundra","Island","Shore","Sand","Shell","Surf","Wave","Foam","Tide","Lake","River","Brook","Stream","Pool","Pond","Sun","Sprinkle","Shade","Shadow","Rain","Cloud","Storm","Hail","Snow","Sleet","Thunder","Lightning","Wind","Hurricane","Typhoon","Dawn","Sunrise","Morning","Noon","Twilight","Evening","Sunset","Midnight","Night","Sky","Star","Stellar","Comet","Nebula","Quasar","Solar","Lunar","Planet","Meteor","Sprout","Pear","Plum","Kiwi","Berry","Apricot","Peach","Mango","Pineapple","Coconut","Olive","Ginger","Root","Plain","Fancy","Stripe","Spot","Speckle","Spangle","Ring","Band","Blaze","Paint","Pinto","Shade","Tabby","Brindle","Patch","Calico","Checker","Dot","Pattern","Glitter","Glimmer","Shimmer","Dull","Dust","Dirt","Glaze","Scratch","Quick","Swift","Fast","Slow","Clever","Fire","Flicker","Flash","Spark","Ember","Coal","Flame","Chocolate","Vanilla","Sugar","Spice","Cake","Pie","Cookie","Candy","Caramel","Spiral","Round","Jelly","Square","Narrow","Long","Short","Small","Tiny","Big","Giant","Great","Atom","Peppermint","Mint","Butter","Fringe","Rag","Quilt","Truth","Lie","Holy","Curse","Noble","Sly","Brave","Shy","Lava","Foul","Leather","Fantasy","Keen","Luminous","Feather","Sticky","Gossamer","Cotton","Rattle","Silk","Satin","Cord","Denim","Flannel","Plaid","Wool","Linen","Silent","Flax","Weak","Valiant","Fierce","Gentle","Rhinestone","Splash","North","South","East","West","Summer","Winter","Autumn","Spring","Season","Equinox","Solstice","Paper","Motley","Torch","Ballistic","Rampant","Shag","Freckle","Wild","Free","Chain","Sheer","Crazy","Mad","Candle","Ribbon","Lace","Notch","Wax","Shine","Shallow","Deep","Bubble","Harvest","Fluff","Venom","Boom","Slash","Rune","Cold","Quill","Love","Hate","Garnet","Zircon","Power","Bone","Void","Horn","Glory","Cyber","Nova","Hot","Helix","Cosmic","Quark","Quiver","Holly","Clover","Polar","Regal","Ripple","Ebony","Wheat","Phantom","Dew","Chisel","Crack","Chatter","Laser","Foil","Tin","Clever","Treasure","Maze","Twisty","Curly","Fortune","Fate","Destiny","Cute","Slime","Ink","Disco","Plume","Time","Psychadelic","Relic","Fossil","Water","Savage","Ancient","Rapid","Road","Trail","Stitch","Button","Bow","Nimble","Zest","Sour","Bitter","Phase","Fan","Frill","Plump","Pickle","Mud","Puddle","Pond","River","Spring","Stream","Battle","Arrow","Plume","Roan","Pitch","Tar","Cat","Dog","Horse","Lizard","Bird","Fish","Saber","Scythe","Sharp","Soft","Razor","Neon","Dandy","Weed","Swamp","Marsh","Bog","Peat","Moor","Muck","Mire","Grave","Fair","Just","Brick","Puzzle","Skitter","Prong","Fork","Dent","Dour","Warp","Luck","Coffee","Split","Chip","Hollow","Heavy","Legend","Hickory","Mesquite","Nettle","Rogue","Charm","Prickle","Bead","Sponge","Whip","Bald","Frost","Fog","Oil","Veil","Cliff","Volcano","Rift","Maze","Proud","Dew","Mirror","Shard","Salt","Pepper","Honey","Thread","Bristle","Ripple","Glow","Zenith"];
+
+	var nouns = ["head","crest","crown","tooth","fang","horn","frill","skull","bone","tongue","throat","voice","nose","snout","chin","eye","sight","seer","speaker","singer","song","chanter","howler","chatter","shrieker","shriek","jaw","bite","biter","neck","shoulder","fin","wing","arm","lifter","grasp","grabber","hand","paw","foot","finger","toe","thumb","talon","palm","touch","racer","runner","hoof","fly","flier","swoop","roar","hiss","hisser","snarl","dive","diver","rib","chest","back","ridge","leg","legs","tail","beak","walker","lasher","swisher","carver","kicker","roarer","crusher","spike","shaker","charger","hunter","weaver","crafter","binder","scribe","muse","snap","snapper","slayer","stalker","track","tracker","scar","scarer","fright","killer","death","doom","healer","saver","friend","foe","guardian","thunder","lightning","cloud","storm","forger","scale","hair","braid","nape","belly","thief","stealer","reaper","giver","taker","dancer","player","gambler","twister","turner","painter","dart","drifter","sting","stinger","venom","spur","ripper","swallow","devourer","knight","lady","lord","queen","king","master","mistress","prince","princess","duke","dutchess","samurai","ninja","knave","slave","servant","sage","wizard","witch","warlock","warrior","jester","paladin","bard","trader","sword","shield","knife","dagger","arrow","bow","fighter","bane","follower","leader","scourge","watcher","cat","panther","tiger","cougar","puma","jaguar","ocelot","lynx","lion","leopard","ferret","weasel","wolverine","bear","raccoon","dog","wolf","kitten","puppy","cub","fox","hound","terrier","coyote","hyena","jackal","pig","horse","donkey","stallion","mare","zebra","antelope","gazelle","deer","buffalo","bison","boar","elk","whale","dolphin","shark","fish","minnow","salmon","ray","fisher","otter","gull","duck","goose","crow","raven","bird","eagle","raptor","hawk","falcon","moose","heron","owl","stork","crane","sparrow","robin","parrot","cockatoo","carp","lizard","gecko","iguana","snake","python","viper","boa","condor","vulture","spider","fly","scorpion","heron","oriole","toucan","bee","wasp","hornet","rabbit","bunny","hare","brow","mustang","ox","piper","soarer","flasher","moth","mask","hide","hero","antler","chill","chiller","gem","ogre","myth","elf","fairy","pixie","dragon","griffin","unicorn","pegasus","sprite","fancier","chopper","slicer","skinner","butterfly","legend","wanderer","rover","raver","loon","lancer","glass","glazer","flame","crystal","lantern","lighter","cloak","bell","ringer","keeper","centaur","bolt","catcher","whimsey","quester","rat","mouse","serpent","wyrm","gargoyle","thorn","whip","rider","spirit","sentry","bat","beetle","burn","cowl","stone","gem","collar","mark","grin","scowl","spear","razor","edge","seeker","jay","ape","monkey","gorilla","koala","kangaroo","yak","sloth","ant","roach","weed","seed","eater","razor","shirt","face","goat","mind","shift","rider","face","mole","vole","pirate","llama","stag","bug","cap","boot","drop","hugger","sargent","snagglefoot","carpet","curtain"];
+
+	function randomNoun(generator){
+	    generator = generator || Math.random;
+
+	    return nouns[Math.floor(generator()*nouns.length)];
+	}
+
+	function randomAdjective(generator){
+	    generator = generator || Math.random;
+
+	    return adjectives[Math.floor(generator()*adjectives.length)];
+	}
+
+	function generateStupidName(generator){
+	    var noun1 = randomNoun(generator);
+	    var noun2 = randomNoun(generator);
+	    noun2 = noun2.substr(0, 1).toUpperCase() + noun2.substr(1);
+	    var adjective = randomAdjective(generator);
+	    return adjective + noun1 + ' ' + noun2;
+	}
+
+	module.exports = generateStupidName;
+	module.exports.randomNoun = randomNoun;
+	module.exports.randomAdjective = randomAdjective;
+
+
+/***/ },
+/* 135 */
+/***/ function(module, exports) {
+
+	"use strict";
+
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+	exports.getColors = getColors;
+	exports.funColor = funColor;
+	exports.superFunColor = superFunColor;
+	exports.chunk = chunk;
+	var MATERIAL_COLORS = [0xff5177, 0x7c4dff, 0x18ffff, 0x5af158, 0xeeff41, 0xffab40, 0xff6e40];
+
+	function shuffle(array) {
+	  var i = 0;
+	  var j = 0;
+	  var temp = null;
+
+	  for (i = array.length - 1; i > 0; i -= 1) {
+	    j = Math.floor(Math.random() * (i + 1));
+	    temp = array[i];
+	    array[i] = array[j];
+	    array[j] = temp;
+	  }
+	}
+
+	function getColors(num) {
+	  var colors = MATERIAL_COLORS.slice();
+
+	  shuffle(colors);
+
+	  return colors.slice(0, num);
+	}
+
+	function funColor() {
+	  return superFunColor(0x80 + Math.random() * 0x80 << 16 | 0x80 + Math.random() * 0x80 << 8 | 0x80 + Math.random() * 0x80);
+	}
+
+	function superFunColor(input) {
+	  var choices = [0xff00ff, 0xffff00, 0x00ffff, 0x0000ff, 0x00ff00, 0xff0000];
+
+	  return input & choices[Math.floor(Math.random() * choices.length)];
+	}
+
+	function chunk(arr, n) {
+	  return arr.slice(0, (arr.length + n - 1) / n | 0).map(function (_, i) {
+	    return arr.slice(n * i, n * i + n);
+	  });
+	}
+
+/***/ },
+/* 136 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+	exports.Player = undefined;
+	exports.containsPoint = containsPoint;
+
+	var _util = __webpack_require__(135);
+
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+	var SKIP_TAIL_FATNESS_MULTIPLIER = 0.25;
+	var TAIL_TICKER_DEFAULT = 3;
+	var ROTATION_SPEED = 0.6;
+	var MOVE_SPEED_BASE = 10;
+	var HOLE_CHANCE_BASE = -0.03;
+	var HOLE_CHANCE_INCREASE = 0.002;
+	var FATNESS_BASE = 10;
+
+	function createConnectedPolygon(point, thickness, last_points, point2) {
+	  var angle = Math.atan2(point2.y - point.y, point2.x - point.x);
+	  var angle_perp = angle + Math.PI / 2;
+
+	  return [point.x + Math.cos(angle_perp) * thickness / 2, point.y + Math.sin(angle_perp) * thickness / 2].concat(last_points).concat([point.x - Math.cos(angle_perp) * thickness / 2, point.y - Math.sin(angle_perp) * thickness / 2]);
+	}
+
+	function createPolygon(point1, point2, thickness1, thickness2) {
+	  var angle = Math.atan2(point2.y - point1.y, point2.x - point1.x);
+	  var angle_perp = angle + Math.PI / 2;
+
+	  return [point1.x + Math.cos(angle_perp) * thickness1 / 2, point1.y + Math.sin(angle_perp) * thickness1 / 2, point2.x + Math.cos(angle_perp) * thickness2 / 2, point2.y + Math.sin(angle_perp) * thickness2 / 2, point2.x - Math.cos(angle_perp) * thickness2 / 2, point2.y - Math.sin(angle_perp) * thickness2 / 2, point1.x - Math.cos(angle_perp) * thickness1 / 2, point1.y - Math.sin(angle_perp) * thickness1 / 2];
+	}
+
+	function containsPoint(points, x, y) {
+	  var inside = false;
+
+	  var length = points.length / 2;
+
+	  for (var i = 0, j = length - 1; i < length; j = i++) {
+	    var xi = points[i * 2];
+	    var yi = points[i * 2 + 1];
+	    var xj = points[j * 2];
+	    var yj = points[j * 2 + 1];
+	    var intersect = yi > y !== yj > y && x < (xj - xi) * (y - yi) / (yj - yi) + xi;
+
+	    if (intersect) {
+	      inside = !inside;
+	    }
+	  }
+
+	  return inside;
+	};
+
+	var Player = exports.Player = function Player(name, start_point, color, rotation) {
+	  var _this = this;
+
+	  _classCallCheck(this, Player);
+
+	  this.rotateLeft = function () {
+	    _this.rotation = (_this.rotation - ROTATION_SPEED / _this.fatness) % (2 * Math.PI);
+	  };
+
+	  this.rotateRight = function () {
+	    _this.rotation = (_this.rotation + ROTATION_SPEED / _this.fatness) % (2 * Math.PI);
+	  };
+
+	  this.createTail = function () {
+	    var r = Math.random();
+	    var pol = null;
+
+	    if (_this.skip_tail_ticker <= 0) {
+	      if (r < 1 - _this.hole_chance) {
+	        if (_this.last_end == null) {
+	          pol = createPolygon({ x: _this.x, y: _this.y }, { x: _this.last_x, y: _this.last_y }, _this.fatness, _this.lfatness);
+	        } else {
+	          pol = createConnectedPolygon({ x: _this.x, y: _this.y }, _this.fatness, _this.last_end, { x: _this.last_x, y: _this.last_y });
+	        }
+
+	        _this.last_end = pol.slice(0, 2).concat(pol.slice(-2));
+	        _this.hole_chance += HOLE_CHANCE_INCREASE;
+	      } else {
+	        _this.skip_tail_ticker = _this.fatness * SKIP_TAIL_FATNESS_MULTIPLIER;
+	        _this.last_end = null;
+	        _this.hole_chance = HOLE_CHANCE_BASE;
+	      }
+	    } else {
+	      _this.skip_tail_ticker--;
+	    }
+
+	    _this.last_x = _this.x;
+	    _this.last_y = _this.y;
+	    _this.lfatness = _this.fatness;
+
+	    _this.tail_ticker = TAIL_TICKER_DEFAULT;
+
+	    return pol;
+	  };
+
+	  this.name = name;
+	  this.color = color;
+	  this.x = start_point.x;
+	  this.y = start_point.y;
+	  this.last_x = this.x;
+	  this.last_y = this.y;
+	  this.fatness = FATNESS_BASE;
+	  this.lfatness = FATNESS_BASE;
+	  this.last_end = null;
+	  this.hole_chance = HOLE_CHANCE_BASE;
+	  this.tail_ticker = 0;
+	  this.speed = MOVE_SPEED_BASE;
+	  this.rotation = rotation;
+	  this.polygon_tail = [];
+	  this.skip_tail_ticker = 0;
+	};
+
+/***/ },
+/* 137 */
+/***/ function(module, exports) {
+
+	"use strict";
+
+	var keys = {
+	  CANCEL: { code: 3 },
+	  HELP: { code: 6 },
+	  BACK_SPACE: { code: 8 },
+	  TAB: { code: 9 },
+	  CLEAR: { code: 12 },
+	  RETURN: { code: 13 },
+	  ENTER: { code: 14 },
+	  SHIFT: { code: 16 },
+	  CONTROL: { code: 17 },
+	  ALT: { code: 18 },
+	  PAUSE: { code: 19 },
+	  CAPS_LOCK: { code: 20 },
+	  ESCAPE: { code: 27 },
+	  SPACE: { code: 32 },
+	  PAGE_UP: { code: 33 },
+	  PAGE_DOWN: { code: 34 },
+	  END: { code: 35 },
+	  HOME: { code: 36 },
+	  LEFT: { code: 37 },
+	  UP: { code: 38 },
+	  RIGHT: { code: 39 },
+	  DOWN: { code: 40 },
+	  PRINTSCREEN: { code: 44 },
+	  INSERT: { code: 45 },
+	  DELETE: { code: 46 },
+	  NUM_0: { code: 48 },
+	  NUM_1: { code: 49 },
+	  NUM_2: { code: 50 },
+	  NUM_3: { code: 51 },
+	  NUM_4: { code: 52 },
+	  NUM_5: { code: 53 },
+	  NUM_6: { code: 54 },
+	  NUM_7: { code: 55 },
+	  NUM_8: { code: 56 },
+	  NUM_9: { code: 57 },
+	  SEMICOLON: { code: 59 },
+	  EQUALS: { code: 61 },
+	  A: { code: 65 },
+	  B: { code: 66 },
+	  C: { code: 67 },
+	  D: { code: 68 },
+	  E: { code: 69 },
+	  F: { code: 70 },
+	  G: { code: 71 },
+	  H: { code: 72 },
+	  I: { code: 73 },
+	  J: { code: 74 },
+	  K: { code: 75 },
+	  L: { code: 76 },
+	  M: { code: 77 },
+	  N: { code: 78 },
+	  O: { code: 79 },
+	  P: { code: 80 },
+	  Q: { code: 81 },
+	  R: { code: 82 },
+	  S: { code: 83 },
+	  T: { code: 84 },
+	  U: { code: 85 },
+	  V: { code: 86 },
+	  W: { code: 87 },
+	  X: { code: 88 },
+	  Y: { code: 89 },
+	  Z: { code: 90 },
+	  CONTEXT_MENU: { code: 93 },
+	  NUMPAD_0: { code: 96 },
+	  NUMPAD_1: { code: 97 },
+	  NUMPAD_2: { code: 98 },
+	  NUMPAD_3: { code: 99 },
+	  NUMPAD_4: { code: 100 },
+	  NUMPAD_5: { code: 101 },
+	  NUMPAD_6: { code: 102 },
+	  NUMPAD_7: { code: 103 },
+	  NUMPAD_8: { code: 104 },
+	  NUMPAD_9: { code: 105 },
+	  MULTIPLY: { code: 106 },
+	  ADD: { code: 107 },
+	  SEPARATOR: { code: 108 },
+	  SUBTRACT: { code: 109 },
+	  DECIMAL: { code: 110 },
+	  DIVIDE: { code: 111 },
+	  F1: { code: 112 },
+	  F2: { code: 113 },
+	  F3: { code: 114 },
+	  F4: { code: 115 },
+	  F5: { code: 116 },
+	  F6: { code: 117 },
+	  F7: { code: 118 },
+	  F8: { code: 119 },
+	  F9: { code: 120 },
+	  F10: { code: 121 },
+	  F11: { code: 122 },
+	  F12: { code: 123 },
+	  F13: { code: 124 },
+	  F14: { code: 125 },
+	  F15: { code: 126 },
+	  F16: { code: 127 },
+	  F17: { code: 128 },
+	  F18: { code: 129 },
+	  F19: { code: 130 },
+	  F20: { code: 131 },
+	  F21: { code: 132 },
+	  F22: { code: 133 },
+	  F23: { code: 134 },
+	  F24: { code: 135 },
+	  NUM_LOCK: { code: 144 },
+	  SCROLL_LOCK: { code: 145 },
+	  COMMA: { code: 188 },
+	  PERIOD: { code: 190 },
+	  SLASH: { code: 191 },
+	  BACK_QUOTE: { code: 192 },
+	  OPEN_BRACKET: { code: 219 },
+	  BACK_SLASH: { code: 220 },
+	  CLOSE_BRACKET: { code: 221 },
+	  QUOTE: { code: 222 },
+	  META: { code: 224 }
+	};
+
+	module.exports = (function () {
+	  function setKeysPressed(e, pressed) {
+	    if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+	    for (var key in keys) {
+	      if (keys[key].code === e.keyCode) {
+	        e.preventDefault();
+
+	        keys[key].pressed = pressed;
+	      }
+	    }
+	  }
+
+	  window.addEventListener("keydown", function (e) {
+	    setKeysPressed(e, true);
+	  });
+
+	  window.addEventListener("keyup", function (e) {
+	    setKeysPressed(e, false);
+	  });
+
+	  return keys;
+	})();
 
 /***/ }
 /******/ ]);

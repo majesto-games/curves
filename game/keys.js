@@ -1,5 +1,3 @@
-import R from 'Ramda'
-
 const keys = {
   CANCEL: { code: 3 },
   HELP: { code: 6 },
@@ -65,16 +63,16 @@ const keys = {
   Y: { code: 89 },
   Z: { code: 90 },
   CONTEXT_MENU: { code: 93 },
-  NUMPAD0: { code: 96 },
-  NUMPAD1: { code: 97 },
-  NUMPAD2: { code: 98 },
-  NUMPAD3: { code: 99 },
-  NUMPAD4: { code: 100 },
-  NUMPAD5: { code: 101 },
-  NUMPAD6: { code: 102 },
-  NUMPAD7: { code: 103 },
-  NUMPAD8: { code: 104 },
-  NUMPAD9: { code: 105 },
+  NUMPAD_0: { code: 96 },
+  NUMPAD_1: { code: 97 },
+  NUMPAD_2: { code: 98 },
+  NUMPAD_3: { code: 99 },
+  NUMPAD_4: { code: 100 },
+  NUMPAD_5: { code: 101 },
+  NUMPAD_6: { code: 102 },
+  NUMPAD_7: { code: 103 },
+  NUMPAD_8: { code: 104 },
+  NUMPAD_9: { code: 105 },
   MULTIPLY: { code: 106 },
   ADD: { code: 107 },
   SEPARATOR: { code: 108 },
@@ -120,22 +118,22 @@ const keys = {
 
 module.exports = (() => {
   function setKeysPressed (e, pressed) {
-    R.mapObjIndexed((key) => {
-      if (key.code === e.keyCode) {
+    if (e.metaKey || e.ctrlKey || e.altKey) return
+
+    for (let key in keys) {
+      if (keys[key].code === e.keyCode) {
         e.preventDefault()
 
-        key.pressed = pressed
+        keys[key].pressed = pressed
       }
-
-      return key
-    }, keys)
+    }
   }
 
-  window.addEventListener('keydown', (e) => {
+  window.addEventListener("keydown", (e) => {
     setKeysPressed(e, true)
   })
 
-  window.addEventListener('keyup', (e) => {
+  window.addEventListener("keyup", (e) => {
     setKeysPressed(e, false)
   })
 
