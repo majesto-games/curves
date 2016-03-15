@@ -1,12 +1,13 @@
 import { chunk } from "./util.js"
 
-const SKIP_TAIL_FATNESS_MULTIPLIER = 0.25
-const TAIL_TICKER_DEFAULT = 3
-const ROTATION_SPEED = 0.6
-const MOVE_SPEED_BASE = 10
-const HOLE_CHANCE_BASE = -0.03
-const HOLE_CHANCE_INCREASE = 0.002
-const FATNESS_BASE = 10
+export const TICK_RATE = 60
+export const SKIP_TAIL_FATNESS_MULTIPLIER = 0.05 * TICK_RATE
+export const TAIL_TICKER_DEFAULT = 3
+export const ROTATION_SPEED = 0.5
+export const MOVE_SPEED_BASE = 100 / TICK_RATE
+export const HOLE_CHANCE_BASE = -0.05 / TICK_RATE
+export const HOLE_CHANCE_INCREASE = 0.05 / TICK_RATE
+export const FATNESS_BASE = 10
 
 function createConnectedPolygon (point, thickness, last_points, point2) {
   const angle = Math.atan2(point2.y - point.y, point2.x - point.x)
@@ -77,14 +78,11 @@ export class Player {
     this.rotation = rotation
     this.polygon_tail = []
     this.skip_tail_ticker = 0
+    this.alive = true
   }
 
-  rotateLeft = () => {
-    this.rotation = (this.rotation - ROTATION_SPEED / this.fatness) % (2 * Math.PI)
-  };
-
-  rotateRight = () => {
-    this.rotation = (this.rotation + ROTATION_SPEED / this.fatness) % (2 * Math.PI)
+  rotate = (amount) => {
+    this.rotation = (this.rotation + amount) % (2 * Math.PI)
   };
 
   createTail = () => {
