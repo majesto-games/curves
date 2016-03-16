@@ -153,7 +153,7 @@ const timer = setInterval(() => {
   }
 }, 1000)
 
-const renderer = autoDetectRenderer(window.innerWidth, window.innerHeight, { backgroundColor: 0x000000 })
+const renderer = autoDetectRenderer(window.innerWidth, window.innerHeight, { backgroundColor: 0x000000, antialias: true })
 
 let running = true
 
