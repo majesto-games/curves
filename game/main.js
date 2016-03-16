@@ -6,7 +6,12 @@ import { Player, containsPoint, TICK_RATE } from "./game"
 import Server from "../server/main"
 import keys from "./keys.js"
 
+import R from "ramda"
+
 const middle = { x: (window.innerWidth) / 2, y: (window.innerHeight) / 2 }
+
+// Remove pesky pixi.js banner from console
+utils._saidHello = true
 
 class Client {
   constructor(index) {
@@ -52,7 +57,7 @@ const clients = [new Client(0), new Client(1)]
 clients[0].keys = { left: keys.A, right: keys.D }
 clients[1].keys = { left: keys.LEFT, right: keys.RIGHT }
 
-const server = new Server(clients)
+const server = new Server(clients, TICK_RATE)
 
 // Browser renderer stuff below
 
@@ -62,11 +67,10 @@ function createPlayer (name, start_point, color, rotation) {
   const graphics = new Graphics()
   graphics.beginFill(color)
   graphics.drawCircle(0, 0, 0.5)
-  graphics.position.x = start_point.x
-  graphics.position.y = start_point.x
   graphics.endFill()
 
   player.graphics = graphics
+  updatePlayerGraphics(player)
 
   return player
 }
@@ -88,29 +92,39 @@ container.addChild(graphics)
 
 let pause_timer = 3 // Seconds
 
-// Draw initial state to show the position of the players
-server.serverTick()
 
 class Overlay {
   constructor(graphics) {
     this.graphics = graphics
-    this.overlayText = new PIXI.Text("", { font: "64px Impact", fill: "white" })
+    this.overlayText = new PIXI.Text("", { font: "64px Courier New", fill: "white" })
     this.overlayText.anchor = { x: 0.5, y: 0.5 }
     this.overlayText.x = window.innerWidth / 2
-    this.overlayText.y = window.innerHeight / 2
+    this.overlayText.y = window.innerHeight / 3
 
     this.overlay = new Graphics()
     this.overlay.beginFill(0x000000, 0.5)
     this.overlay.drawRect(0, 0, window.innerWidth, window.innerHeight)
     this.overlay.endFill()
     this.overlay.addChild(this.overlayText)
+
+    this.start_pos = new Graphics()
+    this.overlay.addChild(this.start_pos)
   }
 
   added = false
 
-  addOverlay = text => {
+  addOverlay = (text, players, players_text) => {
     this.overlayText.text = text
     if (!this.added) {
+      // TODO: Remove this hack
+      R.zip(players, players_text).forEach(([player, player_text]) => {
+        const g = new PIXI.Text(player_text, { font: "24px Courier New", fill: player.color })
+        g.anchor = { x: 0.5, y: 1.1 }
+        g.rotation = player.rotation
+        g.x = player.x
+        g.y = player.y
+        this.start_pos.addChild(g)
+      })
       this.graphics.addChild(this.overlay)
       this.added = true
     }
@@ -118,29 +132,28 @@ class Overlay {
 
   removeOverlay = () => {
     this.graphics.removeChild(this.overlay)
+    this.start_pos.removeChildren()
     this.added = false
   }
 }
 
 const overlay = new Overlay(graphics)
 
+overlay.addOverlay(`GAME STARTS IN ${pause_timer}`, clients[0].players, ["A ^ D", "< ^ >"])
+
 // Set a freeze time of 2 seconds
 const timer = setInterval(() => {
   pause_timer--
-  overlay.addOverlay(`GAME STARTS IN ${pause_timer}`)
+  overlay.addOverlay(`GAME STARTS IN ${pause_timer}`, clients[0].players, ["A ^ D", "< ^ >"])
 
   if (pause_timer <= 0) {
     clearInterval(timer)
     overlay.removeOverlay()
-    setInterval(server.serverTick, 1000 / TICK_RATE)
+    server.start()
   }
 }, 1000)
 
-
 const renderer = autoDetectRenderer(window.innerWidth, window.innerHeight, { backgroundColor: 0x000000 })
-
-// Remove pesky pixi.js banner from console
-utils._saidHello = true
 
 let running = true
 
@@ -157,10 +170,10 @@ const draw = function () {
   const players_alive = players.filter(p => p.alive)
 
   if (players_alive.length < 2) {
-    overlay.addOverlay(`GAME OVER. Winner is ${players_alive[0].name}`)
+    overlay.addOverlay(`GAME OVER`, players_alive, ["WINNER"])
     running = false
   } else {
-    if (pause_timer === 0) {
+    if (pause_timer <= 0) {
       clients.forEach(client => {
         if (client.keys.left.pressed) {
           client.rotateLeft()
