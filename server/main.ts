@@ -1,8 +1,25 @@
-import { getColors, createPolygon, createConnectedPolygon, chunk } from "../game/util.js"
-import { Player, containsPoint, ROTATION_SPEED } from "../game/game"
+import { getColors, chunk } from "../game/util"
+import { Point, Player, containsPoint, ROTATION_SPEED } from "../game/game"
+import { Client, PlayerInit } from "../game/main"
+
+interface PlayerUpdate {
+  x: number
+  y: number
+  rotation: number
+  tail_part: number[]
+  alive: boolean
+}
 
 export default class Server {
-  constructor(clients, tick_rate) {
+
+  clients: Client[]
+  pause_delta: number
+  paused: boolean
+  tick_rate: number
+  players: Player[]
+  last_update: number
+
+  constructor(clients: Client[], tick_rate: number) {
     this.clients = clients
     this.pause_delta = 0
     this.paused = true
@@ -14,12 +31,12 @@ export default class Server {
     this.players = players.map(obj => new Player(obj.name, obj.start_point, obj.color, obj.rotation))
   }
 
-  createPlayers = () => {
+  createPlayers = (): PlayerInit[] => {
     let colors = getColors(this.clients.length)
 
     return this.clients.map(client => {
       const name = `${client.index}`
-      const start_point = { x: window.innerWidth / 2 + 300 * (client.index ? 1 : -1), y: window.innerHeight / 2 }
+      const start_point: Point = { x: window.innerWidth / 2 + 300 * (client.index ? 1 : -1), y: window.innerHeight / 2 }
       const color = colors.pop()
       const rotation = Math.random() * Math.PI * 2
 
@@ -55,7 +72,7 @@ export default class Server {
     this.last_update += ticks_needed * 1000 / this.tick_rate
 
     for (let i = 0; i < ticks_needed; i++) {
-      let player_updates = []
+      let player_updates: PlayerUpdate[] = []
       const players_alive = this.players.filter(player => player.alive)
 
       if (players_alive.length < 2) {
@@ -97,7 +114,7 @@ export default class Server {
         let p = player.createTail()
 
         if (p !== null) {
-          const collides = collider => {
+          const collides = (collider: Player) => {
             let pt = collider.polygon_tail
 
             if (collider === player) {
@@ -137,12 +154,12 @@ export default class Server {
     setTimeout(this.serverTick, (this.last_update + (1000 / this.tick_rate)) - Date.now())
   }
 
-  rotateLeft = (index) => {
+  rotateLeft = (index: number) => {
     const player = this.players[index]
     player.rotate(-(ROTATION_SPEED / player.fatness))
   }
 
-  rotateRight = (index) => {
+  rotateRight = (index: number) => {
     const player = this.players[index]
     player.rotate((ROTATION_SPEED / player.fatness))
   }

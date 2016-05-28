@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "ramda": "registry:npm/ramda#0.21.0+20160526170405"
+  },
+  "globalDependencies": {
+    "pixi.js": "registry:dt/pixi.js#3.0.9+20160404013751"
+  }
+}

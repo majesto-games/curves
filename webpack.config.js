@@ -1,5 +1,9 @@
 module.exports = {
-  entry: './game/main.js',
+  resolve: {
+    extensions: ['', '.ts', '.webpack.js', '.web.js', '.js']
+  },
+  devtool: 'source-map',
+  entry: './game/main.ts',
   output: {
     path: __dirname + '/game',
     filename: 'bundle.js'
@@ -9,7 +13,7 @@ module.exports = {
   },
   module: {
     loaders: [
-      { test: /\.js$/, exclude: /node_modules/, loader: 'babel-loader', query: { presets: ['es2015', 'stage-0'] } },
+      { test: /\.ts$/, exclude: /node_modules/, loader: 'awesome-typescript-loader' },
       { test: /\.json$/, exclude: /node_modules/, loader: 'json' },
       { test: /\.json$/, include: /node_modules[\/\\](pixi.js|p2)/, loader: 'json' }
     ]

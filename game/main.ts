@@ -1,26 +1,45 @@
 import { Graphics, autoDetectRenderer, Container, utils } from "pixi.js"
+
 import generateName from "sillyname"
 
-import { getColors, createPolygon, createConnectedPolygon, chunk } from "./util.js"
-import { Player, containsPoint, TICK_RATE } from "./game"
+import { getColors, chunk } from "./util"
+import { Point, Player, containsPoint, TICK_RATE } from "./game"
 import Server from "../server/main"
-import keys from "./keys.js"
+import pressedKeys, { KEYS } from "./keys"
 
-import R from "ramda"
+import * as R from "ramda"
 
 const middle = { x: (window.innerWidth) / 2, y: (window.innerHeight) / 2 }
 
 // Remove pesky pixi.js banner from console
-utils._saidHello = true
+//utils._saidHello = true
 
-class Client {
-  constructor(index) {
+interface ClientKeys {
+  left: KEYS
+  right: KEYS
+}
+
+export interface PlayerInit {
+  name: string
+  start_point: Point
+  color: number
+  rotation: number
+}
+
+export class Client {
+
+  index: number
+  players: Player[]
+  keys: ClientKeys
+  server: Server
+
+  constructor(index: number) {
     this.index = index
     this.players = []
     this.keys = null
   }
 
-  updatePlayers = (player_updates) => {
+  updatePlayers = (player_updates: any[]) => {
     for (let i = 0; i < player_updates.length; i++) {
       const update = player_updates[i]
       const player = this.players[i]
@@ -38,7 +57,7 @@ class Client {
     }
   };
 
-  init = (players, server) => {
+  init = (players: PlayerInit[], server: Server) => {
     this.players = players.map(player => createPlayer(player.name, player.start_point, player.color, player.rotation))
     this.server = server
   };
@@ -54,14 +73,14 @@ class Client {
 
 const clients = [new Client(0), new Client(1)]
 
-clients[0].keys = { left: keys.A, right: keys.D }
-clients[1].keys = { left: keys.LEFT, right: keys.RIGHT }
+clients[0].keys = { left: KEYS.A, right: KEYS.D }
+clients[1].keys = { left: KEYS.LEFT, right: KEYS.RIGHT }
 
 const server = new Server(clients, TICK_RATE)
 
 // Browser renderer stuff below
 
-function createPlayer (name, start_point, color, rotation) {
+function createPlayer (name: string, start_point: Point, color: number, rotation: number) {
   const player = new Player(name, start_point, color, rotation)
 
   const graphics = new Graphics()
@@ -75,10 +94,10 @@ function createPlayer (name, start_point, color, rotation) {
   return player
 }
 
-function updatePlayerGraphics (player) {
+function updatePlayerGraphics (player: Player) {
   player.graphics.x = player.x
   player.graphics.y = player.y
-  player.graphics.scale = { x: player.fatness, y: player.fatness }
+  player.graphics.scale = new PIXI.Point(player.fatness, player.fatness)
 }
 
 const container = new Container()
@@ -94,10 +113,16 @@ let pause_timer = 3 // Seconds
 
 
 class Overlay {
-  constructor(graphics) {
+
+  graphics: PIXI.Graphics
+  overlayText: PIXI.Text
+  overlay: PIXI.Graphics
+  start_pos: PIXI.Graphics
+
+  constructor(graphics: PIXI.Graphics) {
     this.graphics = graphics
     this.overlayText = new PIXI.Text("", { font: "64px Courier New", fill: "white" })
-    this.overlayText.anchor = { x: 0.5, y: 0.5 }
+    this.overlayText.anchor = new PIXI.Point(0.5, 0.5)
     this.overlayText.x = window.innerWidth / 2
     this.overlayText.y = window.innerHeight / 3
 
@@ -113,13 +138,13 @@ class Overlay {
 
   added = false
 
-  addOverlay = (text, players, players_text) => {
+  addOverlay = (text: string, players: Player[], players_text: string[]) => {
     this.overlayText.text = text
     if (!this.added) {
       // TODO: Remove this hack
       R.zip(players, players_text).forEach(([player, player_text]) => {
         const g = new PIXI.Text(player_text, { font: "24px Courier New", fill: player.color })
-        g.anchor = { x: 0.5, y: 1.1 }
+        g.anchor = new PIXI.Point(0.5, 1.1)
         g.rotation = player.rotation
         g.x = player.x
         g.y = player.y
@@ -175,11 +200,11 @@ const draw = function () {
   } else {
     if (pause_timer <= 0) {
       clients.forEach(client => {
-        if (client.keys.left.pressed) {
+        if (pressedKeys[client.keys.left]) {
           client.rotateLeft()
         }
 
-        if (client.keys.right.pressed) {
+        if (pressedKeys[client.keys.right]) {
           client.rotateRight()
         }
       })
@@ -190,7 +215,7 @@ const draw = function () {
     }
   }
 
-  
+
 
   renderer.render(container)
   requestAnimationFrame(draw)

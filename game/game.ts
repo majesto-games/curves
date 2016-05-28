@@ -1,4 +1,4 @@
-import { chunk } from "./util.js"
+import { chunk } from "./util"
 
 export const TICK_RATE = 64
 export const SKIP_TAIL_FATNESS_MULTIPLIER = 0.03 * TICK_RATE
@@ -8,8 +8,12 @@ export const HOLE_CHANCE_BASE = -0.002 / TICK_RATE
 export const HOLE_CHANCE_INCREASE = 0.0018 / TICK_RATE
 export const FATNESS_BASE = 10
 
+export interface Point {
+  x: number
+  y: number
+}
 
-function createConnectedPolygon (point, thickness, last_points, point2) {
+function createConnectedPolygon (point: Point, thickness: number, last_points: number[], point2: Point) {
   const angle = Math.atan2(point2.y - point.y, point2.x - point.x)
   const angle_perp = angle + Math.PI / 2
 
@@ -22,7 +26,7 @@ function createConnectedPolygon (point, thickness, last_points, point2) {
   ])
 }
 
-function createPolygon (point1, point2, thickness1, thickness2) {
+function createPolygon (point1: Point, point2: Point, thickness1: number, thickness2: number) {
   const angle = Math.atan2(point2.y - point1.y, point2.x - point1.x)
   const angle_perp = angle + Math.PI / 2
 
@@ -41,7 +45,7 @@ function createPolygon (point1, point2, thickness1, thickness2) {
   ]
 }
 
-export function containsPoint (points, x, y) {
+export function containsPoint (points: number[], x: number, y: number) {
   let inside = false
 
   const length = points.length / 2
@@ -62,7 +66,27 @@ export function containsPoint (points, x, y) {
 };
 
 export class Player {
-  constructor(name, start_point, color, rotation) {
+
+  name: string
+  color: number
+  x: number
+  y: number
+  last_x: number
+  last_y: number
+  fatness: number
+  lfatness: number
+  last_end: any
+  hole_chance: number
+  tail_ticker: number
+  speed: number
+  rotation: number
+  polygon_tail: any[]
+  skip_tail_ticker: number
+  alive: boolean
+  start_point: Point
+  graphics: PIXI.Graphics
+
+  constructor(name: string, start_point: Point, color: number, rotation: number) {
     this.name = name
     this.color = color
     this.x = start_point.x
@@ -81,13 +105,13 @@ export class Player {
     this.alive = true
   }
 
-  rotate = (amount) => {
+  rotate = (amount: number) => {
     this.rotation = (this.rotation + amount) % (2 * Math.PI)
   };
 
   createTail = () => {
     let r = Math.random()
-    let pol = null
+    let pol: number[] = null
 
     if (this.skip_tail_ticker <= 0) {
       if (r > this.hole_chance) {
