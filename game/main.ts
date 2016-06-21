@@ -4,7 +4,7 @@ import generateName from "sillyname"
 
 import { getColors, chunk } from "./util"
 import { Point, Player, containsPoint, TICK_RATE } from "./game"
-import Server from "../server/main"
+import Server, { LocalServer as ServerImpl } from "../server/main"
 import pressedKeys, { KEYS } from "./keys"
 
 import * as R from "ramda"
@@ -76,7 +76,7 @@ const clients = [new Client(0), new Client(1)]
 clients[0].keys = { left: KEYS.A, right: KEYS.D }
 clients[1].keys = { left: KEYS.LEFT, right: KEYS.RIGHT }
 
-const server = new Server(clients, TICK_RATE)
+const server = new ServerImpl(clients, TICK_RATE)
 
 // Browser renderer stuff below
 

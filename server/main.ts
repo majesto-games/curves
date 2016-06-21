@@ -10,7 +10,14 @@ interface PlayerUpdate {
   alive: boolean
 }
 
-export default class Server {
+interface Server {
+  rotateLeft(index: number): void
+  rotateRight(index: number): void
+}
+
+export default Server;
+
+export class LocalServer implements Server {
 
   clients: Client[]
   pause_delta: number
@@ -31,7 +38,7 @@ export default class Server {
     this.players = players.map(obj => new Player(obj.name, obj.start_point, obj.color, obj.rotation))
   }
 
-  createPlayers = (): PlayerInit[] => {
+  createPlayers(): PlayerInit[] {
     let colors = getColors(this.clients.length)
 
     return this.clients.map(client => {
@@ -44,7 +51,7 @@ export default class Server {
     })
   }
 
-  start = () => {
+  start() {
     if (this.paused) {
       if (this.pause_delta) {
         this.last_update = Date.now() - this.pause_delta
@@ -56,13 +63,13 @@ export default class Server {
     }
   }
 
-  pause = () => {
+  pause() {
     this.pause_delta = Date.now() - this.last_update
     this.paused = true
   }
 
 
-  serverTick = () => {
+  serverTick() {
     if (this.paused) {
       return
     }
@@ -148,19 +155,73 @@ export default class Server {
         })
       }
 
-      this.clients.map(client => client.updatePlayers(player_updates))
+      this.sendUpdates(player_updates)
     }
 
-    setTimeout(this.serverTick, (this.last_update + (1000 / this.tick_rate)) - Date.now())
+    setTimeout(() => this.serverTick(), (this.last_update + (1000 / this.tick_rate)) - Date.now())
   }
 
-  rotateLeft = (index: number) => {
+  sendUpdates(player_updates: any[]) {
+    this.clients.map(client => client.updatePlayers(player_updates))
+  }
+
+  rotateLeft(index: number) {
     const player = this.players[index]
     player.rotate(-(ROTATION_SPEED / player.fatness))
   }
 
-  rotateRight = (index: number) => {
+  rotateRight(index: number) {
     const player = this.players[index]
     player.rotate((ROTATION_SPEED / player.fatness))
+  }
+}
+
+export class PingSimServer extends LocalServer {
+  rtt: number
+
+  constructor(clients: Client[], tick_rate: number, rtt: number) {
+    super(clients, tick_rate)
+    this.rtt = rtt
+  }
+
+  sendUpdates(player_updates: any[]) {
+    setTimeout(() => super.sendUpdates(player_updates), this.rtt / 2)
+  }
+
+  rotateLeft(index: number) {
+    setTimeout(() => super.rotateLeft(index), this.rtt / 2)
+  }
+
+  rotateRight(index: number) {
+    setTimeout(() => super.rotateRight(index), this.rtt / 2)
+  }
+}
+
+export class PackageLossSimServer extends LocalServer {
+  inloss: number
+  outloss: number
+
+  constructor(clients: Client[], tick_rate: number, inloss: number, outloss: number) {
+    super(clients, tick_rate)
+    this.inloss = inloss
+    this.outloss = outloss
+  }
+
+  sendUpdates(player_updates: any[]) {
+    if (Math.random() >= this.outloss) {
+      super.sendUpdates(player_updates)
+    }
+  }
+
+  rotateLeft(index: number) {
+    if (Math.random() >= this.inloss) {
+      super.rotateLeft(index)
+    }
+  }
+
+  rotateRight(index: number) {
+    if (Math.random() >= this.inloss) {
+      super.rotateRight(index)
+    }
   }
 }
