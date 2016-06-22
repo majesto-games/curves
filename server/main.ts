@@ -197,7 +197,7 @@ export class PingSimServer extends LocalServer {
   }
 }
 
-export class PackageLossSimServer extends LocalServer {
+export class RandomPackageLossSimServer extends LocalServer {
   inloss: number
   outloss: number
 
@@ -222,6 +222,76 @@ export class PackageLossSimServer extends LocalServer {
   rotateRight(index: number) {
     if (Math.random() >= this.inloss) {
       super.rotateRight(index)
+    }
+  }
+}
+
+interface NetworkSettings {
+  buffer_size: number
+  tick_ms: number
+}
+enum InType {
+  LEFT,
+  RIGHT
+}
+interface InPackage {
+  index: number
+  type: InType
+}
+
+export class BandwidthSimServer extends LocalServer {
+  networkIn: NetworkSettings
+  bufferIn: InPackage[] = [] 
+  networkOut: NetworkSettings
+  bufferOut: any[][] = []
+
+  constructor(clients: Client[], tick_rate: number, networkIn: NetworkSettings, networkOut: NetworkSettings) {
+    super(clients, tick_rate)
+    this.networkIn = networkIn
+    this.networkOut = networkOut
+    setInterval(() => this.sendOut(), networkOut.tick_ms)
+    setInterval(() => this.sendIn(), networkIn.tick_ms)
+  }
+
+  sendOut() {
+    if (this.bufferOut.length > 0) {
+      const outPackage = this.bufferOut.shift()
+      super.sendUpdates(outPackage)
+    }
+  }
+
+  sendIn() {
+    if (this.bufferIn.length > 0) {
+      const inPackage = this.bufferIn.shift()
+      if (inPackage.type == InType.LEFT) {
+        super.rotateLeft(inPackage.index)
+      } else if(inPackage.type == InType.RIGHT) {
+        super.rotateRight(inPackage.index)
+      }
+    }
+  }
+
+  sendUpdates(player_updates: any[]) {
+    if (this.bufferOut.length < this.networkOut.buffer_size / this.players.length) {
+      this.bufferOut.push(player_updates)
+    } else {
+      console.log("Lost package sendUpdates")
+    }
+  }
+
+  rotateLeft(index: number) {
+    if (this.bufferIn.length < this.networkIn.buffer_size) {
+      this.bufferIn.push({index, type: InType.LEFT})
+    } else {
+      console.log("Lost package rotateLeft " + index)
+    }
+  }
+
+  rotateRight(index: number) {
+    if (this.bufferIn.length < this.networkIn.buffer_size) {
+      this.bufferIn.push({index, type: InType.RIGHT})
+    } else {
+      console.log("Lost package rotateRight " + index)
     }
   }
 }
