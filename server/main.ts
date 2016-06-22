@@ -241,7 +241,7 @@ interface InPackage {
 
 export class BandwidthSimServer extends LocalServer {
   networkIn: NetworkSettings
-  bufferIn: InPackage[] = [] 
+  buffersIn: InPackage[][]
   networkOut: NetworkSettings
   bufferOut: any[][] = []
 
@@ -249,6 +249,7 @@ export class BandwidthSimServer extends LocalServer {
     super(clients, tick_rate)
     this.networkIn = networkIn
     this.networkOut = networkOut
+    this.buffersIn = clients.map(() => [])
     setInterval(() => this.sendOut(), networkOut.tick_ms)
     setInterval(() => this.sendIn(), networkIn.tick_ms)
   }
@@ -261,14 +262,16 @@ export class BandwidthSimServer extends LocalServer {
   }
 
   sendIn() {
-    if (this.bufferIn.length > 0) {
-      const inPackage = this.bufferIn.shift()
+    this.buffersIn.forEach(buffer => {
+      if (buffer.length > 0) {
+      const inPackage = buffer.shift()
       if (inPackage.type == InType.LEFT) {
         super.rotateLeft(inPackage.index)
       } else if(inPackage.type == InType.RIGHT) {
         super.rotateRight(inPackage.index)
       }
     }
+    })
   }
 
   sendUpdates(player_updates: any[]) {
@@ -280,16 +283,16 @@ export class BandwidthSimServer extends LocalServer {
   }
 
   rotateLeft(index: number) {
-    if (this.bufferIn.length < this.networkIn.buffer_size) {
-      this.bufferIn.push({index, type: InType.LEFT})
+    if (this.buffersIn[index].length < this.networkIn.buffer_size) {
+      this.buffersIn[index].push({index, type: InType.LEFT})
     } else {
       console.log("Lost package rotateLeft " + index)
     }
   }
 
   rotateRight(index: number) {
-    if (this.bufferIn.length < this.networkIn.buffer_size) {
-      this.bufferIn.push({index, type: InType.RIGHT})
+    if (this.buffersIn[index].length < this.networkIn.buffer_size) {
+      this.buffersIn[index].push({index, type: InType.RIGHT})
     } else {
       console.log("Lost package rotateRight " + index)
     }
