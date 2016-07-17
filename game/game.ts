@@ -1,5 +1,3 @@
-import { chunk } from "./util"
-
 export const TICK_RATE = 64
 export const SKIP_TAIL_FATNESS_MULTIPLIER = 0.03 * TICK_RATE
 export const ROTATION_SPEED = 0.5

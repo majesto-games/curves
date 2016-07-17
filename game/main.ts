@@ -1,9 +1,6 @@
-import { Graphics, autoDetectRenderer, Container, utils } from "pixi.js"
+import { Graphics, autoDetectRenderer, Container } from "pixi.js"
 
-import generateName from "sillyname"
-
-import { getColors, chunk } from "./util"
-import { Point, Player, containsPoint, TICK_RATE } from "./game"
+import { Point, Player, TICK_RATE } from "./game"
 import Server, { BandwidthSimServer as ServerImpl } from "../server/main"
 import pressedKeys, { KEYS } from "./keys"
 
