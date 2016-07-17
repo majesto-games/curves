@@ -124,7 +124,9 @@ const keys: PressedKeys = {}
 
 export default (() => {
   function setKeysPressed (e: KeyboardEvent, pressed: boolean) {
-    if (e.metaKey || e.ctrlKey || e.altKey) return
+    if (e.metaKey || e.ctrlKey || e.altKey) {
+      return
+    }
 
     if (keys[e.keyCode] !== pressed) {
       e.preventDefault()

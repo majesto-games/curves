@@ -1,4 +1,4 @@
-import { getColors, chunk } from "../game/util"
+import { getColors } from "../game/util"
 import { Point, Player, containsPoint, ROTATION_SPEED } from "../game/game"
 import { Client, PlayerInit } from "../game/main"
 
@@ -6,7 +6,7 @@ interface PlayerUpdate {
   x: number
   y: number
   rotation: number
-  tail_part: number[]
+  tailPart: number[]
   alive: boolean
 }
 
@@ -15,78 +15,78 @@ interface Server {
   rotateRight(index: number): void
 }
 
-export default Server;
+export default Server
 
 export class LocalServer implements Server {
 
-  clients: Client[]
-  pause_delta: number
-  paused: boolean
-  tick_rate: number
-  players: Player[]
-  last_update: number
+public players: Player[]
 
-  constructor(clients: Client[], tick_rate: number) {
+private clients: Client[]
+private pauseDelta: number
+private paused: boolean
+private tickRate: number
+private lastUpdate: number
+
+  constructor(clients: Client[], tickRate: number) {
     this.clients = clients
-    this.pause_delta = 0
+    this.pauseDelta = 0
     this.paused = true
-    this.tick_rate = tick_rate
+    this.tickRate = tickRate
 
     const players = this.createPlayers()
     this.clients.forEach(client => client.init(players, this))
 
-    this.players = players.map(obj => new Player(obj.name, obj.start_point, obj.color, obj.rotation))
+    this.players = players.map(obj => new Player(obj.name, obj.startPoint, obj.color, obj.rotation))
   }
 
-  createPlayers(): PlayerInit[] {
+  public createPlayers(): PlayerInit[] {
     let colors = getColors(this.clients.length)
 
     return this.clients.map(client => {
       const name = `${client.index}`
-      const start_point: Point = { x: window.innerWidth / 2 + 300 * (client.index ? 1 : -1), y: window.innerHeight / 2 }
+      const startPoint: Point = { x: window.innerWidth / 2 + 300 * (client.index ? 1 : -1), y: window.innerHeight / 2 }
       const color = colors.pop()
       const rotation = Math.random() * Math.PI * 2
 
-      return { name, start_point, color, rotation }
+      return { name, startPoint, color, rotation }
     })
   }
 
-  start() {
+  public start() {
     if (this.paused) {
-      if (this.pause_delta) {
-        this.last_update = Date.now() - this.pause_delta
+      if (this.pauseDelta) {
+        this.lastUpdate = Date.now() - this.pauseDelta
       } else {
-        this.last_update = Date.now() - (1000 / this.tick_rate)
+        this.lastUpdate = Date.now() - (1000 / this.tickRate)
       }
       this.paused = false
       this.serverTick()
     }
   }
 
-  pause() {
-    this.pause_delta = Date.now() - this.last_update
+  public pause() {
+    this.pauseDelta = Date.now() - this.lastUpdate
     this.paused = true
   }
 
-
-  serverTick() {
+  public serverTick() {
     if (this.paused) {
       return
     }
 
-    const ticks_needed = Math.floor((Date.now() - this.last_update) * this.tick_rate / 1000)
+    const ticksNeeded = Math.floor((Date.now() - this.lastUpdate) * this.tickRate / 1000)
 
-    this.last_update += ticks_needed * 1000 / this.tick_rate
+    this.lastUpdate += ticksNeeded * 1000 / this.tickRate
 
-    for (let i = 0; i < ticks_needed; i++) {
-      let player_updates: PlayerUpdate[] = []
-      const players_alive = this.players.filter(player => player.alive)
+    for (let i = 0; i < ticksNeeded; i++) {
+      let playerUpdates: PlayerUpdate[] = []
+      const playersAlive = this.players.filter(player => player.alive)
 
-      if (players_alive.length < 2) {
+      if (playersAlive.length < 2) {
         return
       }
 
-      for (let player of players_alive) {
+      for (let player of playersAlive) {
 
         // Update player positions
         player.x += Math.sin(player.rotation) * player.speed
@@ -95,26 +95,26 @@ export class LocalServer implements Server {
         // Edge wrapping
         if (player.x > window.innerWidth + player.fatness) {
           player.x = -player.fatness
-          player.last_x = player.x - 1
-          player.last_end = null
+          player.lastX = player.x - 1
+          player.lastEnd = null
         }
 
         if (player.y > window.innerHeight + player.fatness) {
           player.y = -player.fatness
-          player.last_y = player.y - 1
-          player.last_end = null
+          player.lastY = player.y - 1
+          player.lastEnd = null
         }
 
         if (player.x < -player.fatness) {
           player.x = window.innerWidth + player.fatness
-          player.last_x = player.x + 1
-          player.last_end = null
+          player.lastX = player.x + 1
+          player.lastEnd = null
         }
 
         if (player.y < -player.fatness) {
           player.y = window.innerHeight + player.fatness
-          player.last_y = player.y + 1
-          player.last_end = null
+          player.lastY = player.y + 1
+          player.lastEnd = null
         }
 
         // Create tail polygon, this returns null if it's supposed to be a hole
@@ -122,7 +122,7 @@ export class LocalServer implements Server {
 
         if (p !== null) {
           const collides = (collider: Player) => {
-            let pt = collider.polygon_tail
+            let pt = collider.polygonTail
 
             if (collider === player) {
               pt = pt.slice(0, -1)
@@ -143,85 +143,87 @@ export class LocalServer implements Server {
             player.alive = false
           }
 
-          player.polygon_tail.push(p)
+          player.polygonTail.push(p)
         }
 
-        player_updates.push({
+        playerUpdates.push({
+          alive: player.alive,
+          rotation: player.rotation,
+          tailPart: p,
           x: player.x,
           y: player.y,
-          rotation: player.rotation,
-          tail_part: p,
-          alive: player.alive
         })
       }
 
-      this.sendUpdates(player_updates)
+      this.sendUpdates(playerUpdates)
     }
 
-    setTimeout(() => this.serverTick(), (this.last_update + (1000 / this.tick_rate)) - Date.now())
+    setTimeout(() => this.serverTick(), (this.lastUpdate + (1000 / this.tickRate)) - Date.now())
   }
 
-  sendUpdates(player_updates: any[]) {
-    this.clients.map(client => client.updatePlayers(player_updates))
-  }
-
-  rotateLeft(index: number) {
+  public rotateLeft(index: number) {
     const player = this.players[index]
     player.rotate(-(ROTATION_SPEED / player.fatness))
   }
 
-  rotateRight(index: number) {
+  public rotateRight(index: number) {
     const player = this.players[index]
     player.rotate((ROTATION_SPEED / player.fatness))
+  }
+
+  protected sendUpdates(playerUpdates: any[]) {
+    this.clients.map(client => client.updatePlayers(playerUpdates))
   }
 }
 
 export class PingSimServer extends LocalServer {
-  rtt: number
 
-  constructor(clients: Client[], tick_rate: number, rtt: number) {
-    super(clients, tick_rate)
+  private rtt: number
+
+  constructor(clients: Client[], tickRate: number, rtt: number) {
+    super(clients, tickRate)
     this.rtt = rtt
   }
 
-  sendUpdates(player_updates: any[]) {
-    setTimeout(() => super.sendUpdates(player_updates), this.rtt / 2)
-  }
-
-  rotateLeft(index: number) {
+  public rotateLeft(index: number) {
     setTimeout(() => super.rotateLeft(index), this.rtt / 2)
   }
 
-  rotateRight(index: number) {
+  public rotateRight(index: number) {
     setTimeout(() => super.rotateRight(index), this.rtt / 2)
+  }
+
+  protected sendUpdates(playerUpdates: any[]) {
+    setTimeout(() => super.sendUpdates(playerUpdates), this.rtt / 2)
   }
 }
 
 export class RandomPackageLossSimServer extends LocalServer {
-  inloss: number
-  outloss: number
 
-  constructor(clients: Client[], tick_rate: number, inloss: number, outloss: number) {
-    super(clients, tick_rate)
-    this.inloss = inloss
-    this.outloss = outloss
+  private inLoss: number
+  private outLoss: number
+
+  constructor(clients: Client[], tickRate: number, inLoss: number, outLoss: number) {
+    super(clients, tickRate)
+    this.inLoss = inLoss
+    this.outLoss = outLoss
   }
 
-  sendUpdates(player_updates: any[]) {
-    if (Math.random() >= this.outloss) {
-      super.sendUpdates(player_updates)
-    }
-  }
-
-  rotateLeft(index: number) {
-    if (Math.random() >= this.inloss) {
+  public rotateLeft(index: number) {
+    if (Math.random() >= this.inLoss) {
       super.rotateLeft(index)
     }
   }
 
-  rotateRight(index: number) {
-    if (Math.random() >= this.inloss) {
+  public rotateRight(index: number) {
+    if (Math.random() >= this.inLoss) {
       super.rotateRight(index)
+    }
+  }
+
+  protected sendUpdates(playerUpdates: any[]) {
+    if (Math.random() >= this.outLoss) {
+      super.sendUpdates(playerUpdates)
     }
   }
 }
@@ -230,23 +232,26 @@ interface NetworkSettings {
   buffer_size: number
   tick_ms: number
 }
+
 enum InType {
   LEFT,
   RIGHT
 }
+
 interface InPackage {
   index: number
   type: InType
 }
 
 export class BandwidthSimServer extends LocalServer {
-  networkIn: NetworkSettings
-  buffersIn: InPackage[][]
-  networkOut: NetworkSettings
-  bufferOut: any[][] = []
 
-  constructor(clients: Client[], tick_rate: number, networkIn: NetworkSettings, networkOut: NetworkSettings) {
-    super(clients, tick_rate)
+  private networkIn: NetworkSettings
+  private buffersIn: InPackage[][]
+  private networkOut: NetworkSettings
+  private bufferOut: any[][] = []
+
+  constructor(clients: Client[], tickRate: number, networkIn: NetworkSettings, networkOut: NetworkSettings) {
+    super(clients, tickRate)
     this.networkIn = networkIn
     this.networkOut = networkOut
     this.buffersIn = clients.map(() => [])
@@ -254,35 +259,7 @@ export class BandwidthSimServer extends LocalServer {
     setInterval(() => this.sendIn(), networkIn.tick_ms)
   }
 
-  sendOut() {
-    if (this.bufferOut.length > 0) {
-      const outPackage = this.bufferOut.shift()
-      super.sendUpdates(outPackage)
-    }
-  }
-
-  sendIn() {
-    this.buffersIn.forEach(buffer => {
-      if (buffer.length > 0) {
-      const inPackage = buffer.shift()
-      if (inPackage.type == InType.LEFT) {
-        super.rotateLeft(inPackage.index)
-      } else if(inPackage.type == InType.RIGHT) {
-        super.rotateRight(inPackage.index)
-      }
-    }
-    })
-  }
-
-  sendUpdates(player_updates: any[]) {
-    if (this.bufferOut.length < this.networkOut.buffer_size / this.players.length) {
-      this.bufferOut.push(player_updates)
-    } else {
-      console.log("Lost package sendUpdates")
-    }
-  }
-
-  rotateLeft(index: number) {
+  public rotateLeft(index: number) {
     if (this.buffersIn[index].length < this.networkIn.buffer_size) {
       this.buffersIn[index].push({index, type: InType.LEFT})
     } else {
@@ -290,11 +267,40 @@ export class BandwidthSimServer extends LocalServer {
     }
   }
 
-  rotateRight(index: number) {
+  public rotateRight(index: number) {
     if (this.buffersIn[index].length < this.networkIn.buffer_size) {
       this.buffersIn[index].push({index, type: InType.RIGHT})
     } else {
       console.log("Lost package rotateRight " + index)
     }
+  }
+
+  protected sendUpdates(playerUpdates: any[]) {
+    if (this.bufferOut.length < this.networkOut.buffer_size / this.players.length) {
+      this.bufferOut.push(playerUpdates)
+    } else {
+      console.log("Lost package sendUpdates")
+    }
+  }
+
+  private sendOut() {
+    if (this.bufferOut.length > 0) {
+      const outPackage = this.bufferOut.shift()
+      super.sendUpdates(outPackage)
+    }
+  }
+
+  private sendIn() {
+    this.buffersIn.forEach(buffer => {
+      if (buffer.length > 0) {
+        const inPackage = buffer.shift()
+
+        if (inPackage.type === InType.LEFT) {
+          super.rotateLeft(inPackage.index)
+        } else if (inPackage.type === InType.RIGHT) {
+          super.rotateRight(inPackage.index)
+        }
+      }
+    })
   }
 }

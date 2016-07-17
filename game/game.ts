@@ -11,35 +11,35 @@ export interface Point {
   y: number
 }
 
-function createConnectedPolygon (point: Point, thickness: number, last_points: number[], point2: Point) {
+function createConnectedPolygon (point: Point, thickness: number, lastPoints: number[], point2: Point) {
   const angle = Math.atan2(point2.y - point.y, point2.x - point.x)
-  const angle_perp = angle + Math.PI / 2
+  const anglePerp = angle + Math.PI / 2
 
   return [
-    point.x + (Math.cos(angle_perp) * thickness / 2),
-    point.y + (Math.sin(angle_perp) * thickness / 2),
-  ].concat(last_points).concat([
-    point.x - (Math.cos(angle_perp) * thickness / 2),
-    point.y - (Math.sin(angle_perp) * thickness / 2),
+    point.x + (Math.cos(anglePerp) * thickness / 2),
+    point.y + (Math.sin(anglePerp) * thickness / 2),
+  ].concat(lastPoints).concat([
+    point.x - (Math.cos(anglePerp) * thickness / 2),
+    point.y - (Math.sin(anglePerp) * thickness / 2),
   ])
 }
 
 function createPolygon (point1: Point, point2: Point, thickness1: number, thickness2: number) {
   const angle = Math.atan2(point2.y - point1.y, point2.x - point1.x)
-  const angle_perp = angle + Math.PI / 2
+  const anglePerp = angle + Math.PI / 2
 
   return [
-    point1.x + (Math.cos(angle_perp) * thickness1 / 2),
-    point1.y + (Math.sin(angle_perp) * thickness1 / 2),
+    point1.x + (Math.cos(anglePerp) * thickness1 / 2),
+    point1.y + (Math.sin(anglePerp) * thickness1 / 2),
 
-    point2.x + (Math.cos(angle_perp) * thickness2 / 2),
-    point2.y + (Math.sin(angle_perp) * thickness2 / 2),
+    point2.x + (Math.cos(anglePerp) * thickness2 / 2),
+    point2.y + (Math.sin(anglePerp) * thickness2 / 2),
 
-    point2.x - (Math.cos(angle_perp) * thickness2 / 2),
-    point2.y - (Math.sin(angle_perp) * thickness2 / 2),
+    point2.x - (Math.cos(anglePerp) * thickness2 / 2),
+    point2.y - (Math.sin(anglePerp) * thickness2 / 2),
 
-    point1.x - (Math.cos(angle_perp) * thickness1 / 2),
-    point1.y - (Math.sin(angle_perp) * thickness1 / 2),
+    point1.x - (Math.cos(anglePerp) * thickness1 / 2),
+    point1.y - (Math.sin(anglePerp) * thickness1 / 2),
   ]
 }
 
@@ -65,75 +65,76 @@ export function containsPoint (points: number[], x: number, y: number) {
 
 export class Player {
 
-  name: string
-  color: number
-  x: number
-  y: number
-  last_x: number
-  last_y: number
-  fatness: number
-  lfatness: number
-  last_end: any
-  hole_chance: number
-  tail_ticker: number
-  speed: number
-  rotation: number
-  polygon_tail: any[]
-  skip_tail_ticker: number
-  alive: boolean
-  start_point: Point
-  graphics: PIXI.Graphics
+  public graphics: PIXI.Graphics
+  public polygonTail: any[]
+  public rotation: number
+  public fatness: number
+  public alive: boolean
+  public color: number
+  public lastX: number
+  public lastY: number
+  public speed: number
+  public lastEnd: any
+  public x: number
+  public y: number
 
-  constructor(name: string, start_point: Point, color: number, rotation: number) {
+  private name: string
+  private lfatness: number
+  private holeChance: number
+  private tailTicker: number
+  private skipTailTicker: number
+
+  constructor(name: string, startPoint: Point, color: number, rotation: number) {
     this.name = name
     this.color = color
-    this.x = start_point.x
-    this.y = start_point.y
-    this.last_x = this.x
-    this.last_y = this.y
+    this.x = startPoint.x
+    this.y = startPoint.y
+    this.lastX = this.x
+    this.lastY = this.y
     this.fatness = FATNESS_BASE
     this.lfatness = FATNESS_BASE
-    this.last_end = null
-    this.hole_chance = HOLE_CHANCE_BASE
-    this.tail_ticker = 0
+    this.lastEnd = null
+    this.holeChance = HOLE_CHANCE_BASE
+    this.tailTicker = 0
     this.speed = MOVE_SPEED_BASE
     this.rotation = rotation
-    this.polygon_tail = []
-    this.skip_tail_ticker = 0
+    this.polygonTail = []
+    this.skipTailTicker = 0
     this.alive = true
   }
 
-  rotate = (amount: number) => {
+  public rotate = (amount: number) => {
     this.rotation = (this.rotation + amount) % (2 * Math.PI)
-  };
+  }
 
-  createTail = () => {
+  public createTail = () => {
     let r = Math.random()
     let pol: number[] = null
 
-    if (this.skip_tail_ticker <= 0) {
-      if (r > this.hole_chance) {
-        if (this.last_end == null) {
-          pol = createPolygon({ x: this.x, y: this.y }, { x: this.last_x, y: this.last_y }, this.fatness, this.lfatness)
+    if (this.skipTailTicker <= 0) {
+      if (r > this.holeChance) {
+        if (this.lastEnd == null) {
+          pol = createPolygon({ x: this.x, y: this.y }, { x: this.lastX, y: this.lastY }, this.fatness, this.lfatness)
         } else {
-          pol = createConnectedPolygon({ x: this.x, y: this.y }, this.fatness, this.last_end, { x: this.last_x, y: this.last_y })
+          pol = createConnectedPolygon({ x: this.x, y: this.y }, this.fatness, this.lastEnd,
+            { x: this.lastX, y: this.lastY })
         }
 
-        this.last_end = pol.slice(0, 2).concat(pol.slice(-2))
-        this.hole_chance += HOLE_CHANCE_INCREASE
+        this.lastEnd = pol.slice(0, 2).concat(pol.slice(-2))
+        this.holeChance += HOLE_CHANCE_INCREASE
       } else {
-        this.skip_tail_ticker = this.fatness * SKIP_TAIL_FATNESS_MULTIPLIER
-        this.last_end = null
-        this.hole_chance = HOLE_CHANCE_BASE
+        this.skipTailTicker = this.fatness * SKIP_TAIL_FATNESS_MULTIPLIER
+        this.lastEnd = null
+        this.holeChance = HOLE_CHANCE_BASE
       }
     } else {
-      this.skip_tail_ticker--
+      this.skipTailTicker--
     }
 
-    this.last_x = this.x
-    this.last_y = this.y
+    this.lastX = this.x
+    this.lastY = this.y
     this.lfatness = this.fatness
 
     return pol
-  };
+  }
 }
