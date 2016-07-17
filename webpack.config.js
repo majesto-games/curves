@@ -9,13 +9,13 @@ module.exports = {
     filename: 'bundle.js'
   },
   node: {
-    fs: 'empty'
+    fs: 'empty',
+    tls: 'empty'
   },
   module: {
     loaders: [
       { test: /\.ts$/, exclude: /node_modules/, loader: 'awesome-typescript-loader' },
-      { test: /\.json$/, exclude: /node_modules/, loader: 'json' },
-      { test: /\.json$/, include: /node_modules[\/\\](pixi.js|p2)/, loader: 'json' }
+      { test: /\.json$/, loader: 'json-loader' }
     ]
   }
 }

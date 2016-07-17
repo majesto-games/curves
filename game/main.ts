@@ -3,6 +3,7 @@ import { Graphics, autoDetectRenderer, Container } from "pixi.js"
 import { Point, Player, TICK_RATE } from "./game"
 import Server, { BandwidthSimServer as ServerImpl } from "../server/main"
 import pressedKeys, { KEYS } from "./keys"
+import * as quickconnect from "rtc-quickconnect"
 
 import * as R from "ramda"
 
@@ -68,6 +69,11 @@ export class Client {
     this.server.rotateRight(this.index)
   }
 }
+
+quickconnect("http://curves-p2p.herokuapp.com/", { room: "qc-simple-demo" })
+  .on("call:started", function (id, pc, data) {
+    console.log("we have a new connection to: " + id);
+  });
 
 const clients = [new Client(0), new Client(1)]
 
