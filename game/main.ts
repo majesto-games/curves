@@ -1,9 +1,14 @@
 import { Graphics, autoDetectRenderer, Container } from "pixi.js"
 
 import { Point, Player, TICK_RATE } from "./game"
-import Server, { BandwidthSimServer as ServerImpl } from "../server/main"
+import {
+  PlayerUpdate,
+  ServerConnection,
+  LocalServerConnection,
+  LocalClientConnection,
+  LocalServer as ServerImpl,
+} from "../server/main"
 import pressedKeys, { KEYS } from "./keys"
-import * as quickconnect from "rtc-quickconnect"
 
 import * as R from "ramda"
 
@@ -12,7 +17,12 @@ import * as R from "ramda"
 // Remove pesky pixi.js banner from console
 // utils._saidHello = true
 
-interface ClientKeys {
+const keyCombos = [{ left: KEYS.LEFT, right: KEYS.RIGHT }, { left: KEYS.A, right: KEYS.D }]
+
+const container = new Container()
+const graphics = new Graphics()
+
+export interface ClientKeys {
   left: KEYS
   right: KEYS
 }
@@ -22,23 +32,21 @@ export interface PlayerInit {
   startPoint: Point
   color: number
   rotation: number
+  isOwner: boolean
 }
 
 export class Client {
 
-  public keys: ClientKeys
-  public players: Player[]
-  public index: number
+  public players: Player[] = []
+  public id: number
 
-  private server: Server
+  private connection: ServerConnection
 
-  constructor(index: number) {
-    this.index = index
-    this.players = []
-    this.keys = null
+  constructor(connection: ServerConnection) {
+    this.connection = connection
   }
 
-  public updatePlayers = (playerUpdates: any[]) => {
+  public updatePlayers = (playerUpdates: PlayerUpdate[]) => {
     for (let i = 0; i < playerUpdates.length; i++) {
       const update = playerUpdates[i]
       const player = this.players[i]
@@ -56,36 +64,76 @@ export class Client {
     }
   }
 
-  public init = (players: PlayerInit[], server: Server) => {
-    this.players = players.map(player => createPlayer(player.name, player.startPoint, player.color, player.rotation))
-    this.server = server
+  public start = (players: PlayerInit[]) => {
+    this.players = players.map((player, i) => createPlayer(player.name, player.startPoint,
+      player.color, player.rotation, player.isOwner, i))
   }
 
-  public rotateLeft = () => {
-    this.server.rotateLeft(this.index)
+  public rotateLeft = (id: number) => {
+    this.connection.rotateLeft(id)
   }
 
-  public rotateRight = () => {
-    this.server.rotateRight(this.index)
+  public rotateRight = (id: number) => {
+    this.connection.rotateRight(id)
   }
 }
 
-quickconnect("http://curves-p2p.herokuapp.com/", { room: "qc-simple-demo" })
-  .on("call:started", function (id, pc, data) {
-    console.log("we have a new connection to: " + id);
-  });
+let dataChannel: any = null
 
-const clients = [new Client(0), new Client(1)]
+// if (window.location.hash) { // Non-host
+//   const room = window.location.hash.substring(1)
 
-clients[0].keys = { left: KEYS.A, right: KEYS.D }
-clients[1].keys = { left: KEYS.LEFT, right: KEYS.RIGHT }
+//   quickconnect("http://curves-p2p.herokuapp.com/", { room, iceServers: freeice() })
+//     // tell quickconnect we want a datachannel called test
+//     .createDataChannel("test")
+//     // when the test channel is open, let us know
+//     .on("channel:opened:test", function (id, dc) {
+//       dataChannel = dc
+//       dc.onmessage = function (evt) {
+//         console.log("peer " + id + " says: " + evt.data)
+//       }
 
-const server = new ServerImpl(clients, TICK_RATE, {buffer_size: 10, tick_ms: 10}, {buffer_size: 10, tick_ms: 10})
+//       console.log("test dc open for peer: " + id)
+//       dc.send("hi")
+//     })
+// } else { // Host
+//   const room = "leif"
+
+//   console.log(`#${room}`)
+
+//   quickconnect("http://curves-p2p.herokuapp.com/", { room, iceServers: freeice() })
+//     // tell quickconnect we want a datachannel called test
+//     .createDataChannel("test")
+//     // when the test channel is open, let us know
+//     .on("channel:opened:test", function (id, dc) {
+//       dataChannel = dc
+//       dc.onmessage = function (evt) {
+//         console.log("peer " + id + " says: " + evt.data)
+//       }
+
+//       console.log("test dc open for peer: " + id)
+//       dc.send("hi im host")
+//     })
+//     .on("call:started", (id, peer, data) => console.log(id, peer, data))
+// }
+
+const server = new ServerImpl(TICK_RATE)
+const client = new Client(new LocalServerConnection(server))
+server.addConnection(new LocalClientConnection(client))
+server.addPlayer()
+server.addPlayer()
 
 // Browser renderer stuff below
 
-function createPlayer (name: string, startPoint: Point, color: number, rotation: number) {
-  const player = new Player(name, startPoint, color, rotation)
+function createPlayer (name: string, startPoint: Point, color: number,
+  rotation: number, isOwner: boolean, id: number) {
+  let keys: ClientKeys = null
+
+  if (isOwner) {
+    keys = keyCombos.pop()
+  }
+
+  const player = new Player(name, startPoint, color, rotation, keys, id)
 
   const graphics = new Graphics()
   graphics.beginFill(color)
@@ -104,12 +152,7 @@ function updatePlayerGraphics (player: Player) {
   player.graphics.scale = new PIXI.Point(player.fatness, player.fatness)
 }
 
-const container = new Container()
-const graphics = new Graphics()
-
-for (let player of clients[0].players) {
-  container.addChild(player.graphics)
-}
+client.players.forEach(player => container.addChild(player.graphics))
 
 container.addChild(graphics)
 
@@ -166,20 +209,6 @@ class Overlay {
 
 const overlay = new Overlay(graphics)
 
-overlay.addOverlay(`GAME STARTS IN ${pauseTimer}`, clients[0].players, ["A ^ D", "< ^ >"])
-
-// Set a freeze time of 2 seconds
-const timer = setInterval(() => {
-  pauseTimer--
-  overlay.addOverlay(`GAME STARTS IN ${pauseTimer}`, clients[0].players, ["A ^ D", "< ^ >"])
-
-  if (pauseTimer <= 0) {
-    clearInterval(timer)
-    overlay.removeOverlay()
-    server.start()
-  }
-}, 1000)
-
 const renderer = autoDetectRenderer(window.innerWidth, window.innerHeight,
   { antialias: true, backgroundColor: 0x000000 })
 
@@ -191,9 +220,7 @@ const draw = function () {
     return
   }
 
-  // Just render the players from client #0
-  // The other client has keyboard control though.
-  const players = clients[0].players
+  const players = client.players
 
   const playersAlive = players.filter(p => p.alive)
 
@@ -201,20 +228,22 @@ const draw = function () {
     overlay.addOverlay(`GAME OVER`, playersAlive, ["WINNER"])
     running = false
   } else {
-    if (pauseTimer <= 0) {
-      clients.forEach(client => {
-        if (pressedKeys[client.keys.left]) {
-          client.rotateLeft()
-        }
-
-        if (pressedKeys[client.keys.right]) {
-          client.rotateRight()
-        }
-      })
-
-      for (let player of players) {
-        updatePlayerGraphics(player)
+    players.forEach(p => {
+      if (!p.keys) {
+        return
       }
+
+      if (pressedKeys[p.keys.left]) {
+        client.rotateLeft(p.id)
+      }
+
+      if (pressedKeys[p.keys.right]) {
+        client.rotateRight(p.id)
+      }
+    })
+
+    for (let player of players) {
+      updatePlayerGraphics(player)
     }
   }
 

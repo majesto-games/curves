@@ -2,7 +2,10 @@ import { getColors } from "../game/util"
 import { Point, Player, containsPoint, ROTATION_SPEED } from "../game/game"
 import { Client, PlayerInit } from "../game/main"
 
-interface PlayerUpdate {
+import * as quickconnect from "rtc-quickconnect"
+import freeice = require("freeice")
+
+export interface PlayerUpdate {
   x: number
   y: number
   rotation: number
@@ -10,66 +13,135 @@ interface PlayerUpdate {
   alive: boolean
 }
 
-interface Server {
+export interface ServerConnection {
+  addPlayer(): void
   rotateLeft(index: number): void
   rotateRight(index: number): void
 }
 
-export default Server
+export interface ClientConnection {
+  updatePlayers(playerUpdates: PlayerUpdate[]): void
+  start(playerInits: PlayerInit[]): void
+}
 
-export class LocalServer implements Server {
+export class LocalServerConnection implements ServerConnection {
 
-public players: Player[]
+  private server: LocalServer
 
-private clients: Client[]
-private pauseDelta: number
-private paused: boolean
-private tickRate: number
-private lastUpdate: number
+  constructor(server: LocalServer) {
+    this.server = server
+  }
 
-  constructor(clients: Client[], tickRate: number) {
-    this.clients = clients
-    this.pauseDelta = 0
-    this.paused = true
+  public addPlayer() {
+    this.server.addPlayer()
+  }
+
+  public rotateLeft(id: number) {
+    this.server.rotateLeft(id)
+  }
+
+  public rotateRight(id: number) {
+    this.server.rotateRight(id)
+  }
+}
+
+export class LocalClientConnection implements ClientConnection {
+
+  private client: Client
+
+  constructor(client: Client) {
+    this.client = client
+  }
+
+  public updatePlayers(playerUpdates: PlayerUpdate[]) {
+    this.client.updatePlayers(playerUpdates)
+  }
+
+  public start(playerInits: PlayerInit[]) {
+    this.client.start(playerInits)
+  }
+
+}
+
+export class NetworkConnection {
+
+  private server: LocalServer
+
+  constructor(server: LocalServer) {
+    this.server = server
+  }
+
+  public rotateLeft(index: number) {
+    this.server.rotateLeft(index)
+  }
+
+  public rotateRight(index: number) {
+    this.server.rotateRight(index)
+  }
+}
+
+export class LocalServer {
+
+  public players: Player[] = []
+
+  private playerInits: PlayerInit[] = []
+  private clientConnections: LocalClientConnection[] = []
+  private pauseDelta: number = 0
+  private paused: boolean = true
+  private tickRate: number
+  private lastUpdate: number
+  private colors: number[] = getColors(7)
+
+  constructor(tickRate: number) {
     this.tickRate = tickRate
-
-    const players = this.createPlayers()
-    this.clients.forEach(client => client.init(players, this))
-
-    this.players = players.map(obj => new Player(obj.name, obj.startPoint, obj.color, obj.rotation))
   }
 
-  public createPlayers(): PlayerInit[] {
-    let colors = getColors(this.clients.length)
-
-    return this.clients.map(client => {
-      const name = `${client.index}`
-      const startPoint: Point = { x: window.innerWidth / 2 + 300 * (client.index ? 1 : -1), y: window.innerHeight / 2 }
-      const color = colors.pop()
-      const rotation = Math.random() * Math.PI * 2
-
-      return { name, startPoint, color, rotation }
-    })
+  public addConnection(conn: LocalClientConnection) {
+    this.clientConnections.push(conn)
   }
 
-  public start() {
-    if (this.paused) {
-      if (this.pauseDelta) {
-        this.lastUpdate = Date.now() - this.pauseDelta
-      } else {
-        this.lastUpdate = Date.now() - (1000 / this.tickRate)
-      }
-      this.paused = false
-      this.serverTick()
+  public addPlayer() {
+    const id = this.players.length + 1
+    const name = `${id}`
+    const startPoint: Point = {
+      x: window.innerWidth / 2 + 300 * (this.players.length ? 1 : -1),
+      y: window.innerHeight / 2,
+    }
+    const color = this.colors.pop()
+    const rotation = Math.random() * Math.PI * 2
+
+    const playerInit = { name, startPoint, color, rotation, isOwner: true }
+    const player = new Player(name, startPoint, color, rotation, null, id)
+
+    this.playerInits.push(playerInit)
+    this.players.push(player)
+
+    if (this.playerInits.length > 1) {
+      this.clientConnections.forEach(conn => conn.start(this.playerInits))
+      this.start()
     }
   }
 
-  public pause() {
+  public rotateLeft(index: number) {
+    const player = this.players[index]
+    player.rotate(-(ROTATION_SPEED / player.fatness))
+  }
+
+  public rotateRight(index: number) {
+    const player = this.players[index]
+    player.rotate((ROTATION_SPEED / player.fatness))
+  }
+
+  protected sendUpdates(playerUpdates: any[]) {
+    this.clientConnections.map(client => client.updatePlayers(playerUpdates))
+  }
+
+  private pause() {
     this.pauseDelta = Date.now() - this.lastUpdate
     this.paused = true
   }
 
-  public serverTick() {
+  private serverTick() {
     if (this.paused) {
       return
     }
@@ -161,19 +233,21 @@ private lastUpdate: number
     setTimeout(() => this.serverTick(), (this.lastUpdate + (1000 / this.tickRate)) - Date.now())
   }
 
-  public rotateLeft(index: number) {
-    const player = this.players[index]
-    player.rotate(-(ROTATION_SPEED / player.fatness))
+  private start() {
+    if (this.paused) {
+      if (this.pauseDelta) {
+        this.lastUpdate = Date.now() - this.pauseDelta
+      } else {
+        this.lastUpdate = Date.now() - (1000 / this.tickRate)
+      }
+      this.paused = false
+      this.serverTick()
+    }
   }
+}
 
-  public rotateRight(index: number) {
-    const player = this.players[index]
-    player.rotate((ROTATION_SPEED / player.fatness))
-  }
+export class NetworkServer extends LocalServer {
 
-  protected sendUpdates(playerUpdates: any[]) {
-    this.clients.map(client => client.updatePlayers(playerUpdates))
-  }
 }
 
 export class PingSimServer extends LocalServer {
@@ -181,7 +255,7 @@ export class PingSimServer extends LocalServer {
   private rtt: number
 
   constructor(clients: Client[], tickRate: number, rtt: number) {
-    super(clients, tickRate)
+    super(tickRate)
     this.rtt = rtt
   }
 
@@ -204,7 +278,7 @@ export class RandomPackageLossSimServer extends LocalServer {
   private outLoss: number
 
   constructor(clients: Client[], tickRate: number, inLoss: number, outLoss: number) {
-    super(clients, tickRate)
+    super(tickRate)
     this.inLoss = inLoss
     this.outLoss = outLoss
   }
@@ -251,7 +325,7 @@ export class BandwidthSimServer extends LocalServer {
   private bufferOut: any[][] = []
 
   constructor(clients: Client[], tickRate: number, networkIn: NetworkSettings, networkOut: NetworkSettings) {
-    super(clients, tickRate)
+    super(tickRate)
     this.networkIn = networkIn
     this.networkOut = networkOut
     this.buffersIn = clients.map(() => [])

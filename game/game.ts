@@ -1,3 +1,5 @@
+import { ClientKeys } from "./main"
+
 export const TICK_RATE = 64
 export const SKIP_TAIL_FATNESS_MULTIPLIER = 0.03 * TICK_RATE
 export const ROTATION_SPEED = 0.5
@@ -77,6 +79,8 @@ export class Player {
   public lastEnd: any
   public x: number
   public y: number
+  public keys: ClientKeys
+  public id: number
 
   private name: string
   private lfatness: number
@@ -84,7 +88,7 @@ export class Player {
   private tailTicker: number
   private skipTailTicker: number
 
-  constructor(name: string, startPoint: Point, color: number, rotation: number) {
+  constructor(name: string, startPoint: Point, color: number, rotation: number, keys: ClientKeys, id: number) {
     this.name = name
     this.color = color
     this.x = startPoint.x
@@ -101,6 +105,8 @@ export class Player {
     this.polygonTail = []
     this.skipTailTicker = 0
     this.alive = true
+    this.keys = keys
+    this.id = id
   }
 
   public rotate = (amount: number) => {
