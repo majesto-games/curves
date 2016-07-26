@@ -26,9 +26,9 @@ export interface ClientConnection {
 
 export class LocalServerConnection implements ServerConnection {
 
-  private server: LocalServer
+  private server: Server
 
-  constructor(server: LocalServer) {
+  constructor(server: Server) {
     this.server = server
   }
 
@@ -63,29 +63,164 @@ export class LocalClientConnection implements ClientConnection {
 
 }
 
-export class NetworkConnection {
+export interface Action {
+  type: string
+  payload?: any
+}
 
-  private server: LocalServer
+function createAction(type: string, payloadCreator?: Function) {
+  const finalPayloadCreator = typeof payloadCreator === 'function'
+    ? payloadCreator
+    : (a: any) => a;
 
-  constructor(server: LocalServer) {
-    this.server = server
+  const actionHandler = (...args: any[]) => {
+
+    const action: Action = {
+      type
+    };
+
+    const payload = finalPayloadCreator(...args);
+    if (payload != null) {
+      action.payload = payload;
+    }
+
+    return action;
+  };
+
+  actionHandler.toString = () => type
+
+  return actionHandler;
+}
+
+const ADD_PLAYER = "ADD_PLAYER"
+const addPlayer = createAction(ADD_PLAYER)
+const ROTATE = "ROTATE"
+const rotate = createAction(ROTATE, (direction: number, index: number) => ({ direction, index }))
+const UPDATE_PLAYERS = "UPDATE_PLAYERS"
+const updatePlayers = createAction(UPDATE_PLAYERS, (updates: PlayerUpdate[]) => updates)
+const START = "START"
+const start = createAction(START, (playerInits: PlayerInit[]) => playerInits)
+const LEFT = -1
+const RIGHT = 1
+
+export class NetworkServerConnection implements ServerConnection {
+
+  private dataChannel: any
+
+  constructor(dataChannel: any) {
+    this.dataChannel = dataChannel
+  }
+
+  public addPlayer() {
+    this.send(addPlayer())
   }
 
   public rotateLeft(index: number) {
-    this.server.rotateLeft(index)
+    this.send(rotate(LEFT, index))
   }
 
   public rotateRight(index: number) {
-    this.server.rotateRight(index)
+    this.send(rotate(RIGHT, index))
+  }
+
+  private send(a: Action) {
+    this.dataChannel.send(JSON.stringify(a))
   }
 }
 
-export class LocalServer {
+export class NetworkClientConnection implements ClientConnection {
+
+  private dataChannel: any
+
+  constructor(dataChannel: any) {
+    this.dataChannel = dataChannel
+  }
+
+  public updatePlayers(playerUpdates: PlayerUpdate[]) {
+    this.send(updatePlayers(playerUpdates))
+  }
+
+  public start(playerInits: PlayerInit[]) {
+    this.send(start(playerInits))
+  }
+
+  private send(a: Action) {
+    this.dataChannel.send(JSON.stringify(a))
+  }
+}
+
+export function clientDataChannel(room: string = "leif") {
+  return new Promise((resolve, reject) => {
+    quickconnect("http://curves-p2p.herokuapp.com/", { room, iceServers: freeice() })
+    // tell quickconnect we want a datachannel called test
+    .createDataChannel("test")
+    // when the test channel has opened a RTCDataChannel to a peer, let us know
+    .on("channel:opened:test", function (peerId: any, dc: any) {
+      dc.onmessage = function (evt: any) {
+        if (evt.data === "WELCOME") {
+          console.log("got WELCOME from ", peerId)
+          resolve(dc)
+        }
+      }
+    })
+  })
+}
+
+export function serverDataChannel(room: string = "leif", cb: (dc: any) => any) {
+  quickconnect("http://curves-p2p.herokuapp.com/", { room, iceServers: freeice() })
+  // tell quickconnect we want a datachannel called test
+  .createDataChannel("test")
+  // when the test channel has opened a RTCDataChannel to a peer, let us know
+  .on("channel:opened:test", function (peerId: any, dc: any) {
+    dc.send("WELCOME")
+    console.log("sending WELCOME to ", peerId)
+    cb(dc)
+  })
+}
+
+export function mapServerActions(server: Server) {
+  return (action: Action) => {
+    const { type, payload } = action
+    console.log(type, payload)
+    switch (type) {
+      case ADD_PLAYER:
+        server.addPlayer()
+        break
+      case ROTATE:
+        payload.direction == LEFT ? server.rotateLeft(payload.index) : server.rotateRight(payload.index)
+        break
+      default:
+        console.log("Didn't handle", action)
+    }
+  }
+}
+
+export function mapClientActions(client: Client) {
+  return (action: Action) => {
+    const { payload, type } = action
+    console.log(type)
+    switch (type) {
+      case START:
+        client.start(payload)
+        break
+      case UPDATE_PLAYERS:
+        client.updatePlayers(payload)
+        break
+      default:
+        console.log("Didn't handle", action)
+    }
+  }
+}
+
+const SERVER_WIDTH = 1280
+const SERVER_HEIGHT = 720
+
+export class Server {
 
   public players: Player[] = []
 
   private playerInits: PlayerInit[] = []
-  private clientConnections: LocalClientConnection[] = []
+  private clientConnections: ClientConnection[] = []
   private pauseDelta: number = 0
   private paused: boolean = true
   private tickRate: number
@@ -96,16 +231,17 @@ export class LocalServer {
     this.tickRate = tickRate
   }
 
-  public addConnection(conn: LocalClientConnection) {
+  public addConnection(conn: ClientConnection) {
     this.clientConnections.push(conn)
+    console.log("connection added, total: ", this.clientConnections.length)
   }
 
   public addPlayer() {
     const id = this.players.length + 1
     const name = `${id}`
     const startPoint: Point = {
-      x: window.innerWidth / 2 + 300 * (this.players.length ? 1 : -1),
-      y: window.innerHeight / 2,
+      x: SERVER_WIDTH / 2 + 300 * (this.players.length ? 1 : -1),
+      y: SERVER_HEIGHT / 2,
     }
     const color = this.colors.pop()
     const rotation = Math.random() * Math.PI * 2
@@ -118,17 +254,20 @@ export class LocalServer {
 
     if (this.playerInits.length > 1) {
       this.clientConnections.forEach(conn => conn.start(this.playerInits))
+      console.log("starting server")
       this.start()
     }
   }
 
   public rotateLeft(index: number) {
     const player = this.players[index]
+    console.log("rotateLeft", index, player)
     player.rotate(-(ROTATION_SPEED / player.fatness))
   }
 
   public rotateRight(index: number) {
     const player = this.players[index]
+    console.log("rotateRight", index, player)
     player.rotate((ROTATION_SPEED / player.fatness))
   }
 
@@ -165,26 +304,26 @@ export class LocalServer {
         player.y -= Math.cos(player.rotation) * player.speed
 
         // Edge wrapping
-        if (player.x > window.innerWidth + player.fatness) {
+        if (player.x > SERVER_WIDTH + player.fatness) {
           player.x = -player.fatness
           player.lastX = player.x - 1
           player.lastEnd = null
         }
 
-        if (player.y > window.innerHeight + player.fatness) {
+        if (player.y > SERVER_HEIGHT + player.fatness) {
           player.y = -player.fatness
           player.lastY = player.y - 1
           player.lastEnd = null
         }
 
         if (player.x < -player.fatness) {
-          player.x = window.innerWidth + player.fatness
+          player.x = SERVER_WIDTH + player.fatness
           player.lastX = player.x + 1
           player.lastEnd = null
         }
 
         if (player.y < -player.fatness) {
-          player.y = window.innerHeight + player.fatness
+          player.y = SERVER_HEIGHT + player.fatness
           player.lastY = player.y + 1
           player.lastEnd = null
         }
@@ -246,11 +385,11 @@ export class LocalServer {
   }
 }
 
-export class NetworkServer extends LocalServer {
+export class NetworkServer extends Server {
 
 }
 
-export class PingSimServer extends LocalServer {
+export class PingSimServer extends Server {
 
   private rtt: number
 
@@ -272,7 +411,7 @@ export class PingSimServer extends LocalServer {
   }
 }
 
-export class RandomPackageLossSimServer extends LocalServer {
+export class RandomPackageLossSimServer extends Server {
 
   private inLoss: number
   private outLoss: number
@@ -317,7 +456,7 @@ interface InPackage {
   type: InType
 }
 
-export class BandwidthSimServer extends LocalServer {
+export class BandwidthSimServer extends Server {
 
   private networkIn: NetworkSettings
   private buffersIn: InPackage[][]
@@ -335,7 +474,7 @@ export class BandwidthSimServer extends LocalServer {
 
   public rotateLeft(index: number) {
     if (this.buffersIn[index].length < this.networkIn.buffer_size) {
-      this.buffersIn[index].push({index, type: InType.LEFT})
+      this.buffersIn[index].push({ index, type: InType.LEFT })
     } else {
       console.log("Lost package rotateLeft " + index)
     }
@@ -343,7 +482,7 @@ export class BandwidthSimServer extends LocalServer {
 
   public rotateRight(index: number) {
     if (this.buffersIn[index].length < this.networkIn.buffer_size) {
-      this.buffersIn[index].push({index, type: InType.RIGHT})
+      this.buffersIn[index].push({ index, type: InType.RIGHT })
     } else {
       console.log("Lost package rotateRight " + index)
     }

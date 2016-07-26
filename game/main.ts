@@ -5,8 +5,14 @@ import {
   PlayerUpdate,
   ServerConnection,
   LocalServerConnection,
+  NetworkClientConnection,
+  NetworkServerConnection,
   LocalClientConnection,
-  LocalServer as ServerImpl,
+  Server as ServerImpl,
+  clientDataChannel,
+  serverDataChannel,
+  mapServerActions,
+  mapClientActions,
 } from "../server/main"
 import pressedKeys, { KEYS } from "./keys"
 
@@ -78,54 +84,7 @@ export class Client {
   }
 }
 
-let dataChannel: any = null
-
-// if (window.location.hash) { // Non-host
-//   const room = window.location.hash.substring(1)
-
-//   quickconnect("http://curves-p2p.herokuapp.com/", { room, iceServers: freeice() })
-//     // tell quickconnect we want a datachannel called test
-//     .createDataChannel("test")
-//     // when the test channel is open, let us know
-//     .on("channel:opened:test", function (id, dc) {
-//       dataChannel = dc
-//       dc.onmessage = function (evt) {
-//         console.log("peer " + id + " says: " + evt.data)
-//       }
-
-//       console.log("test dc open for peer: " + id)
-//       dc.send("hi")
-//     })
-// } else { // Host
-//   const room = "leif"
-
-//   console.log(`#${room}`)
-
-//   quickconnect("http://curves-p2p.herokuapp.com/", { room, iceServers: freeice() })
-//     // tell quickconnect we want a datachannel called test
-//     .createDataChannel("test")
-//     // when the test channel is open, let us know
-//     .on("channel:opened:test", function (id, dc) {
-//       dataChannel = dc
-//       dc.onmessage = function (evt) {
-//         console.log("peer " + id + " says: " + evt.data)
-//       }
-
-//       console.log("test dc open for peer: " + id)
-//       dc.send("hi im host")
-//     })
-//     .on("call:started", (id, peer, data) => console.log(id, peer, data))
-// }
-
-const server = new ServerImpl(TICK_RATE)
-const client = new Client(new LocalServerConnection(server))
-server.addConnection(new LocalClientConnection(client))
-server.addPlayer()
-server.addPlayer()
-
-// Browser renderer stuff below
-
-function createPlayer (name: string, startPoint: Point, color: number,
+function createPlayer(name: string, startPoint: Point, color: number,
   rotation: number, isOwner: boolean, id: number) {
   let keys: ClientKeys = null
 
@@ -146,11 +105,43 @@ function createPlayer (name: string, startPoint: Point, color: number,
   return player
 }
 
-function updatePlayerGraphics (player: Player) {
+function updatePlayerGraphics(player: Player) {
   player.graphics.x = player.x
   player.graphics.y = player.y
   player.graphics.scale = new PIXI.Point(player.fatness, player.fatness)
 }
+
+new Promise(resolve => {
+  if (window.location.hash) { // not server
+    clientDataChannel().then((dc: any) => {
+      const conn = new NetworkServerConnection(dc)
+      const client = new Client(conn)
+      resolve(client)
+      const m = mapClientActions(client)
+      dc.onmessage = (evt: any) => {
+        m(JSON.parse(evt.data))
+      }
+      conn.addPlayer()
+    })
+  } else {
+    const server = new ServerImpl(TICK_RATE)
+    const conn = new LocalServerConnection(server)
+    const client = new Client(conn)
+    server.addConnection(new LocalClientConnection(client))
+    const m = mapServerActions(server)
+
+    serverDataChannel(undefined, dc => {
+      server.addConnection(new NetworkClientConnection(dc))
+
+      dc.onmessage = (evt: any) => {
+        m(JSON.parse(evt.data))
+      }
+    })
+    conn.addPlayer()
+    resolve(client)
+  }
+}).then((client: Client) => {
+// Browser renderer stuff below
 
 client.players.forEach(player => container.addChild(player.graphics))
 
@@ -212,39 +203,26 @@ const overlay = new Overlay(graphics)
 const renderer = autoDetectRenderer(window.innerWidth, window.innerHeight,
   { antialias: true, backgroundColor: 0x000000 })
 
-let running = true
-
 const draw = function () {
-
-  if (!running) {
-    return
-  }
 
   const players = client.players
 
-  const playersAlive = players.filter(p => p.alive)
-
-  if (playersAlive.length < 2) {
-    overlay.addOverlay(`GAME OVER`, playersAlive, ["WINNER"])
-    running = false
-  } else {
-    players.forEach(p => {
-      if (!p.keys) {
-        return
-      }
-
-      if (pressedKeys[p.keys.left]) {
-        client.rotateLeft(p.id)
-      }
-
-      if (pressedKeys[p.keys.right]) {
-        client.rotateRight(p.id)
-      }
-    })
-
-    for (let player of players) {
-      updatePlayerGraphics(player)
+  players.forEach(p => {
+    if (!p.keys) {
+      return
     }
+
+    if (pressedKeys[p.keys.left]) {
+      client.rotateLeft(p.id)
+    }
+
+    if (pressedKeys[p.keys.right]) {
+      client.rotateRight(p.id)
+    }
+  })
+
+  for (let player of players) {
+    updatePlayerGraphics(player)
   }
 
   renderer.render(container)
@@ -261,3 +239,4 @@ window.onresize = (e) => {
 document.getElementById("game").appendChild(renderer.view)
 
 draw()
+})
