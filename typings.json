@@ -3,6 +3,7 @@
     "ramda": "registry:npm/ramda#0.21.0+20160526170405"
   },
   "globalDependencies": {
+    "es6-shim": "registry:dt/es6-shim#0.31.2+20160602141504",
     "pixi.js": "registry:dt/pixi.js#3.0.9+20160404013751"
   }
 }
