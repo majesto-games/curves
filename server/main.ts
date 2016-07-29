@@ -64,44 +64,69 @@ export class LocalClientConnection implements ClientConnection {
 }
 
 export interface Action {
-  type: string
+  readonly type: string
   payload?: any
 }
 
-function createAction(type: string, payloadCreator?: Function) {
-  const finalPayloadCreator = typeof payloadCreator === 'function'
-    ? payloadCreator
-    : (a: any) => a;
 
-  const actionHandler = (...args: any[]) => {
-
-    const action: Action = {
-      type
-    };
-
-    const payload = finalPayloadCreator(...args);
-    if (payload != null) {
-      action.payload = payload;
-    }
-
-    return action;
-  };
-
-  actionHandler.toString = () => type
-
-  return actionHandler;
+const ADD_PLAYER: "ADD_PLAYER" = "ADD_PLAYER"
+interface AddPlayer extends Action {
+  type: "ADD_PLAYER"
+}
+function addPlayer(): AddPlayer {
+  return {
+    type: ADD_PLAYER
+  }
 }
 
-const ADD_PLAYER = "ADD_PLAYER"
-const addPlayer = createAction(ADD_PLAYER)
-const ROTATE = "ROTATE"
-const rotate = createAction(ROTATE, (direction: number, index: number) => ({ direction, index }))
-const UPDATE_PLAYERS = "UPDATE_PLAYERS"
-const updatePlayers = createAction(UPDATE_PLAYERS, (updates: PlayerUpdate[]) => updates)
-const START = "START"
-const start = createAction(START, (playerInits: PlayerInit[]) => playerInits)
+const ROTATE: "ROTATE" = "ROTATE"
+interface Rotate extends Action {
+  type: "ROTATE"
+  payload: {
+    direction: number
+    index: number
+  }
+}
+
+function rotate(direction: number, index: number) {
+  return {
+    type: ROTATE,
+    payload: {
+      direction: direction,
+      index: index,
+    }
+  }
+}
+
+const UPDATE_PLAYERS: "UPDATE_PLAYERS" = "UPDATE_PLAYERS"
+interface UpdatePlayers extends Action {
+  type: "UPDATE_PLAYERS"
+  payload: PlayerUpdate[]
+}
+function updatePlayers(updates: PlayerUpdate[]) {
+  return {
+    type: ROTATE,
+    payload: updates,
+  }
+}
+
+const START: "START" = "START"
+interface Start extends Action {
+  type: "START"
+  payload: PlayerInit[]
+}
+function start(playerInits: PlayerInit[]) {
+  return {
+    type: ROTATE,
+    payload: playerInits,
+  }
+}
+
 const LEFT = -1
 const RIGHT = 1
+
+type ServerAction = AddPlayer | Rotate
+type ClientAction  = UpdatePlayers | Start
 
 export class NetworkServerConnection implements ServerConnection {
 
@@ -178,17 +203,19 @@ export function serverDataChannel(room: string = "leif", cb: (dc: any) => any) {
   })
 }
 
+
 export function mapServerActions(server: Server) {
-  return (action: Action) => {
-    const { type, payload } = action
-    console.log(type, payload)
-    switch (type) {
-      case ADD_PLAYER:
+  return (action: ServerAction) => {
+    switch (action.type) {
+      case ADD_PLAYER: {
         server.addPlayer()
         break
-      case ROTATE:
-        payload.direction == LEFT ? server.rotateLeft(payload.index) : server.rotateRight(payload.index)
+      }
+      case ROTATE: {
+        const { payload } = action
+        payload.direction === LEFT ? server.rotateLeft(payload.index) : server.rotateRight(payload.index)
         break
+      }
       default:
         console.log("Didn't handle", action)
     }
@@ -196,16 +223,18 @@ export function mapServerActions(server: Server) {
 }
 
 export function mapClientActions(client: Client) {
-  return (action: Action) => {
-    const { payload, type } = action
-    console.log(type)
-    switch (type) {
-      case START:
+  return (action: ClientAction) => {
+    switch (action.type) {
+      case START: {
+        const { payload } = action
         client.start(payload)
         break
-      case UPDATE_PLAYERS:
+      }
+      case UPDATE_PLAYERS: {
+        const { payload } = action
         client.updatePlayers(payload)
         break
+      }
       default:
         console.log("Didn't handle", action)
     }
