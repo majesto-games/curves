@@ -3,7 +3,7 @@ module.exports = {
     extensions: ['', '.ts', '.webpack.js', '.web.js', '.js']
   },
   devtool: 'source-map',
-  entry: './game/main.ts',
+  entry: './index.tsx',
   output: {
     path: __dirname + '/game',
     filename: 'bundle.js'
@@ -14,8 +14,8 @@ module.exports = {
   },
   module: {
     loaders: [
-      { test: /\.ts$/, exclude: /node_modules/, loader: 'awesome-typescript-loader' },
+      { test: /\.tsx?$/, exclude: /node_modules/, loader: 'awesome-typescript-loader' },
       { test: /\.json$/, loader: 'json-loader' }
     ]
-  }
+  },
 }

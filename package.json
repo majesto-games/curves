@@ -26,6 +26,9 @@
     "keypress.js": "^2.1.0",
     "pixi.js": "^3.0.8",
     "ramda": "^0.21.0",
+    "react": "^15.3.0",
+    "react-dom": "^15.3.0",
+    "react-router": "^2.6.0",
     "rtc-quickconnect": "^5.5.1",
     "sillyname": "^0.1.0"
   },

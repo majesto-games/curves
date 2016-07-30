@@ -1,9 +1,12 @@
 {
   "dependencies": {
-    "ramda": "registry:npm/ramda#0.21.0+20160526170405"
+    "ramda": "registry:npm/ramda#0.21.0+20160526170405",
+    "react-router": "registry:npm/react-router#2.4.0+20160723033700"
   },
   "globalDependencies": {
     "es6-shim": "registry:dt/es6-shim#0.31.2+20160602141504",
-    "pixi.js": "registry:dt/pixi.js#3.0.9+20160404013751"
+    "pixi.js": "registry:dt/pixi.js#3.0.9+20160404013751",
+    "react": "registry:dt/react#0.14.0+20160720060442",
+    "react-dom": "registry:dt/react-dom#0.14.0+20160412154040"
   }
 }

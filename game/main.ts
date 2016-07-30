@@ -1,19 +1,29 @@
 import { Graphics, autoDetectRenderer, Container } from "pixi.js"
-
 import { Point, Player, TICK_RATE } from "./game"
 import {
   PlayerUpdate,
+  PlayerInit,
+} from "../server/actions"
+
+import {
+  Server as ServerImpl,
+} from "../server/main"
+
+import {
   ServerConnection,
   LocalServerConnection,
   NetworkClientConnection,
   NetworkServerConnection,
   LocalClientConnection,
-  Server as ServerImpl,
   clientDataChannel,
   serverDataChannel,
+} from "../server/connections"
+
+import {
   mapServerActions,
   mapClientActions,
-} from "../server/main"
+} from "../server/reducers"
+
 import pressedKeys, { KEYS } from "./keys"
 
 import * as R from "ramda"
@@ -31,14 +41,6 @@ const graphics = new Graphics()
 export interface ClientKeys {
   left: KEYS
   right: KEYS
-}
-
-export interface PlayerInit {
-  name: string
-  startPoint: Point
-  color: number
-  rotation: number
-  isOwner: boolean
 }
 
 export class Client {
@@ -71,6 +73,7 @@ export class Client {
   }
 
   public start = (players: PlayerInit[]) => {
+    console.log("starting with", players)
     this.players = players.map((player, i) => createPlayer(player.name, player.startPoint,
       player.color, player.rotation, player.isOwner, i))
   }
@@ -111,19 +114,23 @@ function updatePlayerGraphics(player: Player) {
   player.graphics.scale = new PIXI.Point(player.fatness, player.fatness)
 }
 
-new Promise(resolve => {
-  if (window.location.hash) { // not server
+export function createGame(isServer: boolean) {
+  return new Promise(resolve => {
+  if (!isServer) { // not server
+    console.log("Not server")
     clientDataChannel().then((dc: any) => {
       const conn = new NetworkServerConnection(dc)
       const client = new Client(conn)
       resolve(client)
       const m = mapClientActions(client)
       dc.onmessage = (evt: any) => {
+        console.log(evt)
         m(JSON.parse(evt.data))
       }
       conn.addPlayer()
     })
   } else {
+    console.log("Server")
     const server = new ServerImpl(TICK_RATE)
     const conn = new LocalServerConnection(server)
     const client = new Client(conn)
@@ -236,7 +243,7 @@ window.onresize = (e) => {
   renderer.resize(window.innerWidth, window.innerHeight)
 }
 
-document.getElementById("game").appendChild(renderer.view)
-
 draw()
+return renderer.view
 })
+}

@@ -12,7 +12,10 @@
      */
      "semicolon": [true, "never"],
      "interface-name": [true, "never-prefix"],
-     "align": [false]
+     "align": [false],
+     "sort-object-literal-keys": false,
+     "linebreak-style": [true, "LF"],
+     "indent": [true, "spaces"]
   },
   "rulesDirectory": [
     /*
