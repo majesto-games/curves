@@ -25,7 +25,7 @@ export interface Rotate extends Action {
   }
 }
 
-export function rotate(direction: number, index: number) {
+export function rotate(direction: number, index: number): Rotate {
   return {
     type: ROTATE,
     payload: {
@@ -47,7 +47,7 @@ export interface UpdatePlayers extends Action {
   type: "UPDATE_PLAYERS"
   payload: PlayerUpdate[]
 }
-export function updatePlayers(updates: PlayerUpdate[]) {
+export function updatePlayers(updates: PlayerUpdate[]): UpdatePlayers {
   return {
     type: UPDATE_PLAYERS,
     payload: updates,
@@ -66,7 +66,7 @@ export interface Start extends Action {
   type: "START"
   payload: PlayerInit[]
 }
-export function start(playerInits: PlayerInit[]) {
+export function start(playerInits: PlayerInit[]): Start {
   return {
     type: START,
     payload: playerInits,
