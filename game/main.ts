@@ -6,7 +6,7 @@ import {
 } from "../server/actions"
 
 import {
-  Server as ServerImpl,
+  Server,
 } from "../server/main"
 
 import {
@@ -131,7 +131,7 @@ export function createGame(isServer: boolean) {
     })
   } else {
     console.log("Server")
-    const server = new ServerImpl(TICK_RATE)
+    const server = new Server(TICK_RATE)
     const conn = new LocalServerConnection(server)
     const client = new Client(conn)
     server.addConnection(new LocalClientConnection(client))
