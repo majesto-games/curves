@@ -39,7 +39,7 @@ export interface PlayerUpdate {
   x: number
   y: number
   rotation: number
-  tailPart: number[]
+  tailPart: number[] | null
   alive: boolean
 }
 export const UPDATE_PLAYERS: "UPDATE_PLAYERS" = "UPDATE_PLAYERS"
@@ -73,8 +73,21 @@ export function start(playerInits: PlayerInit[]): Start {
   }
 }
 
+export const END: "END" = "END"
+export interface End extends Action {
+  type: "END"
+  payload: number | null
+}
+export function end(winnerId: number | null): End {
+  return {
+    type: END,
+    payload: winnerId,
+  }
+}
+
+
 export const LEFT = -1
 export const RIGHT = 1
 
 export type ServerAction = AddPlayer | Rotate
-export type ClientAction  = UpdatePlayers | Start
+export type ClientAction  = UpdatePlayers | Start | End

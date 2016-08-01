@@ -85,14 +85,18 @@ export class Client {
   public rotateRight = (id: number) => {
     this.connection.rotateRight(id)
   }
+
+  public end = (winnerId: number | null) => {
+    alert(winnerId)
+  }
 }
 
 function createPlayer(name: string, startPoint: Point, color: number,
   rotation: number, isOwner: boolean, id: number) {
-  let keys: ClientKeys = null
+  let keys: ClientKeys | null = null
 
   if (isOwner) {
-    keys = keyCombos.pop()
+    keys = keyCombos.pop() || null
   }
 
   const player = new Player(name, startPoint, color, rotation, keys, id)
@@ -210,7 +214,7 @@ const overlay = new Overlay(graphics)
 const renderer = autoDetectRenderer(window.innerWidth, window.innerHeight,
   { antialias: true, backgroundColor: 0x000000 })
 
-const draw = function () {
+function draw() {
 
   const players = client.players
 

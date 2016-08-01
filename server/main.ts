@@ -39,7 +39,7 @@ export class Server {
       x: SERVER_WIDTH / 2 + 300 * (this.players.length ? 1 : -1),
       y: SERVER_HEIGHT / 2,
     }
-    const color = this.colors.pop()
+    const color = this.colors.pop() as number
     const rotation = Math.random() * Math.PI * 2
 
     const playerInit = { name, startPoint, color, rotation, isOwner: true }
@@ -49,7 +49,7 @@ export class Server {
     this.players.push(player)
 
     if (this.playerInits.length > 1) {
-      this.clientConnections.forEach(conn => conn.start(this.playerInits))
+      this.send(c => c.start(this.playerInits))
       console.log("starting server")
       this.start()
     }
@@ -67,8 +67,8 @@ export class Server {
     player.rotate((ROTATION_SPEED / player.fatness))
   }
 
-  protected sendUpdates(playerUpdates: any[]) {
-    this.clientConnections.map(client => client.updatePlayers(playerUpdates))
+  private send(f: (client: ClientConnection) => void) {
+    this.clientConnections.forEach(f)
   }
 
   private pause() {
@@ -90,6 +90,7 @@ export class Server {
       const playersAlive = this.players.filter(player => player.alive)
 
       if (playersAlive.length < 2) {
+        this.send(c => c.end((playersAlive[0] && playersAlive[0].id) || null))
         return
       }
 
@@ -125,7 +126,7 @@ export class Server {
         }
 
         // Create tail polygon, this returns null if it's supposed to be a hole
-        let p = player.createTail()
+        const p = player.createTail()
 
         if (p !== null) {
           const collides = (collider: Player) => {
@@ -162,7 +163,7 @@ export class Server {
         })
       }
 
-      this.sendUpdates(playerUpdates)
+      this.send(c => c.updatePlayers(playerUpdates))
     }
 
     setTimeout(() => this.serverTick(), (this.lastUpdate + (1000 / this.tickRate)) - Date.now())

@@ -13,6 +13,8 @@ import {
   Action,
   updatePlayers,
   start,
+  END,
+  end
 } from "./actions"
 
 export interface ServerConnection {
@@ -24,6 +26,7 @@ export interface ServerConnection {
 export interface ClientConnection {
   updatePlayers(playerUpdates: PlayerUpdate[]): void
   start(playerInits: PlayerInit[]): void
+  end(winnerId: number | null): void
 }
 
 export class LocalServerConnection implements ServerConnection {
@@ -61,6 +64,10 @@ export class LocalClientConnection implements ClientConnection {
 
   public start(playerInits: PlayerInit[]) {
     this.client.start(playerInits)
+  }
+
+  public end(winnerId: number | null) {
+    this.client.end(winnerId)
   }
 
 }
@@ -105,6 +112,10 @@ export class NetworkClientConnection implements ClientConnection {
 
   public start(playerInits: PlayerInit[]) {
     this.send(start(playerInits))
+  }
+
+  public end (winnerId: number | null) {
+    this.send(end(winnerId))
   }
 
   private send(a: Action) {

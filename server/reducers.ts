@@ -8,7 +8,8 @@ import {
   ADD_PLAYER,
   ROTATE,
   START,
-  UPDATE_PLAYERS
+  UPDATE_PLAYERS,
+  END,
 } from "./actions"
 
 export function mapServerActions(server: Server) {
@@ -41,6 +42,10 @@ export function mapClientActions(client: Client) {
         const { payload } = action
         client.updatePlayers(payload)
         break
+      }
+      case END: {
+        const { payload } = action
+        client.end(payload)
       }
       default:
         console.log("Client didn't handle", action)

@@ -10,5 +10,5 @@ ReactDOM.render(
     <Route path="/" component={Lobby} />
     <Route path="/game" component={Game} />
   </Router>,
-  document.getElementById("content")
+  document.getElementById("content") as HTMLElement
 )

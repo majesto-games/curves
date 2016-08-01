@@ -16,7 +16,7 @@ export default class Game extends React.Component<GameProps, any> {
   public componentDidMount() {
     const { query } = this.props.location
     console.log("Server?", query && !!query.server)
-    createGame(query && !!query.server).then(view => {
+    createGame(!!query && !!query.server).then(view => {
       this.div.appendChild(view)
     })
   }
