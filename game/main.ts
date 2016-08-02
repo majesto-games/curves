@@ -179,6 +179,7 @@ export function createGame(room?: string) {
       })
     } else {
       console.log("Server")
+      overlay.addOverlay("Wating for players...");
       const server = new Server(TICK_RATE)
       const conn = new LocalServerConnection(server)
       const client = new Client(conn)
@@ -189,7 +190,14 @@ export function createGame(room?: string) {
         server.addConnection(new NetworkClientConnection(dc))
 
         dc.onmessage = (evt: any) => {
-          m(JSON.parse(evt.data))
+          const data = JSON.parse(evt.data)
+
+          // HACK
+          if (data.type === "ADD_PLAYER") {
+            overlay.removeOverlay()
+          }
+
+          m(data)
         }
       })
       conn.addPlayer()
