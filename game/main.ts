@@ -25,7 +25,7 @@ import {
   mapClientActions,
 } from "../server/reducers"
 
-import pressedKeys, { KEYS } from "./keys"
+import pressedKeys, { KEYS, registerKeys } from "./keys"
 
 import * as R from "ramda"
 
@@ -35,6 +35,7 @@ import * as R from "ramda"
 // utils._saidHello = true
 
 const keyCombos = [{ left: KEYS.LEFT, right: KEYS.RIGHT }, { left: KEYS.A, right: KEYS.D }]
+registerKeys(Array.prototype.concat.apply([], keyCombos.map(n => [n.left, n.right])))
 
 const container = new Container()
 const graphics = new Graphics()
@@ -128,7 +129,6 @@ export function createGame(room?: string) {
         const client = new Client(conn)
         const m = mapClientActions(client)
         dc.onmessage = (evt: any) => {
-          console.log(evt)
           m(JSON.parse(evt.data))
         }
         conn.addPlayer()

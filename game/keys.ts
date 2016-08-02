@@ -120,15 +120,24 @@ interface PressedKeys {
   [key: number]: boolean
 }
 
-const keys: PressedKeys = {}
+
+const keys: PressedKeys = {
+}
+
+export function registerKeys(keysToRegister: KEYS[]) {
+  keysToRegister.forEach(element => {
+    keys[element] = keys[element] || false
+  })
+}
 
 export default (() => {
   function setKeysPressed (e: KeyboardEvent, pressed: boolean) {
-    if (e.metaKey || e.ctrlKey || e.altKey) {
+    if (e.metaKey || e.ctrlKey || e.altKey || e.target !== document.body) {
       return
     }
 
-    if (keys[e.keyCode] !== pressed) {
+    const key = keys[e.keyCode]
+    if (key != null && key !== pressed) {
       e.preventDefault()
 
       keys[e.keyCode] = pressed
