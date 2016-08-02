@@ -78,6 +78,7 @@ export class Client {
     console.log("starting with", players)
     this.players = players.map((player, i) => createPlayer(player.name, player.startPoint,
       player.color, player.rotation, player.isOwner, i))
+    this.players.forEach(player => container.addChild(player.graphics))
   }
 
   public rotateLeft = (id: number) => {
@@ -154,8 +155,6 @@ export function createGame(room?: string) {
     }
   }).then((client: Client) => {
 // Browser renderer stuff below
-
-client.players.forEach(player => container.addChild(player.graphics))
 
 container.addChild(graphics)
 
