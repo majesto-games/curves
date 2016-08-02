@@ -7,6 +7,8 @@ import {
 
 import {
   Server,
+  SERVER_WIDTH,
+  SERVER_HEIGHT
 } from "../server/main"
 
 import {
@@ -39,6 +41,46 @@ registerKeys(Array.prototype.concat.apply([], keyCombos.map(n => [n.left, n.righ
 
 const container = new Container()
 const graphics = new Graphics()
+
+class Overlay {
+
+  private graphics: PIXI.Graphics
+  private overlayText: PIXI.Text
+  private overlay: PIXI.Graphics
+  private startPos: PIXI.Graphics
+  private added = false
+
+  constructor(g: PIXI.Graphics) {
+    this.graphics = g
+    this.overlayText = new PIXI.Text("", { fill: "white", font: "64px Courier New" })
+    this.overlayText.anchor = new PIXI.Point(0.5, 0.5)
+    this.overlayText.x = SERVER_WIDTH / 2
+    this.overlayText.y = SERVER_HEIGHT / 3
+
+    this.overlay = new Graphics()
+    this.overlay.beginFill(0x000000, 0.5)
+    this.overlay.drawRect(0, 0, SERVER_WIDTH, SERVER_HEIGHT)
+    this.overlay.endFill()
+    this.overlay.addChild(this.overlayText)
+
+    this.startPos = new Graphics()
+    this.overlay.addChild(this.startPos)
+  }
+
+  public addOverlay = (text: string) => {
+    this.overlayText.text = text
+    this.graphics.addChild(this.overlay)
+    this.added = true
+  }
+
+  public removeOverlay = () => {
+    this.graphics.removeChild(this.overlay)
+    this.startPos.removeChildren()
+    this.added = false
+  }
+}
+
+const overlay = new Overlay(graphics)
 
 export interface ClientKeys {
   left: KEYS
@@ -90,7 +132,7 @@ export class Client {
   }
 
   public end = (winnerId: number | null) => {
-    alert(winnerId)
+    overlay.addOverlay(`Winner: Player ${winnerId}`);
   }
 }
 
@@ -154,100 +196,49 @@ export function createGame(room?: string) {
       return client
     }
   }).then((client: Client) => {
-// Browser renderer stuff below
+    // Browser renderer stuff below
 
-container.addChild(graphics)
+    container.addChild(graphics)
 
-let pauseTimer = 3 // Seconds
+    let pauseTimer = 3 // Seconds
 
-class Overlay {
+    const renderer = autoDetectRenderer(SERVER_WIDTH, SERVER_HEIGHT,
+      { antialias: true, backgroundColor: 0x000000 })
 
-  private graphics: PIXI.Graphics
-  private overlayText: PIXI.Text
-  private overlay: PIXI.Graphics
-  private startPos: PIXI.Graphics
-  private added = false
+    function draw() {
 
-  constructor(g: PIXI.Graphics) {
-    this.graphics = g
-    this.overlayText = new PIXI.Text("", { fill: "white", font: "64px Courier New" })
-    this.overlayText.anchor = new PIXI.Point(0.5, 0.5)
-    this.overlayText.x = window.innerWidth / 2
-    this.overlayText.y = window.innerHeight / 3
+      const players = client.players
 
-    this.overlay = new Graphics()
-    this.overlay.beginFill(0x000000, 0.5)
-    this.overlay.drawRect(0, 0, window.innerWidth, window.innerHeight)
-    this.overlay.endFill()
-    this.overlay.addChild(this.overlayText)
+      players.forEach(p => {
+        if (!p.keys) {
+          return
+        }
 
-    this.startPos = new Graphics()
-    this.overlay.addChild(this.startPos)
-  }
+        if (pressedKeys[p.keys.left]) {
+          client.rotateLeft(p.id)
+        }
 
-  public addOverlay = (text: string, players: Player[], playersText: string[]) => {
-    this.overlayText.text = text
-    if (!this.added) {
-      // TODO: Remove this hack
-      R.zip(players, playersText).forEach(([player, pt]) => {
-        const g = new PIXI.Text(pt, { fill: player.color, font: "24px Courier New" })
-        g.anchor = new PIXI.Point(0.5, 1.1)
-        g.rotation = player.rotation
-        g.x = player.x
-        g.y = player.y
-        this.startPos.addChild(g)
+        if (pressedKeys[p.keys.right]) {
+          client.rotateRight(p.id)
+        }
       })
-      this.graphics.addChild(this.overlay)
-      this.added = true
-    }
-  }
 
-  public removeOverlay = () => {
-    this.graphics.removeChild(this.overlay)
-    this.startPos.removeChildren()
-    this.added = false
-  }
-}
+      for (let player of players) {
+        updatePlayerGraphics(player)
+      }
 
-const overlay = new Overlay(graphics)
-
-const renderer = autoDetectRenderer(window.innerWidth, window.innerHeight,
-  { antialias: true, backgroundColor: 0x000000 })
-
-function draw() {
-
-  const players = client.players
-
-  players.forEach(p => {
-    if (!p.keys) {
-      return
+      renderer.render(container)
+      requestAnimationFrame(draw)
     }
 
-    if (pressedKeys[p.keys.left]) {
-      client.rotateLeft(p.id)
-    }
+    // window.onresize = (e) => {
+    //   renderer.view.style.width = window.innerWidth + "px"
+    //   renderer.view.style.height = window.innerHeight + "px"
 
-    if (pressedKeys[p.keys.right]) {
-      client.rotateRight(p.id)
-    }
+    //   renderer.resize(window.innerWidth, window.innerHeight)
+    // }
+
+    draw()
+    return renderer.view
   })
-
-  for (let player of players) {
-    updatePlayerGraphics(player)
-  }
-
-  renderer.render(container)
-  requestAnimationFrame(draw)
-}
-
-window.onresize = (e) => {
-  renderer.view.style.width = window.innerWidth + "px"
-  renderer.view.style.height = window.innerHeight + "px"
-
-  renderer.resize(window.innerWidth, window.innerHeight)
-}
-
-draw()
-return renderer.view
-})
 }

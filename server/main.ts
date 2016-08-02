@@ -8,8 +8,8 @@ import {
 
 import { ClientConnection } from "./connections"
 
-const SERVER_WIDTH = 1280
-const SERVER_HEIGHT = 720
+export const SERVER_WIDTH = 1280
+export const SERVER_HEIGHT = 720
 
 export class Server {
 
