@@ -17,6 +17,7 @@ import {
   LocalClientConnection,
   clientDataChannel,
   serverDataChannel,
+  connectAndCount
 } from "../server/connections"
 
 import {
@@ -118,40 +119,40 @@ function updatePlayerGraphics(player: Player) {
   player.graphics.scale = new PIXI.Point(player.fatness, player.fatness)
 }
 
-export function createGame(isServer: boolean) {
-  return new Promise(resolve => {
-  if (!isServer) { // not server
-    console.log("Not server")
-    clientDataChannel().then((dc: any) => {
-      const conn = new NetworkServerConnection(dc)
+export function createGame(room?: string) {
+  return connectAndCount(room).then(([rc, memberCount]) => {
+    if (memberCount > 1) { // not server
+      console.log("Not server")
+      return clientDataChannel(rc).then((dc) => {
+        const conn = new NetworkServerConnection(dc)
+        const client = new Client(conn)
+        const m = mapClientActions(client)
+        dc.onmessage = (evt: any) => {
+          console.log(evt)
+          m(JSON.parse(evt.data))
+        }
+        conn.addPlayer()
+        return client
+      })
+    } else {
+      console.log("Server")
+      const server = new Server(TICK_RATE)
+      const conn = new LocalServerConnection(server)
       const client = new Client(conn)
-      resolve(client)
-      const m = mapClientActions(client)
-      dc.onmessage = (evt: any) => {
-        console.log(evt)
-        m(JSON.parse(evt.data))
-      }
+      server.addConnection(new LocalClientConnection(client))
+      const m = mapServerActions(server)
+
+      serverDataChannel(rc, dc => {
+        server.addConnection(new NetworkClientConnection(dc))
+
+        dc.onmessage = (evt: any) => {
+          m(JSON.parse(evt.data))
+        }
+      })
       conn.addPlayer()
-    })
-  } else {
-    console.log("Server")
-    const server = new Server(TICK_RATE)
-    const conn = new LocalServerConnection(server)
-    const client = new Client(conn)
-    server.addConnection(new LocalClientConnection(client))
-    const m = mapServerActions(server)
-
-    serverDataChannel(undefined, dc => {
-      server.addConnection(new NetworkClientConnection(dc))
-
-      dc.onmessage = (evt: any) => {
-        m(JSON.parse(evt.data))
-      }
-    })
-    conn.addPlayer()
-    resolve(client)
-  }
-}).then((client: Client) => {
+      return client
+    }
+  }).then((client: Client) => {
 // Browser renderer stuff below
 
 client.players.forEach(player => container.addChild(player.graphics))

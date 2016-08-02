@@ -1,13 +1,32 @@
 import * as React from "react"
-import { Link } from "react-router"
+import { Link, withRouter, IRouter } from "react-router"
 
-export interface LobbyProps {}
-
-export default function Lobby(props: LobbyProps) {
-    return (
-        <div>
-            <Link to={ { pathname: "/game", query: {server: true } } }>Spela som server</Link>
-            <Link to={ { pathname: "/game"} }>Spela som klient</Link>
-        </div>
-    )
+export interface LobbyProps {
+  router: IRouter
 }
+
+
+class Lobby extends React.Component<LobbyProps, any> {
+
+  roomInput: HTMLInputElement
+
+  onSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    this.props.router.push({
+      pathname: "/game",
+      query: { room: this.roomInput.value },
+    })
+  }
+
+  render() {
+    return (
+      <form onSubmit={this.onSubmit}>
+        <input type="text" placeholder="Room name" defaultValue="leif" ref={n => this.roomInput = n} />
+        <button type="submit">Join room</button>
+      </form>
+    )
+  }
+}
+
+export default withRouter(Lobby)

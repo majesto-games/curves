@@ -123,12 +123,14 @@ export class NetworkClientConnection implements ClientConnection {
   }
 }
 
-export function clientDataChannel(room: string = "leif") {
-  return new Promise((resolve, reject) => {
-    quickconnect("http://curves-p2p.herokuapp.com/", { room, iceServers: freeice() })
+type RoomConnection = any
+type DataChannel = any
+
+export function clientDataChannel(rc: RoomConnection) {
+  return new Promise<DataChannel>((resolve, reject) => {
+    
     // tell quickconnect we want a datachannel called test
-    .createDataChannel("test")
-    // when the test channel has opened a RTCDataChannel to a peer, let us know
+    rc.createDataChannel("test")
     .on("channel:opened:test", function (peerId: any, dc: any) {
       dc.onmessage = function (evt: any) {
         if (evt.data === "WELCOME") {
@@ -140,14 +142,24 @@ export function clientDataChannel(room: string = "leif") {
   })
 }
 
-export function serverDataChannel(room: string = "leif", cb: (dc: any) => any) {
-  quickconnect("http://curves-p2p.herokuapp.com/", { room, iceServers: freeice() })
+export function serverDataChannel(rc: RoomConnection, cb: (dc: DataChannel) => any) {
   // tell quickconnect we want a datachannel called test
-  .createDataChannel("test")
+  rc.createDataChannel("test")
   // when the test channel has opened a RTCDataChannel to a peer, let us know
   .on("channel:opened:test", function (peerId: any, dc: any) {
     dc.send("WELCOME")
     console.log("sending WELCOME to ", peerId)
     cb(dc)
+  })
+}
+
+
+export function connectAndCount(room: string = "leif"): Promise<[RoomConnection, number]> {
+  const rc = quickconnect("http://curves-p2p.herokuapp.com/", { room, iceServers: freeice() })
+  return new Promise<[RoomConnection, number]>((resolve) => {
+    rc.once("message:roominfo", (data: { memberCount: number }) => {
+      console.log("roomInfo", data)
+      resolve([rc, data.memberCount])
+    })
   })
 }

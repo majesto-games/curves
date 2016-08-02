@@ -5,7 +5,7 @@ import { createGame } from "../game/main"
 export interface GameProps {
   location: {
     query?: {
-      server: string
+      room: string
     }
   }
 }
@@ -15,8 +15,8 @@ export default class Game extends React.Component<GameProps, any> {
 
   public componentDidMount() {
     const { query } = this.props.location
-    console.log("Server?", query && !!query.server)
-    createGame(!!query && !!query.server).then(view => {
+    console.log("Room:", query && query.room)
+    createGame(query && query.room).then(view => {
       this.div.appendChild(view)
     })
   }
