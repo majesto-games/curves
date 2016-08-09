@@ -57,13 +57,11 @@ export class Server {
 
   public rotateLeft(index: number) {
     const player = this.players[index]
-    console.log("rotateLeft", index, player)
     player.rotate(-(ROTATION_SPEED / player.fatness))
   }
 
   public rotateRight(index: number) {
     const player = this.players[index]
-    console.log("rotateRight", index, player)
     player.rotate((ROTATION_SPEED / player.fatness))
   }
 

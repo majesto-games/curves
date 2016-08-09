@@ -46,6 +46,7 @@ export function mapClientActions(client: Client) {
       case END: {
         const { payload } = action
         client.end(payload)
+        break
       }
       default:
         console.log("Client didn't handle", action)

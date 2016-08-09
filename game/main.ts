@@ -36,11 +36,15 @@ import * as R from "ramda"
 // Remove pesky pixi.js banner from console
 // utils._saidHello = true
 
-const keyCombos = [{ left: KEYS.LEFT, right: KEYS.RIGHT }, { left: KEYS.A, right: KEYS.D }]
+let keyCombos: { left: KEYS, right: KEYS }[] = []
+
+function resetCombos() {
+  keyCombos = [{ left: KEYS.LEFT, right: KEYS.RIGHT }, { left: KEYS.A, right: KEYS.D }]
+}
+resetCombos()
 registerKeys(Array.prototype.concat.apply([], keyCombos.map(n => [n.left, n.right])))
 
-const container = new Container()
-const graphics = new Graphics()
+
 
 class Overlay {
 
@@ -80,11 +84,15 @@ class Overlay {
   }
 }
 
-const overlay = new Overlay(graphics)
-
 export interface ClientKeys {
   left: KEYS
   right: KEYS
+}
+
+interface Gfx {
+  container: Container
+  graphics: Graphics
+  overlay: Overlay
 }
 
 export class Client {
@@ -92,10 +100,9 @@ export class Client {
   public players: Player[] = []
   public id: number
 
-  private connection: ServerConnection
+  private endListeners: (() => void)[] = []
 
-  constructor(connection: ServerConnection) {
-    this.connection = connection
+  constructor(private connection: ServerConnection, public gfx: Gfx) {
   }
 
   public updatePlayers = (playerUpdates: PlayerUpdate[]) => {
@@ -109,9 +116,9 @@ export class Client {
       player.alive = update.alive
 
       if (update.tailPart) {
-        graphics.beginFill(player.color)
-        graphics.drawPolygon(update.tailPart)
-        graphics.endFill()
+        this.gfx.graphics.beginFill(player.color)
+        this.gfx.graphics.drawPolygon(update.tailPart)
+        this.gfx.graphics.endFill()
       }
     }
   }
@@ -120,7 +127,7 @@ export class Client {
     console.log("starting with", players)
     this.players = players.map((player, i) => createPlayer(player.name, player.startPoint,
       player.color, player.rotation, player.isOwner, i))
-    this.players.forEach(player => container.addChild(player.graphics))
+    this.players.forEach(player => this.gfx.container.addChild(player.graphics))
   }
 
   public rotateLeft = (id: number) => {
@@ -132,7 +139,15 @@ export class Client {
   }
 
   public end = (winnerId: number | null) => {
-    overlay.addOverlay(`Winner: Player ${winnerId}`);
+    this.gfx.overlay.addOverlay(`Winner: Player ${winnerId}`)
+    this.endListeners.forEach(f => f())
+  }
+
+  public onEnd = (f: () => void) => {
+    this.endListeners.push(f)
+    return () => {
+      this.endListeners = this.endListeners.filter(g => g !== f)
+    }
   }
 }
 
@@ -163,31 +178,43 @@ function updatePlayerGraphics(player: Player) {
   player.graphics.scale = new PIXI.Point(player.fatness, player.fatness)
 }
 
-export function createGame(room?: string) {
+export function createGame(room: string) {
+  const container = new Container()
+  const graphics = new Graphics()
+  const overlay = new Overlay(graphics)
+  const gfx = {container, graphics, overlay}
+
+  console.log("createGame")
+
   return connectAndCount(room).then(([rc, memberCount]) => {
+    const close = () => rc.close()
     if (memberCount > 1) { // not server
       console.log("Not server")
       return clientDataChannel(rc).then((dc) => {
         const conn = new NetworkServerConnection(dc)
-        const client = new Client(conn)
+        const client = new Client(conn, gfx)
         const m = mapClientActions(client)
         dc.onmessage = (evt: any) => {
           m(JSON.parse(evt.data))
         }
         conn.addPlayer()
-        return client
+        return { client, close }
       })
     } else {
       console.log("Server")
       overlay.addOverlay("Wating for players...");
       const server = new Server(TICK_RATE)
       const conn = new LocalServerConnection(server)
-      const client = new Client(conn)
+      const client = new Client(conn, gfx)
       server.addConnection(new LocalClientConnection(client))
       const m = mapServerActions(server)
 
+      const conns: NetworkClientConnection[] = []
+
       serverDataChannel(rc, dc => {
-        server.addConnection(new NetworkClientConnection(dc))
+        const netconn = new NetworkClientConnection(dc)
+        server.addConnection(netconn)
+        conns.push(netconn)
 
         dc.onmessage = (evt: any) => {
           const data = JSON.parse(evt.data)
@@ -197,23 +224,29 @@ export function createGame(room?: string) {
             overlay.removeOverlay()
           }
 
+
           m(data)
         }
       })
       conn.addPlayer()
-      return client
+      return { client, close }
     }
-  }).then((client: Client) => {
-    // Browser renderer stuff below
+  }).then((res) => {
+
+    const client = res.client
+
+    let closed = false
 
     container.addChild(graphics)
-
-    let pauseTimer = 3 // Seconds
 
     const renderer = autoDetectRenderer(SERVER_WIDTH, SERVER_HEIGHT,
       { antialias: true, backgroundColor: 0x000000 })
 
     function draw() {
+
+      if (closed) {
+        return
+      }
 
       const players = client.players
 
@@ -247,6 +280,11 @@ export function createGame(room?: string) {
     // }
 
     draw()
-    return renderer.view
+    return { view: renderer.view, close: () => {
+      res.close()
+      renderer.destroy()
+      closed = true
+      resetCombos()
+    }, onEnd: (f: () => void) => client.onEnd(f) }
   })
 }

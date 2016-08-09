@@ -22,20 +22,19 @@ export interface ServerConnection {
   addPlayer(): void
   rotateLeft(index: number): void
   rotateRight(index: number): void
+  close(): void
 }
 
 export interface ClientConnection {
   updatePlayers(playerUpdates: PlayerUpdate[]): void
   start(playerInits: PlayerInit[]): void
   end(winnerId: number | null): void
+  close(): void
 }
 
 export class LocalServerConnection implements ServerConnection {
 
-  private server: Server
-
-  constructor(server: Server) {
-    this.server = server
+  constructor(private server: Server) {
   }
 
   public addPlayer() {
@@ -48,6 +47,10 @@ export class LocalServerConnection implements ServerConnection {
 
   public rotateRight(id: number) {
     this.server.rotateRight(id)
+  }
+
+  public close() {
+    return
   }
 }
 
@@ -71,6 +74,9 @@ export class LocalClientConnection implements ClientConnection {
     this.client.end(winnerId)
   }
 
+  public close() {
+    return
+  }
 }
 
 
@@ -92,6 +98,10 @@ export class NetworkServerConnection implements ServerConnection {
 
   public rotateRight(index: number) {
     this.send(rotate(RIGHT, index))
+  }
+
+  public close() {
+    this.dataChannel.close()
   }
 
   private send(a: Action) {
@@ -119,6 +129,10 @@ export class NetworkClientConnection implements ClientConnection {
     this.send(end(winnerId))
   }
 
+  public close() {
+    this.dataChannel.close()
+  }
+
   private send(a: Action) {
     this.dataChannel.send(JSON.stringify(a))
   }
@@ -132,13 +146,17 @@ export function clientDataChannel(rc: RoomConnection) {
     
     // tell quickconnect we want a datachannel called test
     rc.createDataChannel("test")
-    .on("channel:opened:test", function (peerId: any, dc: any) {
-      dc.onmessage = function (evt: any) {
+    .on("channel:opened:test", (peerId: any, dc: any) => {
+      console.log("opened channel", peerId, dc)
+      dc.onmessage = (evt: any) => {
         if (evt.data === "WELCOME") {
           console.log("got WELCOME from ", peerId)
           resolve(dc)
         }
       }
+    })
+    .on("channel:closed:test", (peerId: any, dc: any) => {
+      console.log("closed channel", peerId, dc)
     })
   })
 }
@@ -148,14 +166,18 @@ export function serverDataChannel(rc: RoomConnection, cb: (dc: DataChannel) => a
   rc.createDataChannel("test")
   // when the test channel has opened a RTCDataChannel to a peer, let us know
   .on("channel:opened:test", function (peerId: any, dc: any) {
+    console.log("opened channel", peerId, dc)
     dc.send("WELCOME")
     console.log("sending WELCOME to ", peerId)
     cb(dc)
   })
+  .on("channel:closed:test", (peerId: any, dc: any) => {
+    console.log("closed channel", peerId, dc)
+  })
 }
 
 
-export function connectAndCount(room: string = "leif"): Promise<[RoomConnection, number]> {
+export function connectAndCount(room: string): Promise<[RoomConnection, number]> {
   const rc = quickconnect(SERVER_URL, { room, iceServers: freeice() })
   return new Promise<[RoomConnection, number]>((resolve) => {
     rc.once("message:roominfo", (data: { memberCount: number }) => {

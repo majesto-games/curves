@@ -61,7 +61,7 @@ export default class Lobby extends React.Component<{}, { rooms: Room[] }> {
   public render() {
     const existingRooms = this.state.rooms.map(room => (
       <li key={`room_${room.name}`}>
-        <Link to={{ pathname: "/game", query: room.name }}>{room.name}</Link>
+        <Link to={{ pathname: "/game", query: {room: room.name} }}>{room.name}</Link>
       </li>
     )
 
