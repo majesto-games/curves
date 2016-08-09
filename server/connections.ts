@@ -2,6 +2,7 @@ import * as quickconnect from "rtc-quickconnect"
 import freeice = require("freeice")
 import { Server } from "./main"
 import { Client } from "../game/main"
+import { SERVER_URL } from "../config"
 
 import {
   PlayerUpdate,
@@ -155,7 +156,7 @@ export function serverDataChannel(rc: RoomConnection, cb: (dc: DataChannel) => a
 
 
 export function connectAndCount(room: string = "leif"): Promise<[RoomConnection, number]> {
-  const rc = quickconnect("http://curves-p2p.herokuapp.com/", { room, iceServers: freeice() })
+  const rc = quickconnect(SERVER_URL, { room, iceServers: freeice() })
   return new Promise<[RoomConnection, number]>((resolve) => {
     rc.once("message:roominfo", (data: { memberCount: number }) => {
       console.log("roomInfo", data)

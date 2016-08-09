@@ -20,6 +20,7 @@
   },
   "homepage": "https://github.com/bengt-games/curves#readme",
   "dependencies": {
+    "axios": "^0.13.1",
     "expect": "^1.14.0",
     "freeice": "^2.2.0",
     "keyboardjs": "^2.2.0",
