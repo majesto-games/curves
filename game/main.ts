@@ -43,6 +43,7 @@ function resetCombos() {
 }
 resetCombos()
 registerKeys(Array.prototype.concat.apply([], keyCombos.map(n => [n.left, n.right])))
+registerKeys([KEYS.RETURN])
 
 
 
@@ -198,11 +199,11 @@ export function createGame(room: string) {
           m(JSON.parse(evt.data))
         }
         conn.addPlayer()
-        return { client, close }
+        return { client, close, server: conn as ServerConnection }
       })
     } else {
       console.log("Server")
-      overlay.addOverlay("Wating for players...");
+      overlay.addOverlay(`Wating for players...\nJoin room ${room} or\npress ENTER to add player`)
       const server = new Server(TICK_RATE)
       const id = {}
       const conn = new LocalServerConnection(server, id)
@@ -219,22 +220,16 @@ export function createGame(room: string) {
 
         dc.onmessage = (evt: any) => {
           const data = JSON.parse(evt.data)
-
-          // HACK
-          if (data.type === "ADD_PLAYER") {
-            overlay.removeOverlay()
-          }
-
-
           m(data, dc)
         }
       })
       conn.addPlayer()
-      return { client, close }
+      return { client, close, server: conn }
     }
   }).then((res) => {
 
     const client = res.client
+    const server = res.server
 
     let closed = false
 
@@ -242,6 +237,23 @@ export function createGame(room: string) {
 
     const renderer = autoDetectRenderer(SERVER_WIDTH, SERVER_HEIGHT,
       { antialias: true, backgroundColor: 0x000000 })
+    function repaint(cb: FrameRequestCallback) {
+      renderer.render(container)
+      requestAnimationFrame(cb)
+    }
+
+    function preGame() {
+      if (client.players.length > 0)  { // Game has started
+        overlay.removeOverlay()
+        return draw()
+      }
+
+      if (pressedKeys[KEYS.RETURN]) {
+        server.addPlayer()
+      }
+
+      repaint(preGame)
+    }
 
     function draw() {
 
@@ -269,8 +281,7 @@ export function createGame(room: string) {
         updatePlayerGraphics(player)
       }
 
-      renderer.render(container)
-      requestAnimationFrame(draw)
+      repaint(draw)
     }
 
     // window.onresize = (e) => {
@@ -280,7 +291,7 @@ export function createGame(room: string) {
     //   renderer.resize(window.innerWidth, window.innerHeight)
     // }
 
-    draw()
+    preGame()
     return { view: renderer.view, close: () => {
       res.close()
       renderer.destroy()
