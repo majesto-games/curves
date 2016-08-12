@@ -27,12 +27,10 @@ export class Server {
   private clientConnections: ClientConnection[] = []
   private pauseDelta: number = 0
   private paused: boolean = true
-  private tickRate: number
   private lastUpdate: number
   private colors: number[] = getColors(7)
 
-  constructor(tickRate: number) {
-    this.tickRate = tickRate
+  constructor(private tickRate: number) {
   }
 
   public addConnection(conn: ClientConnection) {

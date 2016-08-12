@@ -29,12 +29,6 @@ import {
 
 import pressedKeys, { KEYS, registerKeys } from "./keys"
 
-import * as R from "ramda"
-
-// const middle = { x: (window.innerWidth) / 2, y: (window.innerHeight) / 2 }
-
-// Remove pesky pixi.js banner from console
-// utils._saidHello = true
 
 let keyCombos: { left: KEYS, right: KEYS }[] = []
 
@@ -185,8 +179,6 @@ export function createGame(room: string) {
   const overlay = new Overlay(graphics)
   const gfx = {container, graphics, overlay}
 
-  console.log("createGame")
-
   return connectAndCount(room).then(([rc, memberCount]) => {
     const close = () => rc.close()
     if (memberCount > 1) { // not server
@@ -283,13 +275,6 @@ export function createGame(room: string) {
 
       repaint(draw)
     }
-
-    // window.onresize = (e) => {
-    //   renderer.view.style.width = window.innerWidth + "px"
-    //   renderer.view.style.height = window.innerHeight + "px"
-
-    //   renderer.resize(window.innerWidth, window.innerHeight)
-    // }
 
     preGame()
     return { view: renderer.view, close: () => {

@@ -21,12 +21,8 @@
   "homepage": "https://github.com/bengt-games/curves#readme",
   "dependencies": {
     "axios": "^0.13.1",
-    "expect": "^1.14.0",
     "freeice": "^2.2.0",
-    "keyboardjs": "^2.2.0",
-    "keypress.js": "^2.1.0",
     "pixi.js": "^3.0.8",
-    "ramda": "^0.21.0",
     "react": "^15.3.0",
     "react-dom": "^15.3.0",
     "react-router": "^2.6.0",

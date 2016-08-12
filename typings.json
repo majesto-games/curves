@@ -1,6 +1,5 @@
 {
   "dependencies": {
-    "ramda": "registry:npm/ramda#0.21.0+20160526170405",
     "react-router": "registry:npm/react-router#2.4.0+20160723033700"
   },
   "globalDependencies": {
