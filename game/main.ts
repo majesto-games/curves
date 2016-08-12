@@ -204,9 +204,10 @@ export function createGame(room: string) {
       console.log("Server")
       overlay.addOverlay("Wating for players...");
       const server = new Server(TICK_RATE)
-      const conn = new LocalServerConnection(server)
+      const id = {}
+      const conn = new LocalServerConnection(server, id)
       const client = new Client(conn, gfx)
-      server.addConnection(new LocalClientConnection(client))
+      server.addConnection(new LocalClientConnection(client, id))
       const m = mapServerActions(server)
 
       const conns: NetworkClientConnection[] = []
@@ -225,7 +226,7 @@ export function createGame(room: string) {
           }
 
 
-          m(data)
+          m(data, dc)
         }
       })
       conn.addPlayer()

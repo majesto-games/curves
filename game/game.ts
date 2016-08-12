@@ -69,28 +69,22 @@ export class Player {
 
   public graphics: PIXI.Graphics
   public polygonTail: any[]
-  public rotation: number
   public fatness: number
   public alive: boolean
-  public color: number
   public lastX: number
   public lastY: number
   public speed: number
   public lastEnd: any
   public x: number
   public y: number
-  public keys?: ClientKeys | null
   public id: number
 
-  private name: string
   private lfatness: number
   private holeChance: number
   private tailTicker: number
   private skipTailTicker: number
 
-  constructor(name: string, startPoint: Point, color: number, rotation: number, keys: ClientKeys | null, id: number) {
-    this.name = name
-    this.color = color
+  constructor(private name: string, startPoint: Point, public color: number, public rotation: number, public keys: ClientKeys | null, id: number, public owner?: any) {
     this.x = startPoint.x
     this.y = startPoint.y
     this.lastX = this.x
@@ -101,11 +95,9 @@ export class Player {
     this.holeChance = HOLE_CHANCE_BASE
     this.tailTicker = 0
     this.speed = MOVE_SPEED_BASE
-    this.rotation = rotation
     this.polygonTail = []
     this.skipTailTicker = 0
     this.alive = true
-    this.keys = keys
     this.id = id
   }
 

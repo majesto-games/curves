@@ -19,6 +19,7 @@ import {
 } from "./actions"
 
 export interface ServerConnection {
+  id: any
   addPlayer(): void
   rotateLeft(index: number): void
   rotateRight(index: number): void
@@ -26,6 +27,7 @@ export interface ServerConnection {
 }
 
 export interface ClientConnection {
+  id: any
   updatePlayers(playerUpdates: PlayerUpdate[]): void
   start(playerInits: PlayerInit[]): void
   end(winnerId: number | null): void
@@ -34,19 +36,19 @@ export interface ClientConnection {
 
 export class LocalServerConnection implements ServerConnection {
 
-  constructor(private server: Server) {
+  constructor(private server: Server, public id: any) {
   }
 
   public addPlayer() {
-    this.server.addPlayer()
+    this.server.addPlayer(this.id)
   }
 
   public rotateLeft(id: number) {
-    this.server.rotateLeft(id)
+    this.server.rotateLeft(id, this.id)
   }
 
   public rotateRight(id: number) {
-    this.server.rotateRight(id)
+    this.server.rotateRight(id, this.id)
   }
 
   public close() {
@@ -58,7 +60,7 @@ export class LocalClientConnection implements ClientConnection {
 
   private client: Client
 
-  constructor(client: Client) {
+  constructor(client: Client, public id: any) {
     this.client = client
   }
 
@@ -81,11 +83,10 @@ export class LocalClientConnection implements ClientConnection {
 
 
 export class NetworkServerConnection implements ServerConnection {
+  public id: any
 
-  private dataChannel: any
-
-  constructor(dataChannel: any) {
-    this.dataChannel = dataChannel
+  constructor(private dataChannel: any) {
+    this.id = dataChannel
   }
 
   public addPlayer() {
@@ -110,12 +111,11 @@ export class NetworkServerConnection implements ServerConnection {
 }
 
 export class NetworkClientConnection implements ClientConnection {
+  public id: any
 
-  private dataChannel: any
-
-  constructor(dataChannel: any) {
-    this.dataChannel = dataChannel
-  }
+  constructor(private dataChannel: any) {
+    this.id = dataChannel
+}
 
   public updatePlayers(playerUpdates: PlayerUpdate[]) {
     this.send(updatePlayers(playerUpdates))
@@ -143,7 +143,7 @@ type DataChannel = any
 
 export function clientDataChannel(rc: RoomConnection) {
   return new Promise<DataChannel>((resolve, reject) => {
-    
+
     // tell quickconnect we want a datachannel called test
     rc.createDataChannel("test")
     .on("channel:opened:test", (peerId: any, dc: any) => {

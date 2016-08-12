@@ -11,11 +11,19 @@ import { ClientConnection } from "./connections"
 export const SERVER_WIDTH = 1280
 export const SERVER_HEIGHT = 720
 
+interface AlmostPlayerInit {
+  name: string
+  startPoint: Point
+  color: number
+  rotation: number
+  connectionId: any
+}
+
 export class Server {
 
   public players: Player[] = []
 
-  private playerInits: PlayerInit[] = []
+  private playerInits: AlmostPlayerInit[] = []
   private clientConnections: ClientConnection[] = []
   private pauseDelta: number = 0
   private paused: boolean = true
@@ -32,7 +40,11 @@ export class Server {
     console.log("connection added, total: ", this.clientConnections.length)
   }
 
-  public addPlayer() {
+  public addPlayer(connectionId: any) {
+    if (this.playerInits.length > 2) {
+      return
+    }
+
     const id = this.players.length + 1
     const name = `${id}`
     const startPoint: Point = {
@@ -42,27 +54,42 @@ export class Server {
     const color = this.colors.pop() as number
     const rotation = Math.random() * Math.PI * 2
 
-    const playerInit = { name, startPoint, color, rotation, isOwner: true }
-    const player = new Player(name, startPoint, color, rotation, null, id)
+    const playerInit = { name, startPoint, color, rotation, connectionId }
+    const player = new Player(name, startPoint, color, rotation, null, id, connectionId)
 
     this.playerInits.push(playerInit)
     this.players.push(player)
 
     if (this.playerInits.length > 1) {
-      this.send(c => c.start(this.playerInits))
+      this.send(c => {
+        const playerInits = this.playerInits.map(v => {
+          return {
+            name: v.name,
+            startPoint: v.startPoint,
+            color: v.color,
+            rotation: v.rotation,
+            isOwner: v.connectionId === c.id,
+          }
+        })
+        c.start(playerInits)
+      })
       console.log("starting server")
       this.start()
     }
   }
 
-  public rotateLeft(index: number) {
+  public rotateLeft(index: number, connectionId: any) {
     const player = this.players[index]
-    player.rotate(-(ROTATION_SPEED / player.fatness))
+    if (player.owner === connectionId) {
+      player.rotate(-(ROTATION_SPEED / player.fatness))
+    }
   }
 
-  public rotateRight(index: number) {
+  public rotateRight(index: number, connectionId: any) {
     const player = this.players[index]
-    player.rotate((ROTATION_SPEED / player.fatness))
+    if (player.owner === connectionId) {
+      player.rotate((ROTATION_SPEED / player.fatness))
+    }
   }
 
   private send(f: (client: ClientConnection) => void) {

@@ -13,15 +13,19 @@ import {
 } from "./actions"
 
 export function mapServerActions(server: Server) {
-  return (action: ServerAction) => {
+  return (action: ServerAction, connectionId: any) => {
     switch (action.type) {
       case ADD_PLAYER: {
-        server.addPlayer()
+        server.addPlayer(connectionId)
         break
       }
       case ROTATE: {
         const { payload } = action
-        payload.direction === LEFT ? server.rotateLeft(payload.index) : server.rotateRight(payload.index)
+        if (payload.direction === LEFT) {
+          server.rotateLeft(payload.index, connectionId)
+        } else {
+          server.rotateRight(payload.index, connectionId)
+        }
         break
       }
       default:
