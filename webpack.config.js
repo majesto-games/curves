@@ -1,6 +1,6 @@
 module.exports = {
   resolve: {
-    extensions: ['', '.ts', '.webpack.js', '.web.js', '.js']
+    extensions: ['.ts', '.tsx', '.webpack.js', '.web.js', '.js']
   },
   devtool: 'source-map',
   entry: './index.tsx',

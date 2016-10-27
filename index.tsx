@@ -2,8 +2,8 @@ import * as React from "react";
 import * as ReactDOM from "react-dom";
 import { Router, Route, Link, hashHistory } from "react-router"
 
-import Lobby from "./components/Lobby.tsx"
-import Game from "./components/Game.tsx"
+import Lobby from "./components/Lobby"
+import Game from "./components/Game"
 
 ReactDOM.render(
   <Router history={hashHistory}>
