@@ -1,4 +1,4 @@
-import { Graphics, autoDetectRenderer, Container } from "pixi.js"
+import { Graphics, autoDetectRenderer, Container, CanvasRenderer, WebGLRenderer } from "pixi.js"
 import { Point, Player, TICK_RATE } from "./game"
 import {
   PlayerUpdate,
@@ -66,10 +66,12 @@ class Overlay {
     this.overlay.addChild(this.startPos)
   }
 
-  public addOverlay = (text: string) => {
+  public setOverlay = (text: string) => {
     this.overlayText.text = text
-    this.graphics.addChild(this.overlay)
-    this.added = true
+    if (!this.added) {
+      this.graphics.addChild(this.overlay)
+      this.added = true
+    }
   }
 
   public removeOverlay = () => {
@@ -134,7 +136,7 @@ export class Client {
   }
 
   public end = (winnerId: number | null) => {
-    this.gfx.overlay.addOverlay(`Winner: Player ${winnerId}`)
+    this.gfx.overlay.setOverlay(`Winner: Player ${winnerId}`)
     this.endListeners.forEach(f => f())
   }
 
@@ -173,34 +175,57 @@ function updatePlayerGraphics(player: Player) {
   player.graphics.scale = new PIXI.Point(player.fatness, player.fatness)
 }
 
-export function createGame(room: string) {
-  const container = new Container()
-  const graphics = new Graphics()
-  const overlay = new Overlay(graphics)
-  const gfx = {container, graphics, overlay}
+export enum GameEvent {
+  START, END
+}
 
-  return connectAndCount(room).then(([rc, memberCount]) => {
-    const close = () => rc.close()
+export class Game {
+  public readonly container = new Container()
+  public readonly graphics = new Graphics()
+  public readonly overlay: Overlay
+  private client: Client
+  private server: ServerConnection
+  private rc: any
+  private closed = false
+  private renderer: CanvasRenderer | WebGLRenderer
+  private eventListeners: ((e: GameEvent) => void)[] = []
+
+  constructor(public readonly room: string) {
+    this.overlay = new Overlay(this.graphics)
+    this.renderer = autoDetectRenderer(SERVER_WIDTH, SERVER_HEIGHT,
+      { antialias: true, backgroundColor: 0x000000 })
+    this.container.addChild(this.graphics)
+    this.preConnect()
+  }
+
+  public connect() {
+    const gfx = {container: this.container, graphics: this.graphics, overlay: this.overlay}
+    connectAndCount(this.room).then(([rc, memberCount]) => {
+    this.rc = rc
+    if (this.closed) {
+      this.close()
+      return
+    }
     if (memberCount > 1) { // not server
       console.log("Not server")
       return clientDataChannel(rc).then((dc) => {
-        const conn = new NetworkServerConnection(dc)
-        const client = new Client(conn, gfx)
-        const m = mapClientActions(client)
+        this.server = new NetworkServerConnection(dc)
+        this.client = new Client(this.server, gfx)
+        const m = mapClientActions(this.client)
         dc.onmessage = (evt: any) => {
           m(JSON.parse(evt.data))
         }
-        conn.addPlayer()
-        return { client, close, server: conn as ServerConnection }
+        this.server.addPlayer()
+        return
       })
     } else {
       console.log("Server")
-      overlay.addOverlay(`Wating for players...\nJoin room ${room} or\npress ENTER to add player`)
+      this.overlay.setOverlay(`Wating for players...\nJoin room ${this.room} or\npress ENTER to add player`)
       const server = new Server(TICK_RATE)
       const id = {}
-      const conn = new LocalServerConnection(server, id)
-      const client = new Client(conn, gfx)
-      server.addConnection(new LocalClientConnection(client, id))
+      this.server = new LocalServerConnection(server, id)
+      this.client = new Client(this.server, gfx)
+      server.addConnection(new LocalClientConnection(this.client, id))
       const m = mapServerActions(server)
 
       const conns: NetworkClientConnection[] = []
@@ -215,73 +240,116 @@ export function createGame(room: string) {
           m(data, dc)
         }
       })
-      conn.addPlayer()
-      return { client, close, server: conn }
+      this.server.addPlayer()
+      return
     }
-  }).then((res) => {
+  }).then(() => {
+    this.preGame()
+    this.client.onEnd(() => {
+      this.sendEvent(GameEvent.END)
+      this.close()
+    })
+    this.sendEvent(GameEvent.START)
+  })
+  }
 
-    const client = res.client
-    const server = res.server
-
-    let closed = false
-
-    container.addChild(graphics)
-
-    const renderer = autoDetectRenderer(SERVER_WIDTH, SERVER_HEIGHT,
-      { antialias: true, backgroundColor: 0x000000 })
-    function repaint(cb: FrameRequestCallback) {
-      renderer.render(container)
-      requestAnimationFrame(cb)
+  public onEvent = (f: (e: GameEvent) => void) => {
+    this.eventListeners.push(f)
+    return () => {
+      this.eventListeners = this.eventListeners.filter(g => g !== f)
     }
+  }
 
-    function preGame() {
-      if (client.players.length > 0)  { // Game has started
-        overlay.removeOverlay()
-        return draw()
-      }
-
-      if (pressedKeys[KEYS.RETURN]) {
-        server.addPlayer()
-      }
-
-      repaint(preGame)
+  public close() {
+    this.closed = true
+    if (this.rc != null) {
+      this.rc.close()
+      this.rc = undefined
     }
+    if (this.renderer != null) {
+      this.renderer.destroy()
+      this.renderer = undefined as any
+    }
+    if (this.server != null) {
+      this.server = undefined as any
+    }
+    if (this.client != null) {
+      this.client = undefined as any
+      resetCombos()
+    }
+  }
 
-    function draw() {
+  public getView() {
+    return this.renderer.view
+  }
 
-      if (closed) {
+  private paint() {
+    this.renderer.render(this.container)
+  }
+
+  private repaint(cb: FrameRequestCallback) {
+    this.paint()
+    requestAnimationFrame(cb)
+  }
+
+  private handleKeys() {
+    this.client.players.forEach(p => {
+      if (!p.keys) {
         return
       }
 
-      const players = client.players
-
-      players.forEach(p => {
-        if (!p.keys) {
-          return
-        }
-
-        if (pressedKeys[p.keys.left]) {
-          client.rotateLeft(p.id)
-        }
-
-        if (pressedKeys[p.keys.right]) {
-          client.rotateRight(p.id)
-        }
-      })
-
-      for (let player of players) {
-        updatePlayerGraphics(player)
+      if (pressedKeys[p.keys.left]) {
+        this.client.rotateLeft(p.id)
       }
 
-      repaint(draw)
+      if (pressedKeys[p.keys.right]) {
+        this.client.rotateRight(p.id)
+      }
+    })
+  }
+
+  private drawPlayers() {
+    for (let player of this.client.players) {
+      updatePlayerGraphics(player)
+    }
+  }
+
+  private draw = () => {
+    if (this.closed) {
+      this.close()
+      return
     }
 
-    preGame()
-    return { view: renderer.view, close: () => {
-      res.close()
-      renderer.destroy()
-      closed = true
-      resetCombos()
-    }, onEnd: (f: () => void) => client.onEnd(f) }
-  })
+    this.handleKeys()
+    this.drawPlayers()
+
+    this.repaint(this.draw)
+  }
+
+  private preConnect = () => {
+    this.overlay.setOverlay("Connecting...")
+    this.paint()
+  }
+
+  private preGame = () => {
+    if (this.closed) {
+      this.close()
+      return
+    }
+    if (this.client.players.length > 0)  { // Game has started
+      this.overlay.removeOverlay()
+      this.draw()
+      return
+    }
+
+    if (pressedKeys[KEYS.RETURN]) {
+      this.server.addPlayer()
+    }
+
+    this.repaint(this.preGame)
+  }
+
+  private sendEvent (e: GameEvent) {
+    this.eventListeners.forEach(f => f(e))
+  }
 }

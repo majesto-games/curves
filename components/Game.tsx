@@ -1,7 +1,7 @@
 import * as React from "react"
 import { Link, withRouter, IRouter } from "react-router"
 
-import { createGame } from "../game/main"
+import { Game, GameEvent } from "../game/main"
 
 export interface GameProps {
   location: {
@@ -12,10 +12,9 @@ export interface GameProps {
   router: IRouter
 }
 
-class Game extends React.Component<GameProps, any> {
+class GameC extends React.Component<GameProps, any> {
   private div: HTMLDivElement | null = null
-  private games: {[key: string]: Promise<HTMLCanvasElement> | undefined} = {}
-  private latestRoom = ""
+  private games: {[key: string]: HTMLCanvasElement | undefined} = {}
 
   public componentDidMount() {
     const { query } = this.props.location
@@ -32,17 +31,18 @@ class Game extends React.Component<GameProps, any> {
 
   private getGame = (room: string) => {
     const newGame = () => {
-      const view = createGame(room).then(game => {
-        game.onEnd(() => {
+      const game = new Game(room)
+      game.onEvent((e) => {
+        if (e === GameEvent.END) {
           setTimeout(() => {
-            game.close()
             this.games[room] = undefined
             this.props.router.goBack()
           }, 3000)
-        })
-        return game.view
+        }
       })
+      const view = game.getView()
       this.games[room] = view
+      game.connect()
       return view
     }
 
@@ -50,21 +50,16 @@ class Game extends React.Component<GameProps, any> {
   }
 
   private showGame = (room: string) => {
-    this.latestRoom = room
-    this.getGame(room).then(game => {
-      if (this.latestRoom !== room) {
-        return
-      }
+    const game = this.getGame(room)
 
-      if (this.div) {
-        while (this.div.firstChild) {
-          this.div.removeChild(this.div.firstChild)
-        }
-        this.div.appendChild(game)
+    if (this.div) {
+      while (this.div.firstChild) {
+        this.div.removeChild(this.div.firstChild)
       }
-    })
+      this.div.appendChild(game)
+    }
   }
 
 }
 
-export default withRouter(Game)
+export default withRouter(GameC)
