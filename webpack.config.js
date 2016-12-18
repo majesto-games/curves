@@ -15,6 +15,7 @@ module.exports = {
   module: {
     loaders: [
       { test: /\.tsx?$/, exclude: /node_modules/, loader: 'awesome-typescript-loader' },
+      { test: /\.tsx?$/, exclude: /node_modules/, loader: 'tslint-loader', enforce: 'pre' },
       { test: /\.json$/, loader: 'json-loader' }
     ]
   },
