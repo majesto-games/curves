@@ -83,12 +83,6 @@ export interface ClientKeys {
   right: KEYS
 }
 
-interface Gfx {
-  container: Container
-  graphics: Graphics
-  overlay: Overlay
-}
-
 export class Client {
 
   public players: Player[] = []
