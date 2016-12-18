@@ -5,14 +5,13 @@ export interface Action {
   payload?: any
 }
 
-
 export const ADD_PLAYER: "ADD_PLAYER" = "ADD_PLAYER"
 export interface AddPlayer extends Action {
   type: "ADD_PLAYER"
 }
 export function addPlayer(): AddPlayer {
   return {
-    type: ADD_PLAYER
+    type: ADD_PLAYER,
   }
 }
 
@@ -31,7 +30,7 @@ export function rotate(direction: number, index: number): Rotate {
     payload: {
       direction: direction,
       index: index,
-    }
+    },
   }
 }
 
@@ -39,7 +38,7 @@ export interface PlayerUpdate {
   x: number
   y: number
   rotation: number
-  tailPart: number[] | null
+  tailPart?: number[]
   alive: boolean
 }
 export const UPDATE_PLAYERS: "UPDATE_PLAYERS" = "UPDATE_PLAYERS"
@@ -60,6 +59,7 @@ export interface PlayerInit {
   color: number
   rotation: number
   isOwner: boolean
+  id: number
 }
 export const START: "START" = "START"
 export interface Start extends Action {
@@ -76,15 +76,14 @@ export function start(playerInits: PlayerInit[]): Start {
 export const END: "END" = "END"
 export interface End extends Action {
   type: "END"
-  payload: number | null
+  payload?: number
 }
-export function end(winnerId: number | null): End {
+export function end(winnerId?: number): End {
   return {
     type: END,
     payload: winnerId,
   }
 }
-
 
 export const LEFT = -1
 export const RIGHT = 1

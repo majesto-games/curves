@@ -84,7 +84,14 @@ export class Player {
   private tailTicker: number
   private skipTailTicker: number
 
-  constructor(private name: string, startPoint: Point, public color: number, public rotation: number, public keys: ClientKeys | null, id: number, public owner?: any) {
+  constructor(
+      private name: string,
+      startPoint: Point,
+      public color: number,
+      public rotation: number,
+      id: number,
+      public keys?: ClientKeys,
+      public owner?: any) {
     this.x = startPoint.x
     this.y = startPoint.y
     this.lastX = this.x
@@ -107,7 +114,7 @@ export class Player {
 
   public createTail = () => {
     let r = Math.random()
-    let pol: number[] | null = null
+    let pol: number[] | undefined
 
     if (this.skipTailTicker <= 0) {
       if (r > this.holeChance) {

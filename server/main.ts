@@ -1,9 +1,7 @@
 import { getColors } from "../game/util"
 import { Point, Player, containsPoint, ROTATION_SPEED } from "../game/game"
-import { Client } from "../game/main"
 import {
   PlayerUpdate,
-  PlayerInit,
 } from "./actions"
 
 import { ClientConnection } from "./connections"
@@ -17,6 +15,7 @@ interface AlmostPlayerInit {
   color: number
   rotation: number
   connectionId: any
+  id: number
 }
 
 export class Server {
@@ -52,8 +51,9 @@ export class Server {
     const color = this.colors.pop() as number
     const rotation = Math.random() * Math.PI * 2
 
-    const playerInit = { name, startPoint, color, rotation, connectionId }
-    const player = new Player(name, startPoint, color, rotation, null, id, connectionId)
+    const playerInit: AlmostPlayerInit = { name, startPoint, color, rotation, connectionId, id }
+    const player = new Player(name, startPoint, color, rotation, id, undefined, connectionId)
+    console.log(connectionId)
 
     this.playerInits.push(playerInit)
     this.players.push(player)
@@ -67,6 +67,7 @@ export class Server {
             color: v.color,
             rotation: v.rotation,
             isOwner: v.connectionId === c.id,
+            id: v.id,
           }
         })
         c.start(playerInits)
@@ -76,16 +77,16 @@ export class Server {
     }
   }
 
-  public rotateLeft(index: number, connectionId: any) {
-    const player = this.players[index]
-    if (player.owner === connectionId) {
+  public rotateLeft(id: number, connectionId: any) {
+    const player = this.playerById(id)
+    if (player != null && player.owner === connectionId) {
       player.rotate(-(ROTATION_SPEED / player.fatness))
     }
   }
 
-  public rotateRight(index: number, connectionId: any) {
-    const player = this.players[index]
-    if (player.owner === connectionId) {
+  public rotateRight(id: number, connectionId: any) {
+    const player = this.playerById(id)
+    if (player != null && player.owner === connectionId) {
       player.rotate((ROTATION_SPEED / player.fatness))
     }
   }
@@ -97,6 +98,62 @@ export class Server {
   private pause() {
     this.pauseDelta = Date.now() - this.lastUpdate
     this.paused = true
+  }
+
+  private playerById(id: number): Player | undefined {
+    return this.players.find(p => p.id === id)
+  }
+
+  private moveTick(player: Player) {
+    player.x += Math.sin(player.rotation) * player.speed
+    player.y -= Math.cos(player.rotation) * player.speed
+  }
+
+  private wrapEdge(player: Player) {
+    if (player.x > SERVER_WIDTH + player.fatness) {
+        player.x = -player.fatness
+        player.lastX = player.x - 1
+        player.lastEnd = null
+      }
+
+      if (player.y > SERVER_HEIGHT + player.fatness) {
+        player.y = -player.fatness
+        player.lastY = player.y - 1
+        player.lastEnd = null
+      }
+
+      if (player.x < -player.fatness) {
+        player.x = SERVER_WIDTH + player.fatness
+        player.lastX = player.x + 1
+        player.lastEnd = null
+      }
+
+      if (player.y < -player.fatness) {
+        player.y = SERVER_HEIGHT + player.fatness
+        player.lastY = player.y + 1
+        player.lastEnd = null
+      }
+  }
+
+  private collides(p: number[], player: Player) {
+    return (collider: Player) => {
+      let pt = collider.polygonTail
+
+      // Don't collide with the last created tail
+      if (collider === player) {
+        pt = pt.slice(0, -1)
+      }
+
+      for (let i = 0; i < p.length; i += 2) {
+        const x = p[i]
+        const y = p[i + 1]
+
+        if (pt.some(poly => containsPoint(poly, x, y))) {
+          return true
+        }
+      }
+      return false
+    }
   }
 
   private serverTick() {
@@ -113,64 +170,20 @@ export class Server {
       const playersAlive = this.players.filter(player => player.alive)
 
       if (playersAlive.length < 2) {
-        this.send(c => c.end((playersAlive[0] && playersAlive[0].id) || null))
+        this.send(c => c.end((playersAlive[0] && playersAlive[0].id)))
         return
       }
 
       for (let player of playersAlive) {
 
-        // Update player positions
-        player.x += Math.sin(player.rotation) * player.speed
-        player.y -= Math.cos(player.rotation) * player.speed
+        this.moveTick(player)
+        this.wrapEdge(player)
 
-        // Edge wrapping
-        if (player.x > SERVER_WIDTH + player.fatness) {
-          player.x = -player.fatness
-          player.lastX = player.x - 1
-          player.lastEnd = null
-        }
-
-        if (player.y > SERVER_HEIGHT + player.fatness) {
-          player.y = -player.fatness
-          player.lastY = player.y - 1
-          player.lastEnd = null
-        }
-
-        if (player.x < -player.fatness) {
-          player.x = SERVER_WIDTH + player.fatness
-          player.lastX = player.x + 1
-          player.lastEnd = null
-        }
-
-        if (player.y < -player.fatness) {
-          player.y = SERVER_HEIGHT + player.fatness
-          player.lastY = player.y + 1
-          player.lastEnd = null
-        }
-
-        // Create tail polygon, this returns null if it's supposed to be a hole
+        // Create tail polygon, this returns undefined if it's supposed to be a hole
         const p = player.createTail()
 
-        if (p !== null) {
-          const collides = (collider: Player) => {
-            let pt = collider.polygonTail
-
-            if (collider === player) {
-              pt = pt.slice(0, -1)
-            }
-
-            for (let i = 0; i < p.length; i += 2) {
-              const x = p[i]
-              const y = p[i + 1]
-
-              if (pt.some(poly => containsPoint(poly, x, y))) {
-                return true
-              }
-            }
-            return false
-          }
-
-          if (this.players.some(collides)) {
+        if (p != null) {
+          if (this.players.some(this.collides(p, player))) {
             player.alive = false
           }
 

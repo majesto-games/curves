@@ -14,8 +14,7 @@ import {
   Action,
   updatePlayers,
   start,
-  END,
-  end
+  end,
 } from "./actions"
 
 export interface ServerConnection {
@@ -30,7 +29,7 @@ export interface ClientConnection {
   id: any
   updatePlayers(playerUpdates: PlayerUpdate[]): void
   start(playerInits: PlayerInit[]): void
-  end(winnerId: number | null): void
+  end(winnerId?: number): void
   close(): void
 }
 
@@ -72,7 +71,7 @@ export class LocalClientConnection implements ClientConnection {
     this.client.start(playerInits)
   }
 
-  public end(winnerId: number | null) {
+  public end(winnerId?: number) {
     this.client.end(winnerId)
   }
 
@@ -80,7 +79,6 @@ export class LocalClientConnection implements ClientConnection {
     return
   }
 }
-
 
 export class NetworkServerConnection implements ServerConnection {
   public id: any
@@ -125,7 +123,7 @@ export class NetworkClientConnection implements ClientConnection {
     this.send(start(playerInits))
   }
 
-  public end (winnerId: number | null) {
+  public end (winnerId?: number) {
     this.send(end(winnerId))
   }
 
@@ -175,7 +173,6 @@ export function serverDataChannel(rc: RoomConnection, cb: (dc: DataChannel) => a
     console.log("closed channel", peerId, dc)
   })
 }
-
 
 export function connectAndCount(room: string): Promise<[RoomConnection, number]> {
   const rc = quickconnect(SERVER_URL, { room, iceServers: freeice() })

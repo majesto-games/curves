@@ -8,7 +8,7 @@ import {
 import {
   Server,
   SERVER_WIDTH,
-  SERVER_HEIGHT
+  SERVER_HEIGHT,
 } from "../server/main"
 
 import {
@@ -19,7 +19,7 @@ import {
   LocalClientConnection,
   clientDataChannel,
   serverDataChannel,
-  connectAndCount
+  connectAndCount,
 } from "../server/connections"
 
 import {
@@ -29,7 +29,6 @@ import {
 
 import pressedKeys, { KEYS, registerKeys } from "./keys"
 
-
 let keyCombos: { left: KEYS, right: KEYS }[] = []
 
 function resetCombos() {
@@ -38,8 +37,6 @@ function resetCombos() {
 resetCombos()
 registerKeys(Array.prototype.concat.apply([], keyCombos.map(n => [n.left, n.right])))
 registerKeys([KEYS.RETURN])
-
-
 
 class Overlay {
 
@@ -97,9 +94,7 @@ export class Client {
   public players: Player[] = []
   public id: number
 
-  private endListeners: (() => void)[] = []
-
-  constructor(private connection: ServerConnection, public gfx: Gfx) {
+  constructor(private connection: ServerConnection, private game: Game) {
   }
 
   public updatePlayers = (playerUpdates: PlayerUpdate[]) => {
@@ -111,20 +106,19 @@ export class Client {
       player.y = update.y
       player.rotation = update.rotation
       player.alive = update.alive
+      this.game.updatePlayer(player)
 
       if (update.tailPart) {
-        this.gfx.graphics.beginFill(player.color)
-        this.gfx.graphics.drawPolygon(update.tailPart)
-        this.gfx.graphics.endFill()
+        this.game.addTail(update.tailPart, player.color)
       }
     }
   }
 
   public start = (players: PlayerInit[]) => {
     console.log("starting with", players)
-    this.players = players.map((player, i) => createPlayer(player.name, player.startPoint,
-      player.color, player.rotation, player.isOwner, i))
-    this.players.forEach(player => this.gfx.container.addChild(player.graphics))
+    this.players = players.map((player) => createPlayer(player.name, player.startPoint,
+      player.color, player.rotation, player.isOwner, player.id))
+    this.players.forEach(player => this.game.addPlayer(player))
   }
 
   public rotateLeft = (id: number) => {
@@ -135,28 +129,28 @@ export class Client {
     this.connection.rotateRight(id)
   }
 
-  public end = (winnerId: number | null) => {
-    this.gfx.overlay.setOverlay(`Winner: Player ${winnerId}`)
-    this.endListeners.forEach(f => f())
+  public playerById(id: number): Player | undefined {
+    return this.players.find(p => p.id === id)
   }
 
-  public onEnd = (f: () => void) => {
-    this.endListeners.push(f)
-    return () => {
-      this.endListeners = this.endListeners.filter(g => g !== f)
+  public end = (winnerId?: number) => {
+    if (winnerId != null) {
+      this.game.end(this.playerById(winnerId))
+    } else {
+      this.game.end()
     }
   }
 }
 
 function createPlayer(name: string, startPoint: Point, color: number,
   rotation: number, isOwner: boolean, id: number) {
-  let keys: ClientKeys | null = null
+  let keys: ClientKeys | undefined
 
   if (isOwner) {
-    keys = keyCombos.pop() || null
+    keys = keyCombos.pop()
   }
 
-  const player = new Player(name, startPoint, color, rotation, keys, id)
+  const player = new Player(name, startPoint, color, rotation, id, keys)
 
   const graphics = new Graphics()
   graphics.beginFill(color)
@@ -164,15 +158,8 @@ function createPlayer(name: string, startPoint: Point, color: number,
   graphics.endFill()
 
   player.graphics = graphics
-  updatePlayerGraphics(player)
 
   return player
-}
-
-function updatePlayerGraphics(player: Player) {
-  player.graphics.x = player.x
-  player.graphics.y = player.y
-  player.graphics.scale = new PIXI.Point(player.fatness, player.fatness)
 }
 
 export enum GameEvent {
@@ -199,7 +186,6 @@ export class Game {
   }
 
   public connect() {
-    const gfx = {container: this.container, graphics: this.graphics, overlay: this.overlay}
     connectAndCount(this.room).then(([rc, memberCount]) => {
     this.rc = rc
     if (this.closed) {
@@ -210,7 +196,7 @@ export class Game {
       console.log("Not server")
       return clientDataChannel(rc).then((dc) => {
         this.server = new NetworkServerConnection(dc)
-        this.client = new Client(this.server, gfx)
+        this.client = new Client(this.server, this)
         const m = mapClientActions(this.client)
         dc.onmessage = (evt: any) => {
           m(JSON.parse(evt.data))
@@ -224,7 +210,7 @@ export class Game {
       const server = new Server(TICK_RATE)
       const id = {}
       this.server = new LocalServerConnection(server, id)
-      this.client = new Client(this.server, gfx)
+      this.client = new Client(this.server, this)
       server.addConnection(new LocalClientConnection(this.client, id))
       const m = mapServerActions(server)
 
@@ -245,12 +231,19 @@ export class Game {
     }
   }).then(() => {
     this.preGame()
-    this.client.onEnd(() => {
-      this.sendEvent(GameEvent.END)
-      this.close()
-    })
     this.sendEvent(GameEvent.START)
   })
+  }
+
+  public end(player?: Player) {
+    if (player != null) {
+      this.overlay.setOverlay(`Winner: Player ${player.id}`)
+    } else {
+      this.overlay.setOverlay(`No winner!`)
+    }
+    this.sendEvent(GameEvent.END)
+    this.paint()
+    this.close()
   }
 
   public onEvent = (f: (e: GameEvent) => void) => {
@@ -283,6 +276,22 @@ export class Game {
     return this.renderer.view
   }
 
+  public addPlayer(player: Player) {
+    this.container.addChild(player.graphics)
+  }
+
+  public updatePlayer(player: Player) {
+    player.graphics.x = player.x
+    player.graphics.y = player.y
+    player.graphics.scale = new PIXI.Point(player.fatness, player.fatness)
+  }
+
+  public addTail(tail: number[], color: number) {
+    this.graphics.beginFill(color)
+    this.graphics.drawPolygon(tail)
+    this.graphics.endFill()
+  }
+
   private paint() {
     this.renderer.render(this.container)
   }
@@ -310,7 +319,7 @@ export class Game {
 
   private drawPlayers() {
     for (let player of this.client.players) {
-      updatePlayerGraphics(player)
+      this.updatePlayer(player)
     }
   }
 
