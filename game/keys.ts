@@ -120,7 +120,6 @@ interface PressedKeys {
   [key: number]: boolean
 }
 
-
 const keys: PressedKeys = {
 }
 

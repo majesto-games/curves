@@ -20,7 +20,7 @@ export interface Rotate extends Action {
   type: "ROTATE"
   payload: {
     direction: number
-    index: number
+    index: number,
   }
 }
 
@@ -28,8 +28,8 @@ export function rotate(direction: number, index: number): Rotate {
   return {
     type: ROTATE,
     payload: {
-      direction: direction,
-      index: index,
+      direction,
+      index,
     },
   }
 }

@@ -20,8 +20,12 @@ export function getColors (num: number) {
   return colors.slice(0, num)
 }
 
+/* tslint:disable no-bitwise */
 export function funColor () {
-  return superFunColor(((0x80 + Math.random() * 0x80) << 16) | ((0x80 + Math.random() * 0x80) << 8) | ((0x80 + Math.random() * 0x80)))
+  const red   = 0x80 + Math.random() * 0x80
+  const green = 0x80 + Math.random() * 0x80
+  const blue  = 0x80 + Math.random() * 0x80
+  return superFunColor((red << 16) | (green << 8) | blue)
 }
 
 export function superFunColor (input: number) {
@@ -31,5 +35,7 @@ export function superFunColor (input: number) {
 }
 
 export function chunk<T> (arr: T[], n: number) {
-  return arr.slice(0,(arr.length+n-1)/n|0).map(function(_,i) { return arr.slice(n*i,n*i+n); });
+  return arr.slice(0, (arr.length + n - 1) / n | 0).map((_, i) => arr.slice(n * i, n * i + n ))
 }
+
+/* tslint: enable */

@@ -6,8 +6,8 @@ import { Game, GameEvent } from "../game/main"
 export interface GameProps {
   location: {
     query?: {
-      room?: string
-    }
+      room?: string,
+    },
   }
   router: IRouter
 }

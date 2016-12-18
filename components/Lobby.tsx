@@ -9,15 +9,13 @@ interface Room {
 }
 
 const axi = axios.create({
-  baseURL: SERVER_URL
-});
+  baseURL: SERVER_URL,
+})
 
 function getRooms() {
   console.log("getting rooms")
   return axi.get<Room[]>("/")
 }
-
-
 
 class NewRoomClass extends React.Component<{ router: IRouter }, {}> {
   private roomInput: HTMLInputElement
@@ -43,7 +41,6 @@ class NewRoomClass extends React.Component<{ router: IRouter }, {}> {
 
 const NewRoom = withRouter(NewRoomClass) as any
 
-
 export default class Lobby extends React.Component<{}, { rooms: Room[] }> {
   public state: { rooms: Room[] } = {
     rooms: [],
@@ -57,15 +54,13 @@ export default class Lobby extends React.Component<{}, { rooms: Room[] }> {
     })
   }
 
-
   public render() {
     const existingRooms = this.state.rooms.map(room => (
       <li key={`room_${room.name}`}>
         <Link to={{ pathname: "/game", query: {room: room.name} }}>{room.name}</Link>
       </li>
-    )
+    ))
 
-    )
     return (
       <ul>
       {
@@ -75,4 +70,3 @@ export default class Lobby extends React.Component<{}, { rooms: Room[] }> {
     )
   }
 }
-
