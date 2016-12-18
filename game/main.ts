@@ -186,42 +186,10 @@ export class Game {
       this.close()
       return
     }
-    if (memberCount > 1) { // not server
-      console.log("Not server")
-      return clientDataChannel(rc).then((dc) => {
-        this.server = new NetworkServerConnection(dc)
-        this.client = new Client(this.server, this)
-        const m = mapClientActions(this.client)
-        dc.onmessage = (evt: any) => {
-          m(JSON.parse(evt.data))
-        }
-        this.server.addPlayer()
-        return
-      })
+    if (memberCount > 1) {
+      return this.connectAsClient(rc)
     } else {
-      console.log("Server")
-      this.overlay.setOverlay(`Wating for players...\nJoin room ${this.room} or\npress ENTER to add player`)
-      const server = new Server(TICK_RATE)
-      const id = {}
-      this.server = new LocalServerConnection(server, id)
-      this.client = new Client(this.server, this)
-      server.addConnection(new LocalClientConnection(this.client, id))
-      const m = mapServerActions(server)
-
-      const conns: NetworkClientConnection[] = []
-
-      serverDataChannel(rc, dc => {
-        const netconn = new NetworkClientConnection(dc)
-        server.addConnection(netconn)
-        conns.push(netconn)
-
-        dc.onmessage = (evt: any) => {
-          const data = JSON.parse(evt.data)
-          m(data, dc)
-        }
-      })
-      this.server.addPlayer()
-      return
+      return this.connectAsServer(rc)
     }
   }).then(() => {
     this.preGame()
@@ -284,6 +252,48 @@ export class Game {
     this.graphics.beginFill(color)
     this.graphics.drawPolygon(tail)
     this.graphics.endFill()
+  }
+
+  private connectAsClient(rc: any) {
+    console.log("Not server")
+    return clientDataChannel(rc).then((dc) => {
+      this.server = new NetworkServerConnection(dc)
+      this.client = new Client(this.server, this)
+
+      const m = mapClientActions(this.client)
+      dc.onmessage = (evt: any) => {
+        m(JSON.parse(evt.data))
+      }
+      this.server.addPlayer()
+      return
+    })
+  }
+
+  private connectAsServer(rc: any) {
+    console.log("Server")
+    this.overlay.setOverlay(`Wating for players...\nJoin room ${this.room} or\npress ENTER to add player`)
+    const server = new Server(TICK_RATE)
+    const id = {}
+    this.server = new LocalServerConnection(server, id)
+    this.client = new Client(this.server, this)
+    server.addConnection(new LocalClientConnection(this.client, id))
+
+    serverDataChannel(rc, this.handleClientConnections(server))
+
+    this.server.addPlayer()
+  }
+
+  private handleClientConnections(server: Server) {
+    const m = mapServerActions(server)
+    return (dc: any) => {
+      const netconn = new NetworkClientConnection(dc)
+      server.addConnection(netconn)
+
+      dc.onmessage = (evt: any) => {
+        const data = JSON.parse(evt.data)
+        m(data, dc)
+      }
+    }
   }
 
   private paint() {
