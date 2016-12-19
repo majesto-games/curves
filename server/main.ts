@@ -1,7 +1,11 @@
 import { getColors } from "../game/util"
-import { Point, Player, containsPoint, ROTATION_SPEED } from "../game/game"
+import { Point, Player, containsPoint, ROTATION_SPEED, ServerTail } from "../game/game"
 import {
   PlayerUpdate,
+  Gap,
+  GAP,
+  TAIL,
+  Tail,
 } from "./actions"
 
 import { ClientConnection } from "./connections"
@@ -53,6 +57,7 @@ export class Server {
 
     const playerInit: AlmostPlayerInit = { name, startPoint, color, rotation, connectionId, id }
     const player = new Player(name, startPoint, color, rotation, id, undefined, connectionId)
+    player.tails.push(new ServerTail())
     console.log(connectionId)
 
     this.playerInits.push(playerInit)
@@ -137,18 +142,30 @@ export class Server {
 
   private collides(p: number[], player: Player) {
     return (collider: Player) => {
-      let pt = collider.polygonTail
+      let tails = collider.tails
 
-      // Don't collide with the last created tail
-      if (collider === player) {
-        pt = pt.slice(0, -1)
+      // Special case for last tail for this player
+      if (collider === player && tails.length > 0) {
+        const last = tails[tails.length - 1] as ServerTail
+        tails = tails.slice(0, -1)
+
+        for (let i = 0; i < p.length; i += 2) {
+          const x = p[i]
+          const y = p[i + 1]
+
+          const mostOfLast = last.parts.slice(0, -1)
+
+          if (mostOfLast.some(part => containsPoint(part, x, y))) {
+            return true
+          }
+        }
       }
 
       for (let i = 0; i < p.length; i += 2) {
         const x = p[i]
         const y = p[i + 1]
 
-        if (pt.some(poly => containsPoint(poly, x, y))) {
+        if (tails.some(tail => (tail as ServerTail).containsPoint(x, y))) {
           return true
         }
       }
@@ -180,20 +197,32 @@ export class Server {
         this.wrapEdge(player)
 
         // Create tail polygon, this returns undefined if it's supposed to be a hole
-        const p = player.createTail()
+        const p = player.createTailPart()
+
+        let tailAction: Tail | Gap = {type: GAP}
+        const lt = player.tails[player.tails.length - 1] as ServerTail
 
         if (p != null) {
           if (this.players.some(this.collides(p, player))) {
             player.alive = false
           }
 
-          player.polygonTail.push(p)
+          tailAction = {
+            type: TAIL,
+            payload: p,
+          }
+
+          lt.addPart(p)
+        } else {
+          if (!lt.isNew()) {
+            player.tails.push(new ServerTail())
+          }
         }
 
         playerUpdates.push({
           alive: player.alive,
           rotation: player.rotation,
-          tailPart: p,
+          tail: tailAction,
           x: player.x,
           y: player.y,
         })

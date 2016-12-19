@@ -1,8 +1,10 @@
 import { Graphics, autoDetectRenderer, Container, CanvasRenderer, WebGLRenderer } from "pixi.js"
-import { Point, Player, TICK_RATE } from "./game"
+import { Point, Player, TICK_RATE, ClientTail } from "./game"
 import {
   PlayerUpdate,
   PlayerInit,
+  GAP,
+  TAIL,
 } from "../server/actions"
 
 import {
@@ -102,8 +104,15 @@ export class Client {
       player.alive = update.alive
       this.game.updatePlayer(player)
 
-      if (update.tailPart) {
-        this.game.addTail(update.tailPart, player.color)
+      const lt = player.tails[player.tails.length - 1] as ClientTail
+      if (update.tail.type === TAIL) {
+        lt.addPart(update.tail.payload)
+      } else if (update.tail.type === GAP) {
+        if (!lt.isNew()) {
+          const tail = new ClientTail(player.color)
+          player.tails.push(tail)
+          this.game.addTail(tail)
+        }
       }
     }
   }
@@ -152,12 +161,13 @@ function createPlayer(name: string, startPoint: Point, color: number,
   graphics.endFill()
 
   player.graphics = graphics
+  player.tails.push(new ClientTail(color))
 
   return player
 }
 
 export enum GameEvent {
-  START, END
+  START, END,
 }
 
 export class Game {
@@ -240,6 +250,7 @@ export class Game {
 
   public addPlayer(player: Player) {
     this.container.addChild(player.graphics)
+    this.addTail(player.tails[0] as ClientTail)
   }
 
   public updatePlayer(player: Player) {
@@ -248,10 +259,11 @@ export class Game {
     player.graphics.scale = new PIXI.Point(player.fatness, player.fatness)
   }
 
-  public addTail(tail: number[], color: number) {
-    this.graphics.beginFill(color)
-    this.graphics.drawPolygon(tail)
-    this.graphics.endFill()
+  public addTail(tail: ClientTail) {
+    this.graphics.addChild(tail.graphics)
+    // this.graphics.beginFill(color)
+    // this.graphics.drawPolygon(tail)
+    // this.graphics.endFill()
   }
 
   private connectAsClient(rc: any) {

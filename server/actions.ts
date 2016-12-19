@@ -34,12 +34,24 @@ export function rotate(direction: number, index: number): Rotate {
   }
 }
 
+export const TAIL: "TAIL" = "TAIL"
+export interface Tail extends Action {
+  type: "TAIL"
+  payload: number[]
+}
+
+export const GAP: "GAP" = "GAP"
+export interface Gap extends Action {
+  type: "GAP"
+}
+
+
 export interface PlayerUpdate {
   x: number
   y: number
   rotation: number
-  tailPart?: number[]
   alive: boolean
+  tail: Tail | Gap
 }
 export const UPDATE_PLAYERS: "UPDATE_PLAYERS" = "UPDATE_PLAYERS"
 export interface UpdatePlayers extends Action {

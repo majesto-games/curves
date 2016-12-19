@@ -65,10 +65,84 @@ export function containsPoint (points: number[], x: number, y: number) {
   return inside
 };
 
+export interface Tail {
+  addPart: (part: number[]) => void
+  isNew: () => boolean
+}
+
+export class ClientTail implements Tail {
+  public readonly graphics = new PIXI.Graphics()
+  private isnew = true
+
+  constructor(public color: number) {
+
+  }
+
+  public addPart(part: number[]) {
+    this.graphics.beginFill(this.color)
+    this.graphics.drawPolygon(part)
+    this.graphics.endFill()
+    this.isnew = false
+  }
+
+  public isNew() {
+    return this.isnew
+  }
+}
+
+export class ServerTail implements Tail {
+  public minX: number
+  public maxX: number
+  public minY: number
+  public maxY: number
+  public parts: number[][] = []
+
+  public isNew() {
+    return this.parts.length < 1
+  }
+
+  public addPart(part: number[]) {
+
+    if (this.isNew()) {
+      this.minX = this.maxX = part[0]
+      this.minY = this.maxY = part[1]
+    }
+
+    for (let i = 0; i < part.length; i += 2) {
+      const x = part[i]
+      const y = part[i + 1]
+
+      this.ensureBoundsX(x)
+      this.ensureBoundsY(y)
+    }
+
+    this.parts.push(part)
+  }
+
+  public containsPoint(x: number, y: number) {
+    if (x < this.minX || x > this.maxX || y < this.minY || y > this.maxY) {
+      return false
+    }
+    return this.parts.some(poly => containsPoint(poly, x, y))
+  }
+
+  private ensureBoundsX(x: number) {
+    this.minX = Math.min(this.minX, x)
+    this.maxX = Math.max(this.maxX, x)
+  }
+
+  private ensureBoundsY(y: number) {
+    this.minY = Math.min(this.minY, y)
+    this.maxY = Math.max(this.maxY, y)
+  }
+
+}
+
+
 export class Player {
 
   public graphics: PIXI.Graphics
-  public polygonTail: any[]
+  public tails: Tail[]
   public fatness: number
   public alive: boolean
   public lastX: number
@@ -102,7 +176,7 @@ export class Player {
     this.holeChance = HOLE_CHANCE_BASE
     this.tailTicker = 0
     this.speed = MOVE_SPEED_BASE
-    this.polygonTail = []
+    this.tails = []
     this.skipTailTicker = 0
     this.alive = true
     this.id = id
@@ -112,7 +186,7 @@ export class Player {
     this.rotation = (this.rotation + amount) % (2 * Math.PI)
   }
 
-  public createTail = () => {
+  public createTailPart = () => {
     let r = Math.random()
     let pol: number[] | undefined
 
