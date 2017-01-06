@@ -2,6 +2,7 @@ import * as quickconnect from "rtc-quickconnect"
 import freeice = require("freeice")
 import { Server } from "./main"
 import { Client } from "../game/main"
+import { Point, Powerup } from "../game/game"
 import { SERVER_URL } from "../config"
 
 import {
@@ -15,6 +16,9 @@ import {
   updatePlayers,
   start,
   end,
+  POWERUP_SPAWN,
+  spawnPowerup,
+  fetchPowerup,
 } from "./actions"
 
 export interface ServerConnection {
@@ -31,6 +35,8 @@ export interface ClientConnection {
   start(playerInits: PlayerInit[]): void
   end(winnerId?: number): void
   close(): void
+  spawnPowerup(powerup: Powerup): void
+  fetchPowerup(powerup: Powerup): void
 }
 
 export class LocalServerConnection implements ServerConnection {
@@ -73,6 +79,14 @@ export class LocalClientConnection implements ClientConnection {
 
   public end(winnerId?: number) {
     this.client.end(winnerId)
+  }
+
+  public spawnPowerup(powerup: Powerup) {
+    this.client.spawnPowerup(powerup)
+  }
+
+  public fetchPowerup(powerup: Powerup) {
+    this.client.fetchPowerup(powerup.id)
   }
 
   public close() {
@@ -129,6 +143,14 @@ export class NetworkClientConnection implements ClientConnection {
 
   public close() {
     this.dataChannel.close()
+  }
+
+  public spawnPowerup(powerup: Powerup) {
+    this.send(spawnPowerup(powerup))
+  }
+
+  public fetchPowerup(powerup: Powerup) {
+    this.send(fetchPowerup(powerup.id))
   }
 
   private send(a: Action) {

@@ -1,4 +1,5 @@
-import { Point } from "../game/game"
+import { Point, Powerup } from "../game/game"
+import { TailPart, NotRemoved } from "../game/tail"
 
 export interface Action {
   readonly type: string
@@ -37,7 +38,7 @@ export function rotate(direction: number, index: number): Rotate {
 export const TAIL: "TAIL" = "TAIL"
 export interface Tail extends Action {
   type: "TAIL"
-  payload: number[]
+  payload: TailPart & NotRemoved
 }
 
 export const GAP: "GAP" = "GAP"
@@ -45,6 +46,31 @@ export interface Gap extends Action {
   type: "GAP"
 }
 
+export const POWERUP_SPAWN: "POWERUP_SPAWN" = "POWERUP_SPAWN"
+export interface PowerupSpawn extends Action {
+  type: "POWERUP_SPAWN",
+  payload: Powerup
+}
+
+export function spawnPowerup(powerup: Powerup): PowerupSpawn {
+  return {
+    type: POWERUP_SPAWN,
+    payload: powerup,
+  }
+}
+
+export const POWERUP_FETCH: "POWERUP_FETCH" = "POWERUP_FETCH"
+export interface PowerupFetch extends Action {
+  type: "POWERUP_FETCH",
+  payload: number
+}
+
+export function fetchPowerup(id: number): PowerupFetch {
+  return {
+    type: POWERUP_FETCH,
+    payload: id,
+  }
+}
 
 export interface PlayerUpdate {
   x: number
@@ -101,4 +127,4 @@ export const LEFT = -1
 export const RIGHT = 1
 
 export type ServerAction = AddPlayer | Rotate
-export type ClientAction  = UpdatePlayers | Start | End
+export type ClientAction  = UpdatePlayers | Start | End | PowerupSpawn | PowerupFetch

@@ -4,7 +4,8 @@
         "noImplicitThis": true,
         "removeComments": true,
         "strictNullChecks": true,
-        "jsx": "react"
+        "jsx": "react",
+        "target": "es5"
     },
     "exclude": [
         "node_modules",

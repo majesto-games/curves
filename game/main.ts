@@ -1,5 +1,6 @@
 import { Graphics, autoDetectRenderer, Container, CanvasRenderer, WebGLRenderer } from "pixi.js"
-import { Point, Player, TICK_RATE, ClientTail } from "./game"
+import { Point, Player, TICK_RATE, Powerup } from "./game"
+import { ClientTail, TailStorage } from "./tail"
 import {
   PlayerUpdate,
   PlayerInit,
@@ -89,6 +90,8 @@ export class Client {
 
   public players: Player[] = []
   public id: number
+  private powerups: {[id: number]: PIXI.Graphics | undefined} = {}
+  private tails = new TailStorage((i) => this.newTail(i))
 
   constructor(private connection: ServerConnection, private game: Game) {
   }
@@ -96,6 +99,7 @@ export class Client {
   public updatePlayers = (playerUpdates: PlayerUpdate[]) => {
     for (let i = 0; i < playerUpdates.length; i++) {
       const update = playerUpdates[i]
+      // TODO fix ids
       const player = this.players[i]
 
       player.x = update.x
@@ -104,15 +108,8 @@ export class Client {
       player.alive = update.alive
       this.game.updatePlayer(player)
 
-      const lt = player.tails[player.tails.length - 1] as ClientTail
       if (update.tail.type === TAIL) {
-        lt.addPart(update.tail.payload)
-      } else if (update.tail.type === GAP) {
-        if (!lt.isNew()) {
-          const tail = new ClientTail(player.color)
-          player.tails.push(tail)
-          this.game.addTail(tail)
-        }
+        this.tails.add(update.tail.payload)
       }
     }
   }
@@ -121,7 +118,10 @@ export class Client {
     console.log("starting with", players)
     this.players = players.map((player) => createPlayer(player.name, player.startPoint,
       player.color, player.rotation, player.isOwner, player.id))
-    this.players.forEach(player => this.game.addPlayer(player))
+    this.players.forEach(player => {
+      this.game.addPlayer(player)
+      this.tails.initPlayer(player)
+    })
   }
 
   public rotateLeft = (id: number) => {
@@ -143,6 +143,28 @@ export class Client {
       this.game.end()
     }
   }
+
+  public spawnPowerup(powerup: Powerup) {
+    this.powerups[powerup.id] = this.game.addPowerup(powerup)
+  }
+
+  public fetchPowerup(id: number) {
+    const powerupG = this.powerups[id]!
+    this.game.removePowerup(powerupG)
+    this.powerups[id] = undefined
+
+    this.players.forEach(player => {
+      const tails = this.tails.tailsForPlayer(player)
+      const lastTailId = tails.length - 1
+      this.tails.removeTail(player.id, lastTailId)
+    })
+  }
+
+  private newTail(playerId: number) {
+    const tail = new ClientTail(this.playerById(playerId)!.color)
+    this.game.addTail(tail)
+    return tail
+  }
 }
 
 function createPlayer(name: string, startPoint: Point, color: number,
@@ -161,7 +183,6 @@ function createPlayer(name: string, startPoint: Point, color: number,
   graphics.endFill()
 
   player.graphics = graphics
-  player.tails.push(new ClientTail(color))
 
   return player
 }
@@ -250,7 +271,6 @@ export class Game {
 
   public addPlayer(player: Player) {
     this.container.addChild(player.graphics)
-    this.addTail(player.tails[0] as ClientTail)
   }
 
   public updatePlayer(player: Player) {
@@ -261,9 +281,28 @@ export class Game {
 
   public addTail(tail: ClientTail) {
     this.graphics.addChild(tail.graphics)
-    // this.graphics.beginFill(color)
-    // this.graphics.drawPolygon(tail)
-    // this.graphics.endFill()
+  }
+
+  public removeTail(tail: ClientTail) {
+    this.graphics.removeChild(tail.graphics)
+  }
+
+  public addPowerup(powerup: Powerup) {
+    const powerupG = new PIXI.Graphics()
+    this.graphics.addChild(powerupG)
+
+    const { location } = powerup
+    powerupG.beginFill(0xffaaff)
+    powerupG.drawCircle(location.x, location.y, 10)
+    powerupG.endFill()
+
+    return powerupG
+  }
+
+  public removePowerup(powerupG: Graphics) {
+    if (powerupG != null) {
+      this.graphics.removeChild(powerupG)
+    }
   }
 
   private connectAsClient(rc: any) {

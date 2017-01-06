@@ -1,5 +1,6 @@
 import { getColors } from "../game/util"
-import { Point, Player, containsPoint, ROTATION_SPEED, ServerTail } from "../game/game"
+import { Point, Player, ROTATION_SPEED, Powerup } from "../game/game"
+import { containsPoint, ServerTail, TailStorage } from "../game/tail"
 import {
   PlayerUpdate,
   Gap,
@@ -13,6 +14,9 @@ import { ClientConnection } from "./connections"
 export const SERVER_WIDTH = 1280
 export const SERVER_HEIGHT = 720
 
+const POWERUP_CHANCE_BASE = 0.0005
+const POWERUP_CHANCE_INCREASE = 0.00001
+
 interface AlmostPlayerInit {
   name: string
   startPoint: Point
@@ -20,6 +24,12 @@ interface AlmostPlayerInit {
   rotation: number
   connectionId: any
   id: number
+}
+
+function fastDistance(x1: number, y1: number, x2: number, y2: number) {
+  const a = x1 - x2
+  const b = y1 - y2
+  return (a * a) + (b * b)
 }
 
 export class Server {
@@ -32,6 +42,10 @@ export class Server {
   private paused: boolean = true
   private lastUpdate: number
   private colors: number[] = getColors(7)
+  private placedPowerups: Powerup[] = []
+  private nextPowerupId = 0
+  private powerupChance = POWERUP_CHANCE_BASE
+  private tails = new TailStorage(() => new ServerTail())
 
   constructor(private tickRate: number) {
   }
@@ -57,8 +71,8 @@ export class Server {
 
     const playerInit: AlmostPlayerInit = { name, startPoint, color, rotation, connectionId, id }
     const player = new Player(name, startPoint, color, rotation, id, undefined, connectionId)
-    player.tails.push(new ServerTail())
-    console.log(connectionId)
+    this.tails.initPlayer(player)
+    console.log("Added player with connection id:", connectionId)
 
     this.playerInits.push(playerInit)
     this.players.push(player)
@@ -142,20 +156,22 @@ export class Server {
 
   private collides(p: number[], player: Player) {
     return (collider: Player) => {
-      let tails = collider.tails
+      let tails = this.tails.tailsForPlayer(collider)
 
       // Special case for last tail for this player
       if (collider === player && tails.length > 0) {
-        const last = tails[tails.length - 1] as ServerTail
+        const last = tails[tails.length - 1]
+        // Modify tails not not contain last part
         tails = tails.slice(0, -1)
 
         for (let i = 0; i < p.length; i += 2) {
           const x = p[i]
           const y = p[i + 1]
 
+          // Test all but the last tail part
           const mostOfLast = last.parts.slice(0, -1)
 
-          if (mostOfLast.some(part => containsPoint(part, x, y))) {
+          if (mostOfLast.some(part => containsPoint(part.vertices, x, y))) {
             return true
           }
         }
@@ -165,12 +181,41 @@ export class Server {
         const x = p[i]
         const y = p[i + 1]
 
-        if (tails.some(tail => (tail as ServerTail).containsPoint(x, y))) {
+        if (tails.some(tail => tail.containsPoint(x, y))) {
           return true
         }
       }
       return false
     }
+  }
+
+  private collidesPowerup(player: Player, powerup: Powerup) {
+    const {x, y, fatness} = player
+    const { location } = powerup
+    return fastDistance(x, y, location.x, location.y) < (fatness * fatness) + 100 // 100 == 10 * 10
+  }
+
+  private spawnPowerups() {
+    const powerups: Powerup[] = []
+    if (Math.random() < this.powerupChance) {
+      this.powerupChance = POWERUP_CHANCE_BASE
+      const x = Math.round(Math.random() * SERVER_WIDTH)
+      const y = Math.round(Math.random() * SERVER_HEIGHT)
+      powerups.push({
+        type: "REWIND",
+        id: this.nextPowerupId,
+        location: {
+          x,
+          y,
+        },
+      })
+
+      this.nextPowerupId++
+    } else {
+      this.powerupChance += POWERUP_CHANCE_INCREASE
+    }
+
+    return powerups
   }
 
   private serverTick() {
@@ -191,6 +236,8 @@ export class Server {
         return
       }
 
+      const collidedPowerups: Powerup[] = []
+
       for (let player of playersAlive) {
 
         this.moveTick(player)
@@ -200,10 +247,9 @@ export class Server {
         const p = player.createTailPart()
 
         let tailAction: Tail | Gap = {type: GAP}
-        const lt = player.tails[player.tails.length - 1] as ServerTail
 
         if (p != null) {
-          if (this.players.some(this.collides(p, player))) {
+          if (this.players.some(this.collides(p.vertices, player))) {
             player.alive = false
           }
 
@@ -212,11 +258,7 @@ export class Server {
             payload: p,
           }
 
-          lt.addPart(p)
-        } else {
-          if (!lt.isNew()) {
-            player.tails.push(new ServerTail())
-          }
+          this.tails.add(p)
         }
 
         playerUpdates.push({
@@ -226,9 +268,32 @@ export class Server {
           x: player.x,
           y: player.y,
         })
+
+        this.placedPowerups = this.placedPowerups.filter( powerup => {
+          if (this.collidesPowerup(player, powerup)) {
+            collidedPowerups.push(powerup)
+
+            // temporary
+            this.players.forEach(player => {
+              const tails = this.tails.tailsForPlayer(player)
+              const lastTailId = tails.length - 1
+              this.tails.removeTail(player.id, lastTailId)
+            })
+
+            return false
+          }
+          return true
+        })
       }
 
-      this.send(c => c.updatePlayers(playerUpdates))
+      const newPowerups = this.spawnPowerups()
+      this.placedPowerups = this.placedPowerups.concat(newPowerups)
+
+      this.send(c => {
+        c.updatePlayers(playerUpdates)
+        newPowerups.forEach(p => c.spawnPowerup(p))
+        collidedPowerups.forEach(p => c.fetchPowerup(p))
+      })
     }
 
     setTimeout(() => this.serverTick(), (this.lastUpdate + (1000 / this.tickRate)) - Date.now())

@@ -3,6 +3,7 @@ import { Client } from "../game/main"
 
 import {
   LEFT,
+  Action,
   ClientAction,
   ServerAction,
   ADD_PLAYER,
@@ -10,6 +11,8 @@ import {
   START,
   UPDATE_PLAYERS,
   END,
+  POWERUP_SPAWN,
+  POWERUP_FETCH,
 } from "./actions"
 
 export function mapServerActions(server: Server) {
@@ -29,10 +32,11 @@ export function mapServerActions(server: Server) {
         break
       }
       default:
-        console.log("Server didn't handle", action)
+        failedToHandle("Server", action)
     }
   }
 }
+
 
 export function mapClientActions(client: Client) {
   return (action: ClientAction) => {
@@ -52,8 +56,22 @@ export function mapClientActions(client: Client) {
         client.end(payload)
         break
       }
+      case POWERUP_SPAWN: {
+        const { payload } = action
+        client.spawnPowerup(payload)
+        break
+      }
+      case POWERUP_FETCH: {
+        const { payload } = action
+        client.fetchPowerup(payload)
+        break
+      }
       default:
-        console.log("Client didn't handle", action)
+        failedToHandle("Client", action)
     }
   }
+}
+
+function failedToHandle(target: "Client" | "Server", x: never): never {
+  throw new Error(`${target} didn't handle ${x}`)
 }
