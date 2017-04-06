@@ -1,24 +1,14 @@
 import * as React from "react"
-import { Link, withRouter, IRouter } from "react-router"
-
+import history from "./history"
+import * as qs from "query-string"
 import { Game, GameEvent } from "../game/main"
 
-export interface GameProps {
-  location: {
-    query?: {
-      room?: string,
-    },
-  }
-  router: IRouter
-}
-
-class GameC extends React.Component<GameProps, any> {
+export default class GameC extends React.Component<void, any> {
   private div: HTMLDivElement | null = null
   private games: {[key: string]: HTMLCanvasElement | undefined} = {}
 
   public componentDidMount() {
-    const { query } = this.props.location
-    const room = query && query.room || "leif"
+    const room = qs.parse(history.location.search).room || "leif"
     console.log("Room:", room)
     this.showGame(room)
   }
@@ -34,10 +24,8 @@ class GameC extends React.Component<GameProps, any> {
       const game = new Game(room)
       game.onEvent((e) => {
         if (e === GameEvent.END) {
-          setTimeout(() => {
-            this.games[room] = undefined
-            this.props.router.goBack()
-          }, 3000)
+          this.games[room] = undefined
+          history.goBack()
         }
       })
       const view = game.getView()
@@ -57,9 +45,8 @@ class GameC extends React.Component<GameProps, any> {
         this.div.removeChild(this.div.firstChild)
       }
       this.div.appendChild(game)
+      document.body.focus()
     }
   }
 
 }
-
-export default withRouter(GameC)

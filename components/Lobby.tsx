@@ -1,7 +1,9 @@
 import * as React from "react"
-import { Link, withRouter, IRouter } from "react-router"
-import * as axios from "axios"
+import * as qs from "query-string"
+import axios from "axios"
 import { SERVER_URL } from "../config"
+import history from "./history"
+import Link from "./Link"
 
 interface Room {
   name: string
@@ -13,11 +15,10 @@ const axi = axios.create({
 })
 
 function getRooms() {
-  console.log("getting rooms")
-  return axi.get<Room[]>("/")
+  return axi.get("/")
 }
 
-class NewRoomClass extends React.Component<{ router: IRouter }, {}> {
+class NewRoom extends React.Component<void, void> {
   private roomInput: HTMLInputElement
 
   public render() {
@@ -29,19 +30,17 @@ class NewRoomClass extends React.Component<{ router: IRouter }, {}> {
     )
   }
 
-  private onSubmit = (e: React.FormEvent) => {
+  private onSubmit = (e: React.FormEvent<any>) => {
     e.preventDefault()
 
-    this.props.router.push({
+    history.push({
       pathname: "/game",
-      query: { room: this.roomInput.value },
+      search: qs.stringify({ room: this.roomInput.value }),
     })
   }
 }
 
-const NewRoom = withRouter(NewRoomClass) as any
-
-export default class Lobby extends React.Component<{}, { rooms: Room[] }> {
+export default class Lobby extends React.Component<any, { rooms: Room[] }> {
   public state: { rooms: Room[] } = {
     rooms: [],
   }
@@ -57,7 +56,7 @@ export default class Lobby extends React.Component<{}, { rooms: Room[] }> {
   public render() {
     const existingRooms = this.state.rooms.map(room => (
       <li key={`room_${room.name}`}>
-        <Link to={{ pathname: "/game", query: {room: room.name} }}>{room.name}</Link>
+        <Link to={"/game?room=" + room.name}>{room.name}</Link>
       </li>
     ))
 

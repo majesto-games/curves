@@ -51,8 +51,8 @@ class Overlay {
 
   constructor(g: PIXI.Graphics) {
     this.graphics = g
-    this.overlayText = new PIXI.Text("", { fill: "white", font: "64px Courier New" })
-    this.overlayText.anchor = new PIXI.Point(0.5, 0.5)
+    this.overlayText = new PIXI.Text("", { fill: "white", fontFamily: "Courier New", fontSize: "64px" })
+    this.overlayText.anchor = new PIXI.ObservablePoint(() => {; }, 0.5, 0.5)
     this.overlayText.x = SERVER_WIDTH / 2
     this.overlayText.y = SERVER_HEIGHT / 3
 
@@ -234,9 +234,11 @@ export class Game {
     } else {
       this.overlay.setOverlay(`No winner!`)
     }
-    this.sendEvent(GameEvent.END)
     this.paint()
-    this.close()
+    setTimeout(() => {
+      this.sendEvent(GameEvent.END)
+      this.close()
+    }, 3000)
   }
 
   public onEvent = (f: (e: GameEvent) => void) => {
