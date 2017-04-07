@@ -1,4 +1,4 @@
-import { Point, Powerup } from "../game/game"
+import { Point, Powerup } from "../game/player"
 import { TailPart, NotRemoved } from "../game/tail"
 
 export interface Action {

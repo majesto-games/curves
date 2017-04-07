@@ -1,7 +1,7 @@
 import * as React from "react"
 import history from "./history"
 import * as qs from "query-string"
-import { Game, GameEvent } from "../game/main"
+import { Game, GameEvent } from "../game/game"
 
 export default class GameC extends React.Component<void, any> {
   private div: HTMLDivElement | null = null

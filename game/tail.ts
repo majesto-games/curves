@@ -1,4 +1,4 @@
-import { Player, Point } from "./game"
+import { Player, Point } from "./player"
 import {
   SERVER_WIDTH,
   SERVER_HEIGHT,

@@ -1,5 +1,5 @@
 import { getColors } from "../game/util"
-import { Point, Player, ROTATION_SPEED, Powerup } from "../game/game"
+import { Point, Player, ROTATION_SPEED, Powerup } from "../game/player"
 import { containsPoint, ServerTail, TailStorage } from "../game/tail"
 import {
   PlayerUpdate,

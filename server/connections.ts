@@ -1,8 +1,8 @@
 import * as quickconnect from "rtc-quickconnect"
 import freeice = require("freeice")
 import { Server } from "./main"
-import { Client } from "../game/main"
-import { Point, Powerup } from "../game/game"
+import { Client } from "../game/client"
+import { Point, Powerup } from "../game/player"
 import { SERVER_URL } from "../config"
 
 import {
