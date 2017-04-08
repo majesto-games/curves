@@ -63,7 +63,7 @@ export class Server {
     const id = this.players.length + 1
     const name = `${id}`
     const startPoint: Point = {
-      x: SERVER_WIDTH / 2 + 300 * (this.players.length ? 1 : -1),
+      x: SERVER_WIDTH / 2 + (SERVER_WIDTH / 4) * (this.players.length ? 1 : -1),
       y: SERVER_HEIGHT / 2,
     }
     const color = this.colors.pop() as number
@@ -190,9 +190,9 @@ export class Server {
   }
 
   private collidesPowerup(player: Player, powerup: Powerup) {
-    const {x, y, fatness} = player
+    const { x, y, fatness } = player
     const { location } = powerup
-    return fastDistance(x, y, location.x, location.y) < (fatness * fatness) + 100 // 100 == 10 * 10
+    return fastDistance(x, y, location.x, location.y) < (fatness * fatness) + (32*32)
   }
 
   private spawnPowerups() {
@@ -202,7 +202,7 @@ export class Server {
       const x = Math.round(Math.random() * SERVER_WIDTH)
       const y = Math.round(Math.random() * SERVER_HEIGHT)
       powerups.push({
-        type: "REWIND",
+        type: "UPSIZE",
         id: this.nextPowerupId,
         location: {
           x,
@@ -261,28 +261,26 @@ export class Server {
           this.tails.add(p)
         }
 
+        this.placedPowerups = this.placedPowerups.filter(powerup => {
+          if (this.collidesPowerup(player, powerup)) {
+            collidedPowerups.push(powerup)
+
+            this.players
+              .filter(p => player.id !== p.id)
+              .forEach(p => p.fatness += 16)
+
+            return false
+          }
+          return true
+        })
+
         playerUpdates.push({
           alive: player.alive,
           rotation: player.rotation,
           tail: tailAction,
           x: player.x,
           y: player.y,
-        })
-
-        this.placedPowerups = this.placedPowerups.filter( powerup => {
-          if (this.collidesPowerup(player, powerup)) {
-            collidedPowerups.push(powerup)
-
-            // temporary
-            this.players.forEach(player => {
-              const tails = this.tails.tailsForPlayer(player)
-              const lastTailId = tails.length - 1
-              this.tails.removeTail(player.id, lastTailId)
-            })
-
-            return false
-          }
-          return true
+          fatness: player.fatness,
         })
       }
 

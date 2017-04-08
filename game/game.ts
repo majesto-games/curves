@@ -1,4 +1,4 @@
-import { Graphics, autoDetectRenderer, Container, CanvasRenderer, WebGLRenderer } from "pixi.js"
+import { Sprite, Graphics, autoDetectRenderer, Container, CanvasRenderer, WebGLRenderer } from "pixi.js"
 import { Point, Player, TICK_RATE, Powerup } from "./player"
 import { ClientTail, TailStorage } from "./tail"
 import Overlay from "./overlay"
@@ -34,6 +34,8 @@ import {
 import { Client } from "./client"
 
 import pressedKeys, { KEYS, registerKeys } from "./keys"
+
+import * as sizeupImage from "../sizeup.svg"
 
 export enum GameEvent {
   START, END,
@@ -126,7 +128,7 @@ export class Game {
   public updatePlayer(player: Player) {
     player.graphics.x = player.x
     player.graphics.y = player.y
-    player.graphics.scale = new PIXI.Point(player.fatness, player.fatness)
+    player.graphics.scale.set(player.fatness, player.fatness)
   }
 
   public addTail(tail: ClientTail) {
@@ -138,18 +140,18 @@ export class Game {
   }
 
   public addPowerup(powerup: Powerup) {
-    const powerupG = new PIXI.Graphics()
+    const powerupG = Sprite.fromImage(sizeupImage, undefined, undefined)
+    powerupG.anchor.set(0.5)
     this.graphics.addChild(powerupG)
 
     const { location } = powerup
-    powerupG.beginFill(0xffaaff)
-    powerupG.drawCircle(location.x, location.y, 10)
-    powerupG.endFill()
+
+    powerupG.position.set(location.x, location.y)
 
     return powerupG
   }
 
-  public removePowerup(powerupG: Graphics) {
+  public removePowerup(powerupG: Sprite) {
     if (powerupG != null) {
       this.graphics.removeChild(powerupG)
     }

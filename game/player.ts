@@ -15,7 +15,7 @@ export interface Point {
 }
 
 export interface Powerup {
-  type: "REWIND"
+  type: "UPSIZE"
   id: number
   location: Point
 }

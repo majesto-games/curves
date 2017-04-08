@@ -78,6 +78,7 @@ export interface PlayerUpdate {
   rotation: number
   alive: boolean
   tail: Tail | Gap
+  fatness: number
 }
 export const UPDATE_PLAYERS: "UPDATE_PLAYERS" = "UPDATE_PLAYERS"
 export interface UpdatePlayers extends Action {

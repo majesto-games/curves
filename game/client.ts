@@ -16,7 +16,7 @@ import {
   GAP,
   TAIL,
 } from "../server/actions"
-import { Graphics, autoDetectRenderer, Container, CanvasRenderer, WebGLRenderer } from "pixi.js"
+import { Sprite, Graphics, autoDetectRenderer, Container, CanvasRenderer, WebGLRenderer } from "pixi.js"
 
 import pressedKeys, { KEYS, registerKeys } from "./keys"
 
@@ -60,7 +60,7 @@ export class Client {
 
   public players: Player[] = []
   public id: number
-  private powerups: {[id: number]: PIXI.Graphics | undefined} = {}
+  private powerups: { [id: number]: Sprite | undefined } = {}
   private tails = new TailStorage((i) => this.newTail(i))
 
   constructor(private connection: ServerConnection, private game: Game) {
@@ -76,6 +76,7 @@ export class Client {
       player.y = update.y
       player.rotation = update.rotation
       player.alive = update.alive
+      player.fatness = update.fatness
       this.game.updatePlayer(player)
 
       if (update.tail.type === TAIL) {
@@ -128,11 +129,7 @@ export class Client {
     this.game.removePowerup(powerupG)
     this.powerups[id] = undefined
 
-    this.players.forEach(player => {
-      const tails = this.tails.tailsForPlayer(player)
-      const lastTailId = tails.length - 1
-      this.tails.removeTail(player.id, lastTailId)
-    })
+    // play cool sound
   }
 
   private newTail(playerId: number) {
