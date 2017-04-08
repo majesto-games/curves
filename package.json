@@ -7,8 +7,7 @@
     "build": "webpack",
     "watch": "webpack-dev-server --progress --inline --content-base game/",
     "deploy": "webpack; git add game && git commit -m \"dist subtree\" && git push origin `git subtree split --prefix game master`:gh-pages --force && git reset HEAD~1",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "postinstall": "typings install"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
