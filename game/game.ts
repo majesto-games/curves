@@ -24,6 +24,8 @@ import {
   clientDataChannel,
   serverDataChannel,
   connectAndCount,
+  RoomConnection,
+  DataChannel,
 } from "../server/connections"
 
 import {
@@ -47,7 +49,7 @@ export class Game {
   public readonly overlay: Overlay
   private client: Client
   private server: ServerConnection
-  private rc: any
+  private roomConnection: RoomConnection
   private closed = false
   private renderer: CanvasRenderer | WebGLRenderer
   private eventListeners: ((e: GameEvent) => void)[] = []
@@ -62,20 +64,22 @@ export class Game {
 
   public connect() {
     connectAndCount(this.room).then(([rc, memberCount]) => {
-    this.rc = rc
-    if (this.closed) {
-      this.close()
-      return
-    }
-    if (memberCount > 1) {
-      return this.connectAsClient(rc)
-    } else {
-      return this.connectAsServer(rc)
-    }
-  }).then(() => {
-    this.preGame()
-    this.sendEvent(GameEvent.START)
-  })
+      this.roomConnection = rc
+
+      if (this.closed) {
+        this.close()
+        return
+      }
+
+      if (memberCount > 1) {
+        return this.connectAsClient(rc)
+      } else {
+        return this.connectAsServer(rc)
+      }
+    }).then(() => {
+      this.preGame()
+      this.sendEvent(GameEvent.START)
+    })
   }
 
   public end(player?: Player) {
@@ -84,7 +88,9 @@ export class Game {
     } else {
       this.overlay.setOverlay(`No winner!`)
     }
+
     this.paint()
+
     setTimeout(() => {
       this.sendEvent(GameEvent.END)
       this.close()
@@ -93,24 +99,28 @@ export class Game {
 
   public onEvent = (f: (e: GameEvent) => void) => {
     this.eventListeners.push(f)
-    return () => {
+
+    return () =>
       this.eventListeners = this.eventListeners.filter(g => g !== f)
-    }
   }
 
   public close() {
     this.closed = true
-    if (this.rc != null) {
-      this.rc.close()
-      this.rc = undefined
+
+    if (this.roomConnection != null) {
+      this.roomConnection.close()
+      this.roomConnection = undefined
     }
+
     if (this.renderer != null) {
       this.renderer.destroy()
       this.renderer = undefined as any
     }
+
     if (this.server != null) {
       this.server = undefined as any
     }
+
     if (this.client != null) {
       this.client.resetCombos()
       this.client = undefined as any
@@ -125,48 +135,48 @@ export class Game {
     this.container.addChild(player.graphics)
   }
 
-  public updatePlayer(player: Player) {
-    player.graphics.x = player.x
-    player.graphics.y = player.y
-    player.graphics.scale.set(player.fatness, player.fatness)
+  public updatePlayer({ graphics, x, y, fatness }: Player) {
+    graphics.position.set(x, y)
+    graphics.scale.set(fatness, fatness)
   }
 
-  public addTail(tail: ClientTail) {
-    this.graphics.addChild(tail.graphics)
+  public addTail({ graphics }: ClientTail) {
+    this.graphics.addChild(graphics)
   }
 
-  public removeTail(tail: ClientTail) {
-    this.graphics.removeChild(tail.graphics)
+  public removeTail({ graphics }: ClientTail) {
+    this.graphics.removeChild(graphics)
   }
 
-  public addPowerup(powerup: Powerup) {
-    const powerupG = Sprite.fromImage(sizeupImage, undefined, undefined)
-    powerupG.anchor.set(0.5)
-    this.graphics.addChild(powerupG)
+  public addPowerup({ location }: Powerup) {
+    const powerupSprite = Sprite.fromImage(sizeupImage, undefined, undefined)
+    powerupSprite.position.set(location.x, location.y)
+    powerupSprite.anchor.set(0.5)
 
-    const { location } = powerup
+    this.graphics.addChild(powerupSprite)
 
-    powerupG.position.set(location.x, location.y)
-
-    return powerupG
+    return powerupSprite
   }
 
-  public removePowerup(powerupG: Sprite) {
-    if (powerupG != null) {
-      this.graphics.removeChild(powerupG)
+  public removePowerup(powerupSprite: Sprite) {
+    if (powerupSprite != null) {
+      this.graphics.removeChild(powerupSprite)
     }
   }
 
   private connectAsClient(rc: any) {
     console.log("Not server")
-    return clientDataChannel(rc).then((dc) => {
+
+    return clientDataChannel(rc).then((dc: DataChannel) => {
       this.server = new NetworkServerConnection(dc)
       this.client = new Client(this.server, this)
 
       const m = mapClientActions(this.client)
+
       dc.onmessage = (evt: any) => {
         m(JSON.parse(evt.data))
       }
+
       this.server.addPlayer()
       return
     })
@@ -174,11 +184,15 @@ export class Game {
 
   private connectAsServer(rc: any) {
     console.log("Server")
+
     this.overlay.setOverlay(`Wating for players...\nJoin room ${this.room} or\npress ENTER to add player`)
+
     const server = new Server(TICK_RATE)
     const id = {}
+
     this.server = new LocalServerConnection(server, id)
     this.client = new Client(this.server, this)
+
     server.addConnection(new LocalClientConnection(this.client, id))
 
     serverDataChannel(rc, this.handleClientConnections(server))
@@ -188,7 +202,8 @@ export class Game {
 
   private handleClientConnections(server: Server) {
     const m = mapServerActions(server)
-    return (dc: any) => {
+
+    return (dc: DataChannel) => {
       const netconn = new NetworkClientConnection(dc)
       server.addConnection(netconn)
 
@@ -252,6 +267,7 @@ export class Game {
       this.close()
       return
     }
+
     if (this.client.players.length > 0)  { // Game has started
       this.overlay.removeOverlay()
       this.draw()

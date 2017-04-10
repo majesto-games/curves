@@ -60,7 +60,7 @@ export class Client {
 
   public players: Player[] = []
   public id: number
-  private powerups: { [id: number]: Sprite | undefined } = {}
+  private powerupSprites: { [id: number]: Sprite | undefined } = {}
   private tails = new TailStorage((i) => this.newTail(i))
 
   constructor(private connection: ServerConnection, private game: Game) {
@@ -121,13 +121,13 @@ export class Client {
   }
 
   public spawnPowerup(powerup: Powerup) {
-    this.powerups[powerup.id] = this.game.addPowerup(powerup)
+    this.powerupSprites[powerup.id] = this.game.addPowerup(powerup)
   }
 
   public fetchPowerup(id: number) {
-    const powerupG = this.powerups[id]!
-    this.game.removePowerup(powerupG)
-    this.powerups[id] = undefined
+    const powerupSprite = this.powerupSprites[id]!
+    this.game.removePowerup(powerupSprite)
+    this.powerupSprites[id] = undefined
 
     // play cool sound
   }
@@ -135,6 +135,7 @@ export class Client {
   private newTail(playerId: number) {
     const tail = new ClientTail(this.playerById(playerId)!.color)
     this.game.addTail(tail)
+
     return tail
   }
 }

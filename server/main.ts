@@ -192,7 +192,7 @@ export class Server {
   private collidesPowerup(player: Player, powerup: Powerup) {
     const { x, y, fatness } = player
     const { location } = powerup
-    return fastDistance(x, y, location.x, location.y) < (fatness * fatness) + (32*32)
+    return fastDistance(x, y, location.x, location.y) < (fatness * fatness) + (32 * 32)
   }
 
   private spawnPowerups() {

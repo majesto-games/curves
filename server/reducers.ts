@@ -37,7 +37,6 @@ export function mapServerActions(server: Server) {
   }
 }
 
-
 export function mapClientActions(client: Client) {
   return (action: ClientAction) => {
     switch (action.type) {

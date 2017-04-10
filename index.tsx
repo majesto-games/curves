@@ -9,7 +9,7 @@ import { Location, parsePath } from "history"
 function render(location: Location) {
   let component: JSX.Element | undefined = undefined
 
-  switch(location.pathname) {
+  switch (location.pathname) {
     case "/": {
       component = <Lobby />
       break

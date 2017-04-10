@@ -158,8 +158,8 @@ export class NetworkClientConnection implements ClientConnection {
   }
 }
 
-type RoomConnection = any
-type DataChannel = any
+export type RoomConnection = any
+export type DataChannel = any
 
 export function clientDataChannel(rc: RoomConnection) {
   return new Promise<DataChannel>((resolve, reject) => {
