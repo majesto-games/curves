@@ -158,10 +158,9 @@ export class NetworkClientConnection implements ClientConnection {
   }
 }
 
-export type RoomConnection = any
 export type DataChannel = any
 
-export function clientDataChannel(rc: RoomConnection) {
+export function clientDataChannel(rc: quickconnect.connection) {
   return new Promise<DataChannel>((resolve, reject) => {
 
     // tell quickconnect we want a datachannel called test
@@ -181,7 +180,7 @@ export function clientDataChannel(rc: RoomConnection) {
   })
 }
 
-export function serverDataChannel(rc: RoomConnection, cb: (dc: DataChannel) => any) {
+export function serverDataChannel(rc: quickconnect.connection, cb: (dc: DataChannel) => any) {
   // tell quickconnect we want a datachannel called test
   rc.createDataChannel("test")
   // when the test channel has opened a RTCDataChannel to a peer, let us know
@@ -196,9 +195,9 @@ export function serverDataChannel(rc: RoomConnection, cb: (dc: DataChannel) => a
   })
 }
 
-export function connectAndCount(room: string): Promise<[RoomConnection, number]> {
+export function connectAndCount(room: string): Promise<[quickconnect.connection, number]> {
   const rc = quickconnect(SERVER_URL, { room, iceServers: freeice() })
-  return new Promise<[RoomConnection, number]>((resolve) => {
+  return new Promise<[quickconnect.connection, number]>((resolve) => {
     rc.once("message:roominfo", (data: { memberCount: number }) => {
       console.log("roomInfo", data)
       resolve([rc, data.memberCount])
