@@ -26,6 +26,7 @@
     "@types/react": "^15.0.21",
     "@types/react-dom": "^0.14.23",
     "axios": "^0.16.0",
+    "fastpriorityqueue": "^0.2.4",
     "file-loader": "^0.11.1",
     "freeice": "^2.2.0",
     "history": "^4.6.1",

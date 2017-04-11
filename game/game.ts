@@ -24,9 +24,10 @@ import {
   clientDataChannel,
   serverDataChannel,
   connectAndCount,
-  RoomConnection,
   DataChannel,
 } from "../server/connections"
+
+import * as quickconnect from "rtc-quickconnect"
 
 import {
   mapServerActions,
@@ -49,7 +50,7 @@ export class Game {
   public readonly overlay: Overlay
   private client: Client
   private server: ServerConnection
-  private roomConnection: RoomConnection
+  private roomConnection: quickconnect.connection | undefined
   private closed = false
   private renderer: CanvasRenderer | WebGLRenderer
   private eventListeners: ((e: GameEvent) => void)[] = []

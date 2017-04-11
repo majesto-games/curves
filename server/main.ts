@@ -1,6 +1,7 @@
 import { getColors } from "../game/util"
-import { Point, Player, ROTATION_SPEED, Powerup } from "../game/player"
+import { Point, Player, ROTATION_SPEED, Powerup, ActivePowerup } from "../game/player"
 import { containsPoint, ServerTail, TailStorage } from "../game/tail"
+import PriorityQueue = require("fastpriorityqueue");
 import {
   PlayerUpdate,
   Gap,
@@ -43,6 +44,7 @@ export class Server {
   private lastUpdate: number
   private colors: number[] = getColors(7)
   private placedPowerups: Powerup[] = []
+  private activePowerups = new PriorityQueue<ActivePowerup>((a, b) => a.activeTo < b.activeTo)
   private nextPowerupId = 0
   private powerupChance = POWERUP_CHANCE_BASE
   private tails = new TailStorage(() => new ServerTail())
@@ -236,6 +238,16 @@ export class Server {
         return
       }
 
+      let peek = this.activePowerups.peek()
+      while (peek && peek.activeTo < Date.now()) {
+        this.activePowerups.poll()
+        this.players
+          .filter(p => peek!.activator !== p.id)
+          .forEach(p => p.fatness -= 16)
+
+        peek = this.activePowerups.peek()
+      }
+
       const collidedPowerups: Powerup[] = []
 
       for (let player of playersAlive) {
@@ -268,6 +280,13 @@ export class Server {
             this.players
               .filter(p => player.id !== p.id)
               .forEach(p => p.fatness += 16)
+
+            this.activePowerups.add({
+              type: "UPSIZE",
+              id: powerup.id,
+              activator: player.id,
+              activeTo: Date.now() + 10000,
+            })
 
             return false
           }

@@ -20,6 +20,13 @@ export interface Powerup {
   location: Point
 }
 
+export interface ActivePowerup {
+  type: "UPSIZE"
+  id: number
+  activator: number
+  activeTo: number
+}
+
 function createConnectedPolygon (point: Point, thickness: number, lastPoints: number[], point2: Point) {
   const angle = Math.atan2(point2.y - point.y, point2.x - point.x)
   const anglePerp = angle + Math.PI / 2
