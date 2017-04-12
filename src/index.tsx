@@ -1,9 +1,11 @@
+require("file-loader?name=[name].[ext]!index.html")
+
 import * as React from "react"
 import * as ReactDOM from "react-dom"
 
-import Game from "./components/Game"
-import Lobby from "./components/Lobby"
-import history from "./components/history"
+import Game from "components/Game"
+import Lobby from "components/Lobby"
+import history from "components/history"
 import { Location, parsePath } from "history"
 
 function render(location: Location) {

@@ -1,7 +1,7 @@
-import { getColors } from "../game/util"
-import { Point, Player, ROTATION_SPEED, Powerup, ActivePowerup } from "../game/player"
-import { containsPoint, ServerTail, TailStorage } from "../game/tail"
-import PriorityQueue = require("fastpriorityqueue");
+import { getColors } from "game/util"
+import { Point, Player, ROTATION_SPEED, Powerup, ActivePowerup } from "game/player"
+import { containsPoint, ServerTail, TailStorage } from "game/tail"
+import PriorityQueue = require("fastpriorityqueue")
 import {
   PlayerUpdate,
   Gap,

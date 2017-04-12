@@ -9,13 +9,13 @@ import {
   clientDataChannel,
   serverDataChannel,
   connectAndCount,
-} from "../server/connections"
+} from "server/connections"
 import {
   PlayerUpdate,
   PlayerInit,
   GAP,
   TAIL,
-} from "../server/actions"
+} from "server/actions"
 import { Sprite, Graphics, autoDetectRenderer, Container, CanvasRenderer, WebGLRenderer } from "pixi.js"
 
 import pressedKeys, { KEYS, registerKeys } from "./keys"

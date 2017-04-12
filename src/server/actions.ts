@@ -1,5 +1,5 @@
-import { Point, Powerup } from "../game/player"
-import { TailPart, NotRemoved } from "../game/tail"
+import { Point, Powerup } from "game/player"
+import { TailPart, NotRemoved } from "game/tail"
 
 export interface Action {
   readonly type: string

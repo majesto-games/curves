@@ -13,7 +13,7 @@ import {
   Server,
   SERVER_WIDTH,
   SERVER_HEIGHT,
-} from "../server/main"
+} from "server/main"
 
 import {
   ServerConnection,
@@ -25,20 +25,20 @@ import {
   serverDataChannel,
   connectAndCount,
   DataChannel,
-} from "../server/connections"
+} from "server/connections"
 
 import * as quickconnect from "rtc-quickconnect"
 
 import {
   mapServerActions,
   mapClientActions,
-} from "../server/reducers"
+} from "server/reducers"
 
 import { Client } from "./client"
 
 import pressedKeys, { KEYS, registerKeys } from "./keys"
 
-import * as sizeupImage from "../sizeup.svg"
+import * as sizeupImage from "icons/sizeup.svg"
 
 export enum GameEvent {
   START, END,

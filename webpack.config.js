@@ -1,9 +1,12 @@
+const path = require('path')
+
 module.exports = {
   resolve: {
-    extensions: ['.ts', '.tsx', '.webpack.js', '.web.js', '.js']
+    extensions: ['.ts', '.tsx', '.webpack.js', '.web.js', '.js'],
+    modules: [path.resolve(__dirname, 'src'), 'node_modules'],
   },
   devtool: 'source-map',
-  entry: './index.tsx',
+  entry: './src/index.tsx',
   output: {
     path: __dirname + '/game',
     filename: 'bundle.js'

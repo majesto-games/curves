@@ -1,5 +1,5 @@
 import { Server } from "./main"
-import { Client } from "../game/client"
+import { Client } from "game/client"
 
 import {
   LEFT,
