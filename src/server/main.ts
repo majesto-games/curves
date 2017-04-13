@@ -1,5 +1,5 @@
-import { getColors } from "game/util"
-import { Point, Player, ROTATION_SPEED, Powerup, ActivePowerup } from "game/player"
+import { getColors, frequency } from "game/util"
+import { Point, Player, ROTATION_SPEED, Powerup, ActivePowerup, PowerupType } from "game/player"
 import { containsPoint, ServerTail, TailStorage } from "game/tail"
 import PriorityQueue = require("fastpriorityqueue")
 import {
@@ -31,6 +31,10 @@ function fastDistance(x1: number, y1: number, x2: number, y2: number) {
   const a = x1 - x2
   const b = y1 - y2
   return (a * a) + (b * b)
+}
+
+function rotationSpeed(fatness: number) {
+  return ROTATION_SPEED / (10 + fatness) - 0.02
 }
 
 export class Server {
@@ -101,14 +105,14 @@ export class Server {
   public rotateLeft(id: number, connectionId: any) {
     const player = this.playerById(id)
     if (player != null && player.owner === connectionId) {
-      player.rotate(-(ROTATION_SPEED / player.fatness))
+      player.rotate(-rotationSpeed(player.fatness))
     }
   }
 
   public rotateRight(id: number, connectionId: any) {
     const player = this.playerById(id)
     if (player != null && player.owner === connectionId) {
-      player.rotate((ROTATION_SPEED / player.fatness))
+      player.rotate(rotationSpeed(player.fatness))
     }
   }
 
@@ -132,28 +136,28 @@ export class Server {
 
   private wrapEdge(player: Player) {
     if (player.x > SERVER_WIDTH + player.fatness) {
-        player.x = -player.fatness
-        player.lastX = player.x - 1
-        player.lastEnd = null
-      }
+      player.x = -player.fatness
+      player.lastX = player.x - 1
+      player.lastEnd = null
+    }
 
-      if (player.y > SERVER_HEIGHT + player.fatness) {
-        player.y = -player.fatness
-        player.lastY = player.y - 1
-        player.lastEnd = null
-      }
+    if (player.y > SERVER_HEIGHT + player.fatness) {
+      player.y = -player.fatness
+      player.lastY = player.y - 1
+      player.lastEnd = null
+    }
 
-      if (player.x < -player.fatness) {
-        player.x = SERVER_WIDTH + player.fatness
-        player.lastX = player.x + 1
-        player.lastEnd = null
-      }
+    if (player.x < -player.fatness) {
+      player.x = SERVER_WIDTH + player.fatness
+      player.lastX = player.x + 1
+      player.lastEnd = null
+    }
 
-      if (player.y < -player.fatness) {
-        player.y = SERVER_HEIGHT + player.fatness
-        player.lastY = player.y + 1
-        player.lastEnd = null
-      }
+    if (player.y < -player.fatness) {
+      player.y = SERVER_HEIGHT + player.fatness
+      player.lastY = player.y + 1
+      player.lastEnd = null
+    }
   }
 
   private collides(p: number[], player: Player) {
@@ -194,7 +198,7 @@ export class Server {
   private collidesPowerup(player: Player, powerup: Powerup) {
     const { x, y, fatness } = player
     const { location } = powerup
-    return fastDistance(x, y, location.x, location.y) < (fatness * fatness) + (32 * 32)
+    return fastDistance(x, y, location.x, location.y) < (fatness * fatness) + (16 * 16)
   }
 
   private spawnPowerups() {
@@ -203,8 +207,9 @@ export class Server {
       this.powerupChance = POWERUP_CHANCE_BASE
       const x = Math.round(Math.random() * SERVER_WIDTH)
       const y = Math.round(Math.random() * SERVER_HEIGHT)
+      const powerupType = frequency<PowerupType>([[0.7, "UPSIZE"], [0.3, "GHOST"]])
       powerups.push({
-        type: "UPSIZE",
+        type: powerupType,
         id: this.nextPowerupId,
         location: {
           x,
@@ -241,9 +246,20 @@ export class Server {
       let peek = this.activePowerups.peek()
       while (peek && peek.activeTo < Date.now()) {
         this.activePowerups.poll()
-        this.players
-          .filter(p => peek!.activator !== p.id)
-          .forEach(p => p.fatness -= 16)
+        switch (peek.type) {
+          case "UPSIZE": {
+            this.players
+              .filter(p => peek!.activator !== p.id)
+              .forEach(p => p.fatness -= 8)
+            break
+          }
+          case "GHOST": {
+            const player = this.playerById(peek!.activator)
+            player!.unghostify()
+            break
+          }
+          default:
+        }
 
         peek = this.activePowerups.peek()
       }
@@ -258,7 +274,7 @@ export class Server {
         // Create tail polygon, this returns undefined if it's supposed to be a hole
         const p = player.createTailPart()
 
-        let tailAction: Tail | Gap = {type: GAP}
+        let tailAction: Tail | Gap = { type: GAP }
 
         if (p != null) {
           if (this.players.some(this.collides(p.vertices, player))) {
@@ -277,12 +293,21 @@ export class Server {
           if (this.collidesPowerup(player, powerup)) {
             collidedPowerups.push(powerup)
 
-            this.players
-              .filter(p => player.id !== p.id)
-              .forEach(p => p.fatness += 16)
+            switch (powerup.type) {
+              case "UPSIZE": {
+                this.players
+                  .filter(p => player.id !== p.id)
+                  .forEach(p => p.fatness += 8)
+                break
+              }
+              case "GHOST": {
+                player.ghostify()
+              }
+              default:
+            }
 
             this.activePowerups.add({
-              type: "UPSIZE",
+              type: powerup.type,
               id: powerup.id,
               activator: player.id,
               activeTo: Date.now() + 10000,

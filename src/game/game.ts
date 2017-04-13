@@ -1,5 +1,5 @@
 import { Sprite, Graphics, autoDetectRenderer, Container, CanvasRenderer, WebGLRenderer } from "pixi.js"
-import { Point, Player, TICK_RATE, Powerup } from "./player"
+import { Point, Player, TICK_RATE, Powerup, PowerupType } from "./player"
 import { ClientTail, TailStorage } from "./tail"
 import Overlay from "./overlay"
 import {
@@ -39,6 +39,7 @@ import { Client } from "./client"
 import pressedKeys, { KEYS, registerKeys } from "./keys"
 
 import * as sizeupImage from "icons/sizeup.svg"
+import * as ghostImage from "icons/ghost.svg"
 
 export enum GameEvent {
   START, END,
@@ -149,8 +150,8 @@ export class Game {
     this.graphics.removeChild(graphics)
   }
 
-  public addPowerup({ location }: Powerup) {
-    const powerupSprite = Sprite.fromImage(sizeupImage, undefined, undefined)
+  public addPowerup({ location, type }: Powerup) {
+    const powerupSprite = Sprite.fromImage(this.getPowerupImage(type), undefined, undefined)
     powerupSprite.position.set(location.x, location.y)
     powerupSprite.anchor.set(0.5)
 
@@ -162,6 +163,14 @@ export class Game {
   public removePowerup(powerupSprite: Sprite) {
     if (powerupSprite != null) {
       this.graphics.removeChild(powerupSprite)
+    }
+  }
+
+  private getPowerupImage(powerupType: PowerupType): string {
+    switch (powerupType) {
+      case "UPSIZE": return sizeupImage
+      case "GHOST": return ghostImage
+      default: return "" // TODO: add never
     }
   }
 

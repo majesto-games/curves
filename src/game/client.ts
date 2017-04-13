@@ -43,7 +43,7 @@ function createPlayer(name: string, startPoint: Point, color: number,
 
   const graphics = new Graphics()
   graphics.beginFill(color)
-  graphics.drawCircle(0, 0, 0.5)
+  graphics.drawCircle(0, 0, 1)
   graphics.endFill()
 
   player.graphics = graphics

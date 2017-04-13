@@ -3,25 +3,27 @@ import { Tail, TailPart, NotRemoved } from "./tail"
 
 export const TICK_RATE = 64
 export const SKIP_TAIL_FATNESS_MULTIPLIER = 0.03 * TICK_RATE
-export const ROTATION_SPEED = 0.5
+export const ROTATION_SPEED = 1
 export const MOVE_SPEED_BASE = 100 / TICK_RATE
 export const HOLE_CHANCE_BASE = -0.002 / TICK_RATE
 export const HOLE_CHANCE_INCREASE = 0.0018 / TICK_RATE
-export const FATNESS_BASE = 10
+export const FATNESS_BASE = 5
 
 export interface Point {
   x: number
   y: number
 }
 
+export type PowerupType = "UPSIZE" | "GHOST"
+
 export interface Powerup {
-  type: "UPSIZE"
+  type: PowerupType
   id: number
   location: Point
 }
 
 export interface ActivePowerup {
-  type: "UPSIZE"
+  type: PowerupType
   id: number
   activator: number
   activeTo: number
@@ -31,11 +33,11 @@ function createConnectedPolygon (point: Point, thickness: number, lastPoints: nu
   const angle = Math.atan2(point2.y - point.y, point2.x - point.x)
   const anglePerp = angle + Math.PI / 2
   return [
-    point.x + (Math.cos(anglePerp) * thickness / 2),
-    point.y + (Math.sin(anglePerp) * thickness / 2),
+    point.x + (Math.cos(anglePerp) * thickness),
+    point.y + (Math.sin(anglePerp) * thickness),
   ].concat(lastPoints).concat([
-    point.x - (Math.cos(anglePerp) * thickness / 2),
-    point.y - (Math.sin(anglePerp) * thickness / 2),
+    point.x - (Math.cos(anglePerp) * thickness),
+    point.y - (Math.sin(anglePerp) * thickness),
   ])
 }
 
@@ -44,17 +46,17 @@ function createPolygon (point1: Point, point2: Point, thickness1: number, thickn
   const anglePerp = angle + Math.PI / 2
 
   return [
-    point1.x + (Math.cos(anglePerp) * thickness1 / 2),
-    point1.y + (Math.sin(anglePerp) * thickness1 / 2),
+    point1.x + (Math.cos(anglePerp) * thickness1),
+    point1.y + (Math.sin(anglePerp) * thickness1),
 
-    point2.x + (Math.cos(anglePerp) * thickness2 / 2),
-    point2.y + (Math.sin(anglePerp) * thickness2 / 2),
+    point2.x + (Math.cos(anglePerp) * thickness2),
+    point2.y + (Math.sin(anglePerp) * thickness2),
 
-    point2.x - (Math.cos(anglePerp) * thickness2 / 2),
-    point2.y - (Math.sin(anglePerp) * thickness2 / 2),
+    point2.x - (Math.cos(anglePerp) * thickness2),
+    point2.y - (Math.sin(anglePerp) * thickness2),
 
-    point1.x - (Math.cos(anglePerp) * thickness1 / 2),
-    point1.y - (Math.sin(anglePerp) * thickness1 / 2),
+    point1.x - (Math.cos(anglePerp) * thickness1),
+    point1.y - (Math.sin(anglePerp) * thickness1),
   ]
 }
 
@@ -76,6 +78,7 @@ export class Player {
   private tailTicker: number
   private skipTailTicker: number
   private tailId: number
+  private ghost: number
 
   constructor(
       private name: string,
@@ -97,6 +100,7 @@ export class Player {
     this.speed = MOVE_SPEED_BASE
     this.tailId = 0
     this.skipTailTicker = 0
+    this.ghost = 0
     this.alive = true
     this.id = id
   }
@@ -105,11 +109,22 @@ export class Player {
     this.rotation = (this.rotation + amount) % (2 * Math.PI)
   }
 
+  public ghostify() {
+    this.stopTail()
+    this.ghost++
+  }
+
+  public unghostify() {
+    this.ghost--
+  }
+
   public createTailPart = () => {
     let r = Math.random()
     let pol: number[] | undefined
 
-    if (this.skipTailTicker <= 0) {
+    if (this.ghost > 0) {
+      this.lastEnd = null
+    } else if (this.skipTailTicker <= 0) {
       if (r > this.holeChance) {
         if (this.lastEnd == null) {
           pol = createPolygon({ x: this.x, y: this.y }, { x: this.lastX, y: this.lastY }, this.fatness, this.lfatness)
@@ -122,9 +137,8 @@ export class Player {
         this.holeChance += HOLE_CHANCE_INCREASE
       } else {
         this.skipTailTicker = this.fatness * SKIP_TAIL_FATNESS_MULTIPLIER
-        this.lastEnd = null
         this.holeChance = HOLE_CHANCE_BASE
-        this.tailId++
+        this.stopTail()
       }
     } else {
       this.skipTailTicker--
@@ -135,5 +149,12 @@ export class Player {
     this.lfatness = this.fatness
 
     return pol && new TailPart(pol, this.id, this.tailId) as (TailPart & NotRemoved)
+  }
+
+  private stopTail() {
+    if (this.lastEnd != null) {
+      this.lastEnd = null
+      this.tailId++
+    }
   }
 }

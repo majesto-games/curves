@@ -34,8 +34,20 @@ export function superFunColor (input: number) {
   return input & choices[Math.floor(Math.random() * choices.length)]
 }
 
+/* tslint: enable */
+
 export function chunk<T> (arr: T[], n: number) {
   return arr.slice(0, (arr.length + n - 1) / n | 0).map((_, i) => arr.slice(n * i, n * i + n ))
 }
 
-/* tslint: enable */
+export function frequency<T>(choices: [number, T][]): T {
+  let rand = Math.random()
+  for (let choice of choices) {
+    rand -= choice[0]
+    if (rand <= 0) {
+      return choice[1]
+    }
+  }
+  // just in case (and to please the compiler)
+  return choices[0][1]
+}
