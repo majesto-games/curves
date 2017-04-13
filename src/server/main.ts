@@ -37,23 +37,28 @@ function rotationSpeed(fatness: number) {
   return ROTATION_SPEED / (10 + fatness) - 0.02
 }
 
+class RoundState {
+  public tails = new TailStorage(() => new ServerTail())
+  public activePowerups = new PriorityQueue<ActivePowerup>((a, b) => a.activeTo < b.activeTo)
+  public placedPowerups: Powerup[] = []
+  public nextPowerupId = 0
+  public powerupChance = POWERUP_CHANCE_BASE
+  public lastUpdate: number
+}
+
 export class Server {
-
+  // TODO: How to reset the players?
   public players: Player[] = []
-
   private playerInits: AlmostPlayerInit[] = []
+
   private clientConnections: ClientConnection[] = []
   private pauseDelta: number = 0
   private paused: boolean = true
-  private lastUpdate: number
   private colors: number[] = getColors(7)
-  private placedPowerups: Powerup[] = []
-  private activePowerups = new PriorityQueue<ActivePowerup>((a, b) => a.activeTo < b.activeTo)
-  private nextPowerupId = 0
-  private powerupChance = POWERUP_CHANCE_BASE
-  private tails = new TailStorage(() => new ServerTail())
+  private round: RoundState
 
   constructor(private tickRate: number) {
+    this.round = new RoundState()
   }
 
   public addConnection(conn: ClientConnection) {
@@ -77,7 +82,7 @@ export class Server {
 
     const playerInit: AlmostPlayerInit = { name, startPoint, color, rotation, connectionId, id }
     const player = new Player(name, startPoint, color, rotation, id, undefined, connectionId)
-    this.tails.initPlayer(player)
+    this.round.tails.initPlayer(player)
     console.log("Added player with connection id:", connectionId)
 
     this.playerInits.push(playerInit)
@@ -121,7 +126,7 @@ export class Server {
   }
 
   private pause() {
-    this.pauseDelta = Date.now() - this.lastUpdate
+    this.pauseDelta = Date.now() - this.round.lastUpdate
     this.paused = true
   }
 
@@ -162,7 +167,7 @@ export class Server {
 
   private collides(p: number[], player: Player) {
     return (collider: Player) => {
-      let tails = this.tails.tailsForPlayer(collider)
+      let tails = this.round.tails.tailsForPlayer(collider)
 
       // Special case for last tail for this player
       if (collider === player && tails.length > 0) {
@@ -203,23 +208,23 @@ export class Server {
 
   private spawnPowerups() {
     const powerups: Powerup[] = []
-    if (Math.random() < this.powerupChance) {
-      this.powerupChance = POWERUP_CHANCE_BASE
+    if (Math.random() < this.round.powerupChance) {
+      this.round.powerupChance = POWERUP_CHANCE_BASE
       const x = Math.round(Math.random() * SERVER_WIDTH)
       const y = Math.round(Math.random() * SERVER_HEIGHT)
       const powerupType = frequency<PowerupType>([[0.7, "UPSIZE"], [0.3, "GHOST"]])
       powerups.push({
         type: powerupType,
-        id: this.nextPowerupId,
+        id: this.round.nextPowerupId,
         location: {
           x,
           y,
         },
       })
 
-      this.nextPowerupId++
+      this.round.nextPowerupId++
     } else {
-      this.powerupChance += POWERUP_CHANCE_INCREASE
+      this.round.powerupChance += POWERUP_CHANCE_INCREASE
     }
 
     return powerups
@@ -230,9 +235,9 @@ export class Server {
       return
     }
 
-    const ticksNeeded = Math.floor((Date.now() - this.lastUpdate) * this.tickRate / 1000)
+    const ticksNeeded = Math.floor((Date.now() - this.round.lastUpdate) * this.tickRate / 1000)
 
-    this.lastUpdate += ticksNeeded * 1000 / this.tickRate
+    this.round.lastUpdate += ticksNeeded * 1000 / this.tickRate
 
     for (let i = 0; i < ticksNeeded; i++) {
       let playerUpdates: PlayerUpdate[] = []
@@ -243,9 +248,9 @@ export class Server {
         return
       }
 
-      let peek = this.activePowerups.peek()
+      let peek = this.round.activePowerups.peek()
       while (peek && peek.activeTo < Date.now()) {
-        this.activePowerups.poll()
+        this.round.activePowerups.poll()
         switch (peek.type) {
           case "UPSIZE": {
             this.players
@@ -261,7 +266,7 @@ export class Server {
           default:
         }
 
-        peek = this.activePowerups.peek()
+        peek = this.round.activePowerups.peek()
       }
 
       const collidedPowerups: Powerup[] = []
@@ -286,10 +291,10 @@ export class Server {
             payload: p,
           }
 
-          this.tails.add(p)
+          this.round.tails.add(p)
         }
 
-        this.placedPowerups = this.placedPowerups.filter(powerup => {
+        this.round.placedPowerups = this.round.placedPowerups.filter(powerup => {
           if (this.collidesPowerup(player, powerup)) {
             collidedPowerups.push(powerup)
 
@@ -306,7 +311,7 @@ export class Server {
               default:
             }
 
-            this.activePowerups.add({
+            this.round.activePowerups.add({
               type: powerup.type,
               id: powerup.id,
               activator: player.id,
@@ -329,7 +334,7 @@ export class Server {
       }
 
       const newPowerups = this.spawnPowerups()
-      this.placedPowerups = this.placedPowerups.concat(newPowerups)
+      this.round.placedPowerups = this.round.placedPowerups.concat(newPowerups)
 
       this.send(c => {
         c.updatePlayers(playerUpdates)
@@ -338,15 +343,15 @@ export class Server {
       })
     }
 
-    setTimeout(() => this.serverTick(), (this.lastUpdate + (1000 / this.tickRate)) - Date.now())
+    setTimeout(() => this.serverTick(), (this.round.lastUpdate + (1000 / this.tickRate)) - Date.now())
   }
 
   private start() {
     if (this.paused) {
       if (this.pauseDelta) {
-        this.lastUpdate = Date.now() - this.pauseDelta
+        this.round.lastUpdate = Date.now() - this.pauseDelta
       } else {
-        this.lastUpdate = Date.now() - (1000 / this.tickRate)
+        this.round.lastUpdate = Date.now() - (1000 / this.tickRate)
       }
       this.paused = false
       this.serverTick()

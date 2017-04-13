@@ -56,14 +56,23 @@ export interface ClientKeys {
   right: KEYS
 }
 
-export class Client {
+class RoundState {
+  public powerupSprites: { [id: number]: Sprite | undefined } = {}
+  public tails: TailStorage<ClientTail>
 
+  constructor(createTail: (playerId: number) => ClientTail) {
+    this.tails = new TailStorage(createTail)
+  }
+}
+
+export class Client {
+  // TODO: How to reset the players?
   public players: Player[] = []
   public id: number
-  private powerupSprites: { [id: number]: Sprite | undefined } = {}
-  private tails = new TailStorage((i) => this.newTail(i))
+  private round: RoundState
 
   constructor(private connection: ServerConnection, private game: Game) {
+    this.round = new RoundState((id) => this.newTail(id))
   }
 
   public updatePlayers = (playerUpdates: PlayerUpdate[]) => {
@@ -80,7 +89,7 @@ export class Client {
       this.game.updatePlayer(player)
 
       if (update.tail.type === TAIL) {
-        this.tails.add(update.tail.payload)
+        this.round.tails.add(update.tail.payload)
       }
     }
   }
@@ -91,7 +100,7 @@ export class Client {
       player.color, player.rotation, player.isOwner, player.id))
     this.players.forEach(player => {
       this.game.addPlayer(player)
-      this.tails.initPlayer(player)
+      this.round.tails.initPlayer(player)
     })
   }
 
@@ -121,13 +130,13 @@ export class Client {
   }
 
   public spawnPowerup(powerup: Powerup) {
-    this.powerupSprites[powerup.id] = this.game.addPowerup(powerup)
+    this.round.powerupSprites[powerup.id] = this.game.addPowerup(powerup)
   }
 
   public fetchPowerup(id: number) {
-    const powerupSprite = this.powerupSprites[id]!
+    const powerupSprite = this.round.powerupSprites[id]!
     this.game.removePowerup(powerupSprite)
-    this.powerupSprites[id] = undefined
+    this.round.powerupSprites[id] = undefined
 
     // play cool sound
   }
