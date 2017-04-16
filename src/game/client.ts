@@ -1,4 +1,4 @@
-import { Point, Player, TICK_RATE, Powerup } from "./player"
+import { Point, Player, PlayerRound, TICK_RATE, Powerup } from "./player"
 import { ClientTail, TailStorage } from "./tail"
 import {
   ServerConnection,
@@ -39,14 +39,14 @@ function createPlayer(name: string, startPoint: Point, color: number,
     keys = keyCombos.pop()
   }
 
-  const player = new Player(name, startPoint, color, rotation, id, keys)
+  const player = new Player(new PlayerRound(startPoint, rotation, id), name, id, color, keys)
 
   const graphics = new Graphics()
   graphics.beginFill(color)
   graphics.drawCircle(0, 0, 1)
   graphics.endFill()
 
-  player.graphics = graphics
+  player.round.graphics = graphics
 
   return player
 }
@@ -81,12 +81,12 @@ export class Client {
       // TODO fix ids
       const player = this.players[i]
 
-      player.x = update.x
-      player.y = update.y
-      player.rotation = update.rotation
-      player.alive = update.alive
-      player.fatness = update.fatness
-      this.game.updatePlayer(player)
+      player.round.x = update.x
+      player.round.y = update.y
+      player.round.rotation = update.rotation
+      player.round.alive = update.alive
+      player.round.fatness = update.fatness
+      this.game.updatePlayer(player.round)
 
       if (update.tail.type === TAIL) {
         this.round.tails.add(update.tail.payload)
@@ -99,8 +99,8 @@ export class Client {
     this.players = players.map((player) => createPlayer(player.name, player.startPoint,
       player.color, player.rotation, player.isOwner, player.id))
     this.players.forEach(player => {
-      this.game.addPlayer(player)
-      this.round.tails.initPlayer(player)
+      this.game.addPlayer(player.round)
+      this.round.tails.initPlayer(player.round)
     })
   }
 

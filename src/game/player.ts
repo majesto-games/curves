@@ -61,6 +61,19 @@ function createPolygon (point1: Point, point2: Point, thickness1: number, thickn
 }
 
 export class Player {
+  constructor(
+    public round: PlayerRound,
+    public name: string,
+    public id: number,
+    public color: number,
+    public keys?: ClientKeys,
+    public owner?: any,
+  ) {
+
+  }
+}
+
+export class PlayerRound {
 
   public graphics: PIXI.Graphics
   public fatness: number
@@ -71,7 +84,6 @@ export class Player {
   public lastEnd: any
   public x: number
   public y: number
-  public id: number
 
   private lfatness: number
   private holeChance: number
@@ -81,13 +93,10 @@ export class Player {
   private ghost: number
 
   constructor(
-      private name: string,
       startPoint: Point,
-      public color: number,
       public rotation: number,
-      id: number,
-      public keys?: ClientKeys,
-      public owner?: any) {
+      public id: number,
+    ) {
     this.x = startPoint.x
     this.y = startPoint.y
     this.lastX = this.x
@@ -102,7 +111,6 @@ export class Player {
     this.skipTailTicker = 0
     this.ghost = 0
     this.alive = true
-    this.id = id
   }
 
   public rotate = (amount: number) => {

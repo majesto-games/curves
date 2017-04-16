@@ -1,4 +1,4 @@
-import { Player, Point } from "./player"
+import { PlayerRound, Point } from "./player"
 import {
   SERVER_WIDTH,
   SERVER_HEIGHT,
@@ -124,7 +124,7 @@ export class TailStorage<TailT extends Tail> {
     return this.allLinear
   }
 
-  public partsForPlayer(player: Player) {
+  public partsForPlayer(player: PlayerRound) {
     return this.partsForPlayerId(player.id)
   }
 
@@ -132,7 +132,7 @@ export class TailStorage<TailT extends Tail> {
     return this.perPlayer[id].values
   }
 
-  public tailsForPlayer(player: Player) {
+  public tailsForPlayer(player: PlayerRound) {
     return this.tailsForPlayerId(player.id)
   }
 
@@ -140,7 +140,7 @@ export class TailStorage<TailT extends Tail> {
     return this.perTail[id]
   }
 
-  public initPlayer(player: Player) {
+  public initPlayer(player: PlayerRound) {
     this.perPlayer[player.id] = new TailPartArray()
     this.perTail[player.id] = []
   }
