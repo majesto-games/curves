@@ -8,6 +8,8 @@ import { SERVER_URL } from "config"
 import {
   PlayerUpdate,
   PlayerInit,
+  SnakeInit,
+  round,
   addPlayer,
   rotate,
   LEFT,
@@ -33,6 +35,7 @@ export interface ClientConnection {
   id: any
   updatePlayers(playerUpdates: PlayerUpdate[]): void
   start(playerInits: PlayerInit[]): void
+  round(snakeInits: SnakeInit[]): void
   end(winnerId?: number): void
   close(): void
   spawnPowerup(powerup: Powerup): void
@@ -63,6 +66,7 @@ export class LocalServerConnection implements ServerConnection {
 
 export class LocalClientConnection implements ClientConnection {
 
+
   private client: Client
 
   constructor(client: Client, public id: any) {
@@ -75,6 +79,10 @@ export class LocalClientConnection implements ClientConnection {
 
   public start(playerInits: PlayerInit[]) {
     this.client.start(playerInits)
+  }
+
+  public round(snakeInits: SnakeInit[]): void {
+    this.client.round(snakeInits)
   }
 
   public end(winnerId?: number) {
@@ -135,6 +143,10 @@ export class NetworkClientConnection implements ClientConnection {
 
   public start(playerInits: PlayerInit[]) {
     this.send(start(playerInits))
+  }
+
+  public round(snakeInits: SnakeInit[]): void {
+    this.send(round(snakeInits))
   }
 
   public end (winnerId?: number) {

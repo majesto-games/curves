@@ -94,9 +94,7 @@ export function updatePlayers(updates: PlayerUpdate[]): UpdatePlayers {
 
 export interface PlayerInit {
   name: string
-  startPoint: Point
   color: number
-  rotation: number
   isOwner: boolean
   id: number
 }
@@ -109,6 +107,24 @@ export function start(playerInits: PlayerInit[]): Start {
   return {
     type: START,
     payload: playerInits,
+  }
+}
+
+export interface SnakeInit {
+      startPoint: Point,
+      rotation: number,
+      id: number,
+}
+
+export const ROUND: "ROUND" = "ROUND"
+export interface Round extends Action {
+  type: "ROUND"
+  payload: SnakeInit[]
+}
+export function round(snakeInits: SnakeInit[]): Round {
+  return {
+    type: ROUND,
+    payload: snakeInits,
   }
 }
 
@@ -128,4 +144,4 @@ export const LEFT = -1
 export const RIGHT = 1
 
 export type ServerAction = AddPlayer | Rotate
-export type ClientAction  = UpdatePlayers | Start | End | PowerupSpawn | PowerupFetch
+export type ClientAction  = UpdatePlayers | Start | End | PowerupSpawn | PowerupFetch | Round

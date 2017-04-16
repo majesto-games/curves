@@ -1,5 +1,5 @@
 import { getColors, frequency } from "game/util"
-import { Point, Player, PlayerRound, ROTATION_SPEED, Powerup, ActivePowerup, PowerupType } from "game/player"
+import { Point, Player, Snake, ROTATION_SPEED, Powerup, ActivePowerup, PowerupType } from "game/player"
 import { containsPoint, ServerTail, TailStorage } from "game/tail"
 import PriorityQueue = require("fastpriorityqueue")
 import {
@@ -20,9 +20,7 @@ const POWERUP_CHANCE_INCREASE = 0.00001
 
 interface AlmostPlayerInit {
   name: string
-  startPoint: Point
   color: number
-  rotation: number
   connectionId: any
   id: number
 }
@@ -73,16 +71,10 @@ export class Server {
 
     const id = this.players.length + 1
     const name = `${id}`
-    const startPoint: Point = {
-      x: SERVER_WIDTH / 2 + (SERVER_WIDTH / 4) * (this.players.length ? 1 : -1),
-      y: SERVER_HEIGHT / 2,
-    }
     const color = this.colors.pop() as number
-    const rotation = Math.random() * Math.PI * 2
 
-    const playerInit: AlmostPlayerInit = { name, startPoint, color, rotation, connectionId, id }
-    const player = new Player(new PlayerRound(startPoint, rotation, id), name, id, color, undefined, connectionId)
-    this.round.tails.initPlayer(player.round)
+    const playerInit: AlmostPlayerInit = { name, color, connectionId, id }
+    const player = new Player(undefined, name, id, color, undefined, connectionId)
     console.log("Added player with connection id:", connectionId)
 
     this.playerInits.push(playerInit)
@@ -93,9 +85,7 @@ export class Server {
         const playerInits = this.playerInits.map(v => {
           return {
             name: v.name,
-            startPoint: v.startPoint,
             color: v.color,
-            rotation: v.rotation,
             isOwner: v.connectionId === c.id,
             id: v.id,
           }
@@ -103,6 +93,7 @@ export class Server {
         c.start(playerInits)
       })
       console.log("starting server")
+      this.startRound()
       this.start()
     }
   }
@@ -110,14 +101,14 @@ export class Server {
   public rotateLeft(id: number, connectionId: any) {
     const player = this.playerById(id)
     if (player != null && player.owner === connectionId) {
-      player.round.rotate(-rotationSpeed(player.round.fatness))
+      player.snake!.rotate(-rotationSpeed(player.snake!.fatness))
     }
   }
 
   public rotateRight(id: number, connectionId: any) {
     const player = this.playerById(id)
     if (player != null && player.owner === connectionId) {
-      player.round.rotate(rotationSpeed(player.round.fatness))
+      player.snake!.rotate(rotationSpeed(player.snake!.fatness))
     }
   }
 
@@ -134,12 +125,12 @@ export class Server {
     return this.players.find(p => p.id === id)
   }
 
-  private moveTick(player: PlayerRound) {
+  private moveTick(player: Snake) {
     player.x += Math.sin(player.rotation) * player.speed
     player.y -= Math.cos(player.rotation) * player.speed
   }
 
-  private wrapEdge(player: PlayerRound) {
+  private wrapEdge(player: Snake) {
     if (player.x > SERVER_WIDTH + player.fatness) {
       player.x = -player.fatness
       player.lastX = player.x - 1
@@ -165,8 +156,8 @@ export class Server {
     }
   }
 
-  private collides(p: number[], player: PlayerRound) {
-    return (collider: PlayerRound) => {
+  private collides(p: number[], player: Snake) {
+    return (collider: Snake) => {
       let tails = this.round.tails.tailsForPlayer(collider)
 
       // Special case for last tail for this player
@@ -200,7 +191,7 @@ export class Server {
     }
   }
 
-  private collidesPowerup(player: PlayerRound, powerup: Powerup) {
+  private collidesPowerup(player: Snake, powerup: Powerup) {
     const { x, y, fatness } = player
     const { location } = powerup
     return fastDistance(x, y, location.x, location.y) < (fatness * fatness) + (16 * 16)
@@ -241,7 +232,7 @@ export class Server {
 
     for (let i = 0; i < ticksNeeded; i++) {
       let playerUpdates: PlayerUpdate[] = []
-      const playersAlive = this.players.filter(player => player.round.alive)
+      const playersAlive = this.players.filter(player => player.snake!.alive)
 
       if (playersAlive.length < 2) {
         this.send(c => c.end((playersAlive[0] && playersAlive[0].id)))
@@ -255,12 +246,12 @@ export class Server {
           case "UPSIZE": {
             this.players
               .filter(p => peek!.activator !== p.id)
-              .forEach(p => p.round.fatness -= 8)
+              .forEach(p => p.snake!.fatness -= 8)
             break
           }
           case "GHOST": {
             const player = this.playerById(peek!.activator)
-            player!.round.unghostify()
+            player!.snake!.unghostify()
             break
           }
           default:
@@ -273,17 +264,17 @@ export class Server {
 
       for (let player of playersAlive) {
 
-        this.moveTick(player.round)
-        this.wrapEdge(player.round)
+        this.moveTick(player.snake!)
+        this.wrapEdge(player.snake!)
 
         // Create tail polygon, this returns undefined if it's supposed to be a hole
-        const p = player.round.createTailPart()
+        const p = player.snake!.createTailPart()
 
         let tailAction: Tail | Gap = { type: GAP }
 
         if (p != null) {
-          if (this.players.map(p => p.round).some(this.collides(p.vertices, player.round))) {
-            player.round.alive = false
+          if (this.players.map(p => p.snake).some(this.collides(p.vertices, player.snake!))) {
+            player.snake!.alive = false
           }
 
           tailAction = {
@@ -295,18 +286,18 @@ export class Server {
         }
 
         this.round.placedPowerups = this.round.placedPowerups.filter(powerup => {
-          if (this.collidesPowerup(player.round, powerup)) {
+          if (this.collidesPowerup(player.snake!, powerup)) {
             collidedPowerups.push(powerup)
 
             switch (powerup.type) {
               case "UPSIZE": {
                 this.players
                   .filter(p => player.id !== p.id)
-                  .forEach(p => p.round.fatness += 8)
+                  .forEach(p => p.snake!.fatness += 8)
                 break
               }
               case "GHOST": {
-                player.round.ghostify()
+                player.snake!.ghostify()
               }
               default:
             }
@@ -324,12 +315,12 @@ export class Server {
         })
 
         playerUpdates.push({
-          alive: player.round.alive,
-          rotation: player.round.rotation,
+          alive: player.snake!.alive,
+          rotation: player.snake!.rotation,
           tail: tailAction,
-          x: player.round.x,
-          y: player.round.y,
-          fatness: player.round.fatness,
+          x: player.snake!.x,
+          y: player.snake!.y,
+          fatness: player.snake!.fatness,
         })
       }
 
@@ -357,4 +348,29 @@ export class Server {
       this.serverTick()
     }
   }
+
+  private startRound() {
+    const snakeInits = this.players.map((p, i) => {
+      const rotation = Math.random() * Math.PI * 2
+      const startPoint: Point = {
+        x: SERVER_WIDTH / 2 + (SERVER_WIDTH / 4) * (i * 2 - 1), // perf 👌🏿
+        y: SERVER_HEIGHT / 2,
+      }
+
+      const snake = new Snake(startPoint, rotation, p.id)
+      p.snake = snake
+      this.round.tails.initPlayer(snake)
+
+      return {
+        startPoint,
+        rotation,
+        id: p.id,
+      }
+    })
+
+    this.send(c => {
+      c.round(snakeInits)
+    })
+  }
+
 }

@@ -1,5 +1,5 @@
 import { Sprite, Graphics, autoDetectRenderer, Container, CanvasRenderer, WebGLRenderer } from "pixi.js"
-import { Point, Player, PlayerRound, TICK_RATE, Powerup, PowerupType } from "./player"
+import { Point, Player, Snake, TICK_RATE, Powerup, PowerupType } from "./player"
 import { ClientTail, TailStorage } from "./tail"
 import Overlay from "./overlay"
 import {
@@ -133,11 +133,11 @@ export class Game {
     return this.renderer.view
   }
 
-  public addPlayer(player: PlayerRound) {
+  public addPlayer(player: Snake) {
     this.container.addChild(player.graphics)
   }
 
-  public updatePlayer({ graphics, x, y, fatness }: PlayerRound) {
+  public updatePlayer({ graphics, x, y, fatness }: Snake) {
     graphics.position.set(x, y)
     graphics.scale.set(fatness, fatness)
   }
@@ -251,7 +251,7 @@ export class Game {
 
   private drawPlayers() {
     for (let player of this.client.players) {
-      this.updatePlayer(player.round)
+      this.updatePlayer(player.snake!)
     }
   }
 

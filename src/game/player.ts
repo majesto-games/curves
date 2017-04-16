@@ -62,7 +62,7 @@ function createPolygon (point1: Point, point2: Point, thickness1: number, thickn
 
 export class Player {
   constructor(
-    public round: PlayerRound,
+    public snake: Snake | undefined,
     public name: string,
     public id: number,
     public color: number,
@@ -73,7 +73,7 @@ export class Player {
   }
 }
 
-export class PlayerRound {
+export class Snake {
 
   public graphics: PIXI.Graphics
   public fatness: number

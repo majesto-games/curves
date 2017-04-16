@@ -1,4 +1,4 @@
-import { Point, Player, PlayerRound, TICK_RATE, Powerup } from "./player"
+import { Point, Player, Snake, TICK_RATE, Powerup } from "./player"
 import { ClientTail, TailStorage } from "./tail"
 import {
   ServerConnection,
@@ -15,6 +15,7 @@ import {
   PlayerInit,
   GAP,
   TAIL,
+  SnakeInit,
 } from "server/actions"
 import { Sprite, Graphics, autoDetectRenderer, Container, CanvasRenderer, WebGLRenderer } from "pixi.js"
 
@@ -31,22 +32,14 @@ resetCombos()
 registerKeys(Array.prototype.concat.apply([], keyCombos.map(n => [n.left, n.right])))
 registerKeys([KEYS.RETURN])
 
-function createPlayer(name: string, startPoint: Point, color: number,
-  rotation: number, isOwner: boolean, id: number) {
+function createPlayer(name: string, color: number, isOwner: boolean, id: number) {
   let keys: ClientKeys | undefined
 
   if (isOwner) {
     keys = keyCombos.pop()
   }
 
-  const player = new Player(new PlayerRound(startPoint, rotation, id), name, id, color, keys)
-
-  const graphics = new Graphics()
-  graphics.beginFill(color)
-  graphics.drawCircle(0, 0, 1)
-  graphics.endFill()
-
-  player.round.graphics = graphics
+  const player = new Player(undefined, name, id, color, keys)
 
   return player
 }
@@ -69,10 +62,10 @@ export class Client {
   // TODO: How to reset the players?
   public players: Player[] = []
   public id: number
-  private round: RoundState
+  private currentRound: RoundState
 
   constructor(private connection: ServerConnection, private game: Game) {
-    this.round = new RoundState((id) => this.newTail(id))
+    this.currentRound = new RoundState((id) => this.newTail(id))
   }
 
   public updatePlayers = (playerUpdates: PlayerUpdate[]) => {
@@ -81,26 +74,44 @@ export class Client {
       // TODO fix ids
       const player = this.players[i]
 
-      player.round.x = update.x
-      player.round.y = update.y
-      player.round.rotation = update.rotation
-      player.round.alive = update.alive
-      player.round.fatness = update.fatness
-      this.game.updatePlayer(player.round)
+      player.snake!.x = update.x
+      player.snake!.y = update.y
+      player.snake!.rotation = update.rotation
+      player.snake!.alive = update.alive
+      player.snake!.fatness = update.fatness
+      this.game.updatePlayer(player.snake!)
 
       if (update.tail.type === TAIL) {
-        this.round.tails.add(update.tail.payload)
+        this.currentRound.tails.add(update.tail.payload)
       }
     }
   }
 
   public start = (players: PlayerInit[]) => {
     console.log("starting with", players)
-    this.players = players.map((player) => createPlayer(player.name, player.startPoint,
-      player.color, player.rotation, player.isOwner, player.id))
+    this.players = players.map((player) => createPlayer(player.name,
+      player.color, player.isOwner, player.id))
+  }
+
+  public round = (snakeInits: SnakeInit[]) => {
+    console.log("round", snakeInits)
+    snakeInits.forEach(({ startPoint, rotation, id }) => {
+      const snake = new Snake(startPoint, rotation, id)
+      const player = this.playerById(id)!
+
+      player.snake = snake
+
+      const graphics = new Graphics()
+      graphics.beginFill(player.color)
+      graphics.drawCircle(0, 0, 1)
+      graphics.endFill()
+
+      player.snake!.graphics = graphics
+    })
+
     this.players.forEach(player => {
-      this.game.addPlayer(player.round)
-      this.round.tails.initPlayer(player.round)
+      this.game.addPlayer(player.snake!)
+      this.currentRound.tails.initPlayer(player.snake!)
     })
   }
 
@@ -130,13 +141,13 @@ export class Client {
   }
 
   public spawnPowerup(powerup: Powerup) {
-    this.round.powerupSprites[powerup.id] = this.game.addPowerup(powerup)
+    this.currentRound.powerupSprites[powerup.id] = this.game.addPowerup(powerup)
   }
 
   public fetchPowerup(id: number) {
-    const powerupSprite = this.round.powerupSprites[id]!
+    const powerupSprite = this.currentRound.powerupSprites[id]!
     this.game.removePowerup(powerupSprite)
-    this.round.powerupSprites[id] = undefined
+    this.currentRound.powerupSprites[id] = undefined
 
     // play cool sound
   }
