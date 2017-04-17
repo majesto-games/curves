@@ -7,7 +7,8 @@
     "build": "webpack",
     "watch": "webpack-dev-server --progress --inline --content-base game/",
     "deploy": "webpack; git add -f game && git commit -m \"dist subtree\" && git push origin `git subtree split --prefix game master`:gh-pages --force && git reset HEAD~1",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "clean": "rimraf game/"
   },
   "repository": {
     "type": "git",
@@ -41,6 +42,7 @@
     "awesome-typescript-loader": "^3.1.2",
     "imports-loader": "^0.7.1",
     "json-loader": "^0.5.4",
+    "rimraf": "^2.6.1",
     "tslint": "^4.1.1",
     "tslint-loader": "^3.4.3",
     "typescript": "^2.2.2",
