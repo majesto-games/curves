@@ -50,12 +50,13 @@ export class Game {
   public readonly container = new Container()
   public readonly graphics = new Graphics()
   public readonly overlay: Overlay
-  private client: Client
   private server: ServerConnection
   private roomConnection: quickconnect.connection | undefined
   private closed = false
   private renderer: CanvasRenderer | WebGLRenderer
   private eventListeners: ((e: GameEvent) => void)[] = []
+  private drawListeners: (() => void)[] = []
+  private snakes: Snake[] = []
 
   constructor(public readonly room: string) {
     this.overlay = new Overlay(this.graphics)
@@ -107,6 +108,13 @@ export class Game {
       this.eventListeners = this.eventListeners.filter(g => g !== f)
   }
 
+  public onDraw = (f: () => void) => {
+    this.drawListeners.push(f)
+
+    return () =>
+      this.drawListeners = this.drawListeners.filter(g => g !== f)
+  }
+
   public close() {
     this.closed = true
 
@@ -119,15 +127,6 @@ export class Game {
       this.renderer.destroy()
       this.renderer = undefined as any
     }
-
-    if (this.server != null) {
-      this.server = undefined as any
-    }
-
-    if (this.client != null) {
-      this.client.resetCombos()
-      this.client = undefined as any
-    }
   }
 
   public getView() {
@@ -137,6 +136,9 @@ export class Game {
   public newRound(snakes: Snake[]) {
     this.overlay.removeOverlay()
     this.graphics.removeChildren()
+
+    this.snakes = snakes
+
     for (let snake of snakes) {
       this.graphics.addChild(snake.graphics)
     }
@@ -188,9 +190,9 @@ export class Game {
 
     return clientDataChannel(rc).then((dc: DataChannel) => {
       this.server = new NetworkServerConnection(dc)
-      this.client = new Client(this.server, this)
+      const client = new Client(this.server, this)
 
-      const m = mapClientActions(this.client)
+      const m = mapClientActions(client)
 
       dc.onmessage = (evt: any) => {
         m(JSON.parse(evt.data))
@@ -210,9 +212,9 @@ export class Game {
     const id = {}
 
     this.server = new LocalServerConnection(server, id)
-    this.client = new Client(this.server, this)
+    const client = new Client(this.server, this)
 
-    server.addConnection(new LocalClientConnection(this.client, id))
+    server.addConnection(new LocalClientConnection(client, id))
 
     serverDataChannel(rc, this.handleClientConnections(server))
 
@@ -242,25 +244,9 @@ export class Game {
     requestAnimationFrame(cb)
   }
 
-  private handleKeys() {
-    this.client.players.forEach(p => {
-      if (!p.keys) {
-        return
-      }
-
-      if (pressedKeys[p.keys.left]) {
-        this.client.rotateLeft(p.id)
-      }
-
-      if (pressedKeys[p.keys.right]) {
-        this.client.rotateRight(p.id)
-      }
-    })
-  }
-
   private drawPlayers() {
-    for (let player of this.client.players) {
-      this.updatePlayer(player.snake!)
+    for (let snake of this.snakes) {
+      this.updatePlayer(snake)
     }
   }
 
@@ -270,7 +256,7 @@ export class Game {
       return
     }
 
-    this.handleKeys()
+    this.drawListeners.forEach(f => f())
     this.drawPlayers()
 
     this.repaint(this.draw)
@@ -287,12 +273,14 @@ export class Game {
       return
     }
 
-    if (this.client.players.length > 0)  { // Game has started
+    // TODO: Remove haxxor
+    if (this.snakes.length > 0)  { // Game has started
       this.overlay.removeOverlay()
       this.draw()
       return
     }
 
+    // TODO: Remove haxxor
     if (pressedKeys[KEYS.RETURN]) {
       this.server.addPlayer()
     }

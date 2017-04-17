@@ -69,8 +69,6 @@ export class LocalServerConnection implements ServerConnection {
 
 export class LocalClientConnection implements ClientConnection {
 
-
-
   private client: Client
 
   constructor(client: Client, public id: any) {

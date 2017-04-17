@@ -60,13 +60,13 @@ class RoundState {
 }
 
 export class Client {
-  // TODO: How to reset the players?
   public players: Player[] = []
   public id: number
   private currentRound: RoundState
 
   constructor(private connection: ServerConnection, private game: Game) {
     this.currentRound = new RoundState((id) => this.newTail(id))
+    this.game.onDraw(() => this.handleKeys())
   }
 
   public updatePlayers = (playerUpdates: PlayerUpdate[]) => {
@@ -132,17 +132,14 @@ export class Client {
     return this.players.find(p => p.id === id)
   }
 
-  public resetCombos() {
-    // TODO: Migrate combos to live in the client
-    resetCombos()
-  }
-
   public end = (winnerId?: number) => {
     if (winnerId != null) {
       this.game.end(this.playerById(winnerId))
     } else {
       this.game.end()
     }
+
+    resetCombos()
   }
 
   public spawnPowerup(powerup: Powerup) {
@@ -162,5 +159,21 @@ export class Client {
     this.game.addTail(tail)
 
     return tail
+  }
+
+  private handleKeys() {
+    this.players.forEach(p => {
+      if (!p.keys) {
+        return
+      }
+
+      if (pressedKeys[p.keys.left]) {
+        this.rotateLeft(p.id)
+      }
+
+      if (pressedKeys[p.keys.right]) {
+        this.rotateRight(p.id)
+      }
+    })
   }
 }
