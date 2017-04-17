@@ -128,6 +128,16 @@ export function round(snakeInits: SnakeInit[]): Round {
   }
 }
 
+export const ROUND_END: "ROUND_END" = "ROUND_END"
+export interface RoundEnd extends Action {
+  type: "ROUND_END"
+}
+export function roundEnd(): RoundEnd {
+  return {
+    type: ROUND_END,
+  }
+}
+
 export const END: "END" = "END"
 export interface End extends Action {
   type: "END"
@@ -144,4 +154,4 @@ export const LEFT = -1
 export const RIGHT = 1
 
 export type ServerAction = AddPlayer | Rotate
-export type ClientAction  = UpdatePlayers | Start | End | PowerupSpawn | PowerupFetch | Round
+export type ClientAction  = UpdatePlayers | Start | End | PowerupSpawn | PowerupFetch | Round | RoundEnd

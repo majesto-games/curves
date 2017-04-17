@@ -10,6 +10,7 @@ import {
   PlayerInit,
   SnakeInit,
   round,
+  roundEnd,
   addPlayer,
   rotate,
   LEFT,
@@ -37,6 +38,7 @@ export interface ClientConnection {
   start(playerInits: PlayerInit[]): void
   round(snakeInits: SnakeInit[]): void
   end(winnerId?: number): void
+  roundEnd(): void
   close(): void
   spawnPowerup(powerup: Powerup): void
   fetchPowerup(powerup: Powerup): void
@@ -67,6 +69,7 @@ export class LocalServerConnection implements ServerConnection {
 export class LocalClientConnection implements ClientConnection {
 
 
+
   private client: Client
 
   constructor(client: Client, public id: any) {
@@ -83,6 +86,10 @@ export class LocalClientConnection implements ClientConnection {
 
   public round(snakeInits: SnakeInit[]): void {
     this.client.round(snakeInits)
+  }
+
+  public roundEnd() {
+    this.client.roundEnd()
   }
 
   public end(winnerId?: number) {
@@ -131,6 +138,7 @@ export class NetworkServerConnection implements ServerConnection {
 }
 
 export class NetworkClientConnection implements ClientConnection {
+
   public id: any
 
   constructor(private dataChannel: any) {
@@ -147,6 +155,10 @@ export class NetworkClientConnection implements ClientConnection {
 
   public round(snakeInits: SnakeInit[]): void {
     this.send(round(snakeInits))
+  }
+
+  public roundEnd() {
+    this.send(roundEnd())
   }
 
   public end (winnerId?: number) {

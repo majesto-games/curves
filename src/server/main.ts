@@ -235,7 +235,12 @@ export class Server {
       const playersAlive = this.players.filter(player => player.snake!.alive)
 
       if (playersAlive.length < 2) {
-        this.send(c => c.end((playersAlive[0] && playersAlive[0].id)))
+        this.send(c => c.roundEnd())
+        this.pause()
+        setTimeout(() => {
+          this.startRound()
+          this.start()
+        }, 3000)
         return
       }
 
@@ -350,6 +355,7 @@ export class Server {
   }
 
   private startRound() {
+    this.round = new RoundState()
     const snakeInits = this.players.map((p, i) => {
       const rotation = Math.random() * Math.PI * 2
       const startPoint: Point = {

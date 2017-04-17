@@ -133,8 +133,16 @@ export class Game {
     return this.renderer.view
   }
 
-  public addPlayer(player: Snake) {
-    this.container.addChild(player.graphics)
+  public newRound(snakes: Snake[]) {
+    this.overlay.removeOverlay()
+    this.graphics.removeChildren()
+    for (let snake of snakes) {
+      this.graphics.addChild(snake.graphics)
+    }
+  }
+
+  public roundEnd() {
+    this.overlay.setOverlay("NEW ROUND SOON")
   }
 
   public updatePlayer({ graphics, x, y, fatness }: Snake) {

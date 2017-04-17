@@ -94,7 +94,6 @@ export class Client {
   }
 
   public round = (snakeInits: SnakeInit[]) => {
-    console.log("round", snakeInits)
     snakeInits.forEach(({ startPoint, rotation, id }) => {
       const snake = new Snake(startPoint, rotation, id)
       const player = this.playerById(id)!
@@ -110,9 +109,14 @@ export class Client {
     })
 
     this.players.forEach(player => {
-      this.game.addPlayer(player.snake!)
       this.currentRound.tails.initPlayer(player.snake!)
     })
+
+    this.game.newRound(this.players.map(p => p.snake!))
+  }
+
+  public roundEnd = () => {
+    this.game.roundEnd()
   }
 
   public rotateLeft = (id: number) => {

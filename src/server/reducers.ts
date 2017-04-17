@@ -14,6 +14,7 @@ import {
   POWERUP_SPAWN,
   POWERUP_FETCH,
   ROUND,
+  ROUND_END,
 } from "./actions"
 
 export function mapServerActions(server: Server) {
@@ -69,6 +70,10 @@ export function mapClientActions(client: Client) {
       case ROUND: {
         const { payload } = action
         client.round(payload)
+        break
+      }
+      case ROUND_END: {
+        client.roundEnd()
         break
       }
       default:
