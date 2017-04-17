@@ -73,7 +73,8 @@ export function mapClientActions(client: Client) {
         break
       }
       case ROUND_END: {
-        client.roundEnd()
+        const { payload } = action
+        client.roundEnd(payload)
         break
       }
       default:

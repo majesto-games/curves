@@ -128,13 +128,20 @@ export function round(snakeInits: SnakeInit[]): Round {
   }
 }
 
+export interface Score {
+  score: number
+  id: number
+}
+
 export const ROUND_END: "ROUND_END" = "ROUND_END"
 export interface RoundEnd extends Action {
   type: "ROUND_END"
+  payload: Score[]
 }
-export function roundEnd(): RoundEnd {
+export function roundEnd(scores: Score[]): RoundEnd {
   return {
     type: ROUND_END,
+    payload: scores,
   }
 }
 

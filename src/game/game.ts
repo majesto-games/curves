@@ -7,6 +7,7 @@ import {
   PlayerInit,
   GAP,
   TAIL,
+  Score,
 } from "../server/actions"
 
 import {
@@ -141,8 +142,8 @@ export class Game {
     }
   }
 
-  public roundEnd() {
-    this.overlay.setOverlay("NEW ROUND SOON")
+  public roundEnd(scores: Score[]) {
+    this.overlay.setOverlay("Score: " + JSON.stringify(scores))
   }
 
   public updatePlayer({ graphics, x, y, fatness }: Snake) {

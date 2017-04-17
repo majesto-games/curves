@@ -16,6 +16,7 @@ import {
   GAP,
   TAIL,
   SnakeInit,
+  Score,
 } from "server/actions"
 import { Sprite, Graphics, autoDetectRenderer, Container, CanvasRenderer, WebGLRenderer } from "pixi.js"
 
@@ -115,8 +116,8 @@ export class Client {
     this.game.newRound(this.players.map(p => p.snake!))
   }
 
-  public roundEnd = () => {
-    this.game.roundEnd()
+  public roundEnd = (scores: Score[]) => {
+    this.game.roundEnd(scores)
   }
 
   public rotateLeft = (id: number) => {

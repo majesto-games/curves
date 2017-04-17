@@ -8,6 +8,7 @@ import {
   GAP,
   TAIL,
   Tail,
+  Score,
 } from "./actions"
 
 import { ClientConnection } from "./connections"
@@ -48,6 +49,7 @@ export class Server {
   // TODO: How to reset the players?
   public players: Player[] = []
   private playerInits: AlmostPlayerInit[] = []
+  private scores: Score[] = []
 
   private clientConnections: ClientConnection[] = []
   private pauseDelta: number = 0
@@ -79,6 +81,10 @@ export class Server {
 
     this.playerInits.push(playerInit)
     this.players.push(player)
+    this.scores.push({
+      score: 0,
+      id,
+    })
 
     if (this.playerInits.length > 1) {
       this.send(c => {
@@ -235,7 +241,13 @@ export class Server {
       const playersAlive = this.players.filter(player => player.snake!.alive)
 
       if (playersAlive.length < 2) {
-        this.send(c => c.roundEnd())
+        const winnerId = playersAlive[0] && playersAlive[0].id
+        this.scores.forEach(score => {
+          if (score.id === winnerId) {
+            score.score++
+          }
+        })
+        this.send(c => c.roundEnd(this.scores))
         this.pause()
         setTimeout(() => {
           this.startRound()

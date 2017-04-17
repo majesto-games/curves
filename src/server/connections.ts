@@ -22,6 +22,7 @@ import {
   POWERUP_SPAWN,
   spawnPowerup,
   fetchPowerup,
+  Score,
 } from "./actions"
 
 export interface ServerConnection {
@@ -38,7 +39,7 @@ export interface ClientConnection {
   start(playerInits: PlayerInit[]): void
   round(snakeInits: SnakeInit[]): void
   end(winnerId?: number): void
-  roundEnd(): void
+  roundEnd(scores: Score[]): void
   close(): void
   spawnPowerup(powerup: Powerup): void
   fetchPowerup(powerup: Powerup): void
@@ -88,8 +89,8 @@ export class LocalClientConnection implements ClientConnection {
     this.client.round(snakeInits)
   }
 
-  public roundEnd() {
-    this.client.roundEnd()
+  public roundEnd(scores: Score[]) {
+    this.client.roundEnd(scores)
   }
 
   public end(winnerId?: number) {
@@ -157,8 +158,8 @@ export class NetworkClientConnection implements ClientConnection {
     this.send(round(snakeInits))
   }
 
-  public roundEnd() {
-    this.send(roundEnd())
+  public roundEnd(scores: Score[]) {
+    this.send(roundEnd(scores))
   }
 
   public end (winnerId?: number) {
