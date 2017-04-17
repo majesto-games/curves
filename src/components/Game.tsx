@@ -2,20 +2,32 @@ import * as React from "react"
 import history from "./history"
 import * as qs from "query-string"
 import { Game, GameEvent } from "../game/game"
+import { Score } from "server/actions"
+import Canvas from "components/Canvas"
 
-export default class GameC extends React.Component<void, any> {
+interface GameState {
+  scores: Score[]
+}
+
+export default class GameC extends React.Component<void, GameState> {
+  public state: GameState = {
+    scores: [],
+  }
+
   private div: HTMLDivElement | null = null
   private games: {[key: string]: HTMLCanvasElement | undefined} = {}
 
-  public componentDidMount() {
-    const room = qs.parse(history.location.search).room || "leif"
-    console.log("Room:", room)
-    this.showGame(room)
-  }
-
   public render() {
+    const room = qs.parse(history.location.search).room || "leif"
+
+    const { scores } = this.state
+
     return (
-      <div ref={n => this.div = n} />
+      <div>
+        <Canvas view={this.getGame(room)} />
+        <div>{scores.map(({ score, id }) =>
+            <h1 key={id}>Player {id}: {score}</h1>)}</div>
+      </div>
     )
   }
 
@@ -27,6 +39,12 @@ export default class GameC extends React.Component<void, any> {
           this.games[room] = undefined
           history.goBack()
         }
+
+        if (e === GameEvent.ROUND_END || e === GameEvent.START) {
+          this.setState((prevState, props) => ({
+            scores: game.scores,
+          }))
+        }
       })
       const view = game.getView()
       this.games[room] = view
@@ -36,17 +54,4 @@ export default class GameC extends React.Component<void, any> {
 
     return this.games[room] || newGame()
   }
-
-  private showGame = (room: string) => {
-    const game = this.getGame(room)
-
-    if (this.div) {
-      while (this.div.firstChild) {
-        this.div.removeChild(this.div.firstChild)
-      }
-      this.div.appendChild(game)
-      document.body.focus()
-    }
-  }
-
 }

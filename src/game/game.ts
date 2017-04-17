@@ -43,10 +43,11 @@ import * as sizeupImage from "icons/sizeup.svg"
 import * as ghostImage from "icons/ghost.svg"
 
 export enum GameEvent {
-  START, END,
+  START, END, ROUND_END,
 }
 
 export class Game {
+  public scores: Score[] = []
   public readonly container = new Container()
   public readonly graphics = new Graphics()
   public readonly overlay: Overlay
@@ -82,7 +83,6 @@ export class Game {
       }
     }).then(() => {
       this.preGame()
-      this.sendEvent(GameEvent.START)
     })
   }
 
@@ -145,7 +145,8 @@ export class Game {
   }
 
   public roundEnd(scores: Score[]) {
-    this.overlay.setOverlay("Score: " + JSON.stringify(scores))
+    this.scores = scores
+    this.sendEvent(GameEvent.ROUND_END)
   }
 
   public updatePlayer({ graphics, x, y, fatness }: Snake) {
@@ -277,6 +278,8 @@ export class Game {
     if (this.snakes.length > 0)  { // Game has started
       this.overlay.removeOverlay()
       this.draw()
+      this.scores = this.snakes.map(({ id }) => ({ id, score: 0 }))
+      this.sendEvent(GameEvent.START)
       return
     }
 
