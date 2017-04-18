@@ -43,7 +43,7 @@ import * as sizeupImage from "icons/sizeup.svg"
 import * as ghostImage from "icons/ghost.svg"
 
 export enum GameEvent {
-  START, END, ROUND_END,
+  START, END, ROUND_END, ADD_PLAYER,
 }
 
 export class Game {
@@ -51,39 +51,18 @@ export class Game {
   public readonly container = new Container()
   public readonly graphics = new Graphics()
   public readonly overlay: Overlay
-  private server: ServerConnection
-  private roomConnection: quickconnect.connection | undefined
   private closed = false
   private renderer: CanvasRenderer | WebGLRenderer
   private eventListeners: ((e: GameEvent) => void)[] = []
   private drawListeners: (() => void)[] = []
   private snakes: Snake[] = []
 
-  constructor(public readonly room: string) {
+  constructor(private readonly room: string) {
     this.overlay = new Overlay(this.graphics)
     this.renderer = autoDetectRenderer(SERVER_WIDTH, SERVER_HEIGHT,
       { antialias: true, backgroundColor: 0x000000 })
     this.container.addChild(this.graphics)
     this.preConnect()
-  }
-
-  public connect() {
-    connectAndCount(this.room).then(([rc, memberCount]) => {
-      this.roomConnection = rc
-
-      if (this.closed) {
-        this.close()
-        return
-      }
-
-      if (memberCount > 1) {
-        return this.connectAsClient(rc)
-      } else {
-        return this.connectAsServer(rc)
-      }
-    }).then(() => {
-      this.preGame()
-    })
   }
 
   public end(player?: Player) {
@@ -113,20 +92,6 @@ export class Game {
 
     return () =>
       this.drawListeners = this.drawListeners.filter(g => g !== f)
-  }
-
-  public close() {
-    this.closed = true
-
-    if (this.roomConnection != null) {
-      this.roomConnection.close()
-      this.roomConnection = undefined
-    }
-
-    if (this.renderer != null) {
-      this.renderer.destroy()
-      this.renderer = undefined as any
-    }
   }
 
   public getView() {
@@ -178,61 +143,46 @@ export class Game {
     }
   }
 
+  public waitForPlayers() {
+    this.overlay.setOverlay(`Wating for players...\nJoin room ${this.room} or\npress ENTER to add player`)
+  }
+
+  public preGame = () => {
+    if (this.closed) {
+      this.close()
+      return
+    }
+
+    // TODO: Remove haxxor
+    if (this.snakes.length > 0)  { // Game has started
+      this.overlay.removeOverlay()
+      this.draw()
+      this.scores = this.snakes.map(({ id }) => ({ id, score: 0 }))
+      this.sendEvent(GameEvent.START)
+      return
+    }
+
+    if (pressedKeys[KEYS.RETURN]) {
+      this.sendEvent(GameEvent.ADD_PLAYER)
+    }
+
+    this.repaint(this.preGame)
+  }
+
+  public close() {
+    this.closed = true
+
+    if (this.renderer != null) {
+      this.renderer.destroy()
+      this.renderer = undefined as any
+    }
+  }
+
   private getPowerupImage(powerupType: PowerupType): string {
     switch (powerupType) {
       case "UPSIZE": return sizeupImage
       case "GHOST": return ghostImage
       default: return "" // TODO: add never
-    }
-  }
-
-  private connectAsClient(rc: any) {
-    console.log("Not server")
-
-    return clientDataChannel(rc).then((dc: DataChannel) => {
-      this.server = new NetworkServerConnection(dc)
-      const client = new Client(this.server, this)
-
-      const m = mapClientActions(client)
-
-      dc.onmessage = (evt: any) => {
-        m(JSON.parse(evt.data))
-      }
-
-      this.server.addPlayer()
-      return
-    })
-  }
-
-  private connectAsServer(rc: any) {
-    console.log("Server")
-
-    this.overlay.setOverlay(`Wating for players...\nJoin room ${this.room} or\npress ENTER to add player`)
-
-    const server = new Server(TICK_RATE)
-    const id = {}
-
-    this.server = new LocalServerConnection(server, id)
-    const client = new Client(this.server, this)
-
-    server.addConnection(new LocalClientConnection(client, id))
-
-    serverDataChannel(rc, this.handleClientConnections(server))
-
-    this.server.addPlayer()
-  }
-
-  private handleClientConnections(server: Server) {
-    const m = mapServerActions(server)
-
-    return (dc: DataChannel) => {
-      const netconn = new NetworkClientConnection(dc)
-      server.addConnection(netconn)
-
-      dc.onmessage = (evt: any) => {
-        const data = JSON.parse(evt.data)
-        m(data, dc)
-      }
     }
   }
 
@@ -266,29 +216,6 @@ export class Game {
   private preConnect = () => {
     this.overlay.setOverlay("Connecting...")
     this.paint()
-  }
-
-  private preGame = () => {
-    if (this.closed) {
-      this.close()
-      return
-    }
-
-    // TODO: Remove haxxor
-    if (this.snakes.length > 0)  { // Game has started
-      this.overlay.removeOverlay()
-      this.draw()
-      this.scores = this.snakes.map(({ id }) => ({ id, score: 0 }))
-      this.sendEvent(GameEvent.START)
-      return
-    }
-
-    // TODO: Remove haxxor
-    if (pressedKeys[KEYS.RETURN]) {
-      this.server.addPlayer()
-    }
-
-    this.repaint(this.preGame)
   }
 
   private sendEvent (e: GameEvent) {

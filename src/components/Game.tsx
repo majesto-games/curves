@@ -4,6 +4,7 @@ import * as qs from "query-string"
 import { Game, GameEvent } from "../game/game"
 import { Score } from "server/actions"
 import Canvas from "components/Canvas"
+import Room from "game/room"
 
 interface GameState {
   scores: Score[]
@@ -31,27 +32,27 @@ export default class GameC extends React.Component<void, GameState> {
     )
   }
 
-  private getGame = (room: string) => {
+  private getGame = (roomName: string) => {
     const newGame = () => {
-      const game = new Game(room)
-      game.onEvent((e) => {
+      const room = new Room(roomName)
+      room.game.onEvent((e) => {
         if (e === GameEvent.END) {
-          this.games[room] = undefined
+          this.games[roomName] = undefined
           history.goBack()
         }
 
         if (e === GameEvent.ROUND_END || e === GameEvent.START) {
           this.setState((prevState, props) => ({
-            scores: game.scores,
+            scores: room.game.scores,
           }))
         }
       })
-      const view = game.getView()
-      this.games[room] = view
-      game.connect()
+      const view = room.game.getView()
+      this.games[roomName] = view
+      room.connect()
       return view
     }
 
-    return this.games[room] || newGame()
+    return this.games[roomName] || newGame()
   }
 }
