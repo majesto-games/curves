@@ -29,7 +29,7 @@ export interface ActivePowerup {
   activeTo: number
 }
 
-function createConnectedPolygon (point: Point, thickness: number, lastPoints: number[], point2: Point) {
+function createConnectedPolygon(point: Point, thickness: number, lastPoints: number[], point2: Point) {
   const angle = Math.atan2(point2.y - point.y, point2.x - point.x)
   const anglePerp = angle + Math.PI / 2
   return [
@@ -41,7 +41,7 @@ function createConnectedPolygon (point: Point, thickness: number, lastPoints: nu
   ])
 }
 
-function createPolygon (point1: Point, point2: Point, thickness1: number, thickness2: number) {
+function createPolygon(point1: Point, point2: Point, thickness1: number, thickness2: number) {
   const angle = Math.atan2(point2.y - point1.y, point2.x - point1.x)
   const anglePerp = angle + Math.PI / 2
 
@@ -93,10 +93,10 @@ export class Snake {
   private ghost: number
 
   constructor(
-      startPoint: Point,
-      public rotation: number,
-      public id: number,
-    ) {
+    startPoint: Point,
+    public rotation: number,
+    public id: number,
+  ) {
     this.x = startPoint.x
     this.y = startPoint.y
     this.lastX = this.x

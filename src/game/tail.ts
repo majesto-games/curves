@@ -6,7 +6,7 @@ import {
 
 export interface Tail {
   add: (part: TailPart) => void
-  clear: ()  => void
+  clear: () => void
 }
 
 export interface NotRemoved {
@@ -66,13 +66,13 @@ class Grid {
     public readonly height: number,
     public readonly scaleX: number,
     public readonly scaleY: number,
-    ) {
-      this.cols = width / scaleX
-      this.rows = height / scaleY
+  ) {
+    this.cols = width / scaleX
+    this.rows = height / scaleY
 
-      for (let i = 0; i < this.cols * this.rows; i++) {
-        this.cells[i] = new TailPartArray()
-      }
+    for (let i = 0; i < this.cols * this.rows; i++) {
+      this.cells[i] = new TailPartArray()
+    }
   }
 
   public add(part: TailPart & NotRemoved) {
@@ -248,7 +248,7 @@ export class ServerTail implements Tail {
 
 }
 
-export function containsPoint (points: number[], x: number, y: number) {
+export function containsPoint(points: number[], x: number, y: number) {
   let inside = false
 
   const length = points.length / 2

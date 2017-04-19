@@ -130,7 +130,7 @@ export function registerKeys(keysToRegister: KEYS[]) {
 }
 
 export default (() => {
-  function setKeysPressed (e: KeyboardEvent, pressed: boolean) {
+  function setKeysPressed(e: KeyboardEvent, pressed: boolean) {
     if (e.metaKey || e.ctrlKey || e.altKey || e.target !== document.body) {
       return
     }

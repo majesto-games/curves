@@ -111,9 +111,9 @@ export function start(playerInits: PlayerInit[]): Start {
 }
 
 export interface SnakeInit {
-      startPoint: Point,
-      rotation: number,
-      id: number,
+  startPoint: Point,
+  rotation: number,
+  id: number,
 }
 
 export const ROUND: "ROUND" = "ROUND"
@@ -161,4 +161,4 @@ export const LEFT = -1
 export const RIGHT = 1
 
 export type ServerAction = AddPlayer | Rotate
-export type ClientAction  = UpdatePlayers | Start | End | PowerupSpawn | PowerupFetch | Round | RoundEnd
+export type ClientAction = UpdatePlayers | Start | End | PowerupSpawn | PowerupFetch | Round | RoundEnd

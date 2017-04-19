@@ -142,7 +142,7 @@ export class NetworkClientConnection implements ClientConnection {
 
   constructor(private dataChannel: any) {
     this.id = dataChannel
-}
+  }
 
   public updatePlayers(playerUpdates: PlayerUpdate[]) {
     this.send(updatePlayers(playerUpdates))
@@ -160,7 +160,7 @@ export class NetworkClientConnection implements ClientConnection {
     this.send(roundEnd(scores))
   }
 
-  public end (winnerId?: number) {
+  public end(winnerId?: number) {
     this.send(end(winnerId))
   }
 
@@ -188,34 +188,34 @@ export function clientDataChannel(rc: quickconnect.connection) {
 
     // tell quickconnect we want a datachannel called test
     rc.createDataChannel("test")
-    .on("channel:opened:test", (peerId: any, dc: any) => {
-      console.log("opened channel", peerId, dc)
-      dc.onmessage = (evt: any) => {
-        if (evt.data === "WELCOME") {
-          console.log("got WELCOME from ", peerId)
-          resolve(dc)
+      .on("channel:opened:test", (peerId: any, dc: any) => {
+        console.log("opened channel", peerId, dc)
+        dc.onmessage = (evt: any) => {
+          if (evt.data === "WELCOME") {
+            console.log("got WELCOME from ", peerId)
+            resolve(dc)
+          }
         }
-      }
-    })
-    .on("channel:closed:test", (peerId: any, dc: any) => {
-      console.log("closed channel", peerId, dc)
-    })
+      })
+      .on("channel:closed:test", (peerId: any, dc: any) => {
+        console.log("closed channel", peerId, dc)
+      })
   })
 }
 
 export function serverDataChannel(rc: quickconnect.connection, cb: (dc: DataChannel) => any) {
   // tell quickconnect we want a datachannel called test
   rc.createDataChannel("test")
-  // when the test channel has opened a RTCDataChannel to a peer, let us know
-  .on("channel:opened:test", function (peerId: any, dc: any) {
-    console.log("opened channel", peerId, dc)
-    dc.send("WELCOME")
-    console.log("sending WELCOME to ", peerId)
-    cb(dc)
-  })
-  .on("channel:closed:test", (peerId: any, dc: any) => {
-    console.log("closed channel", peerId, dc)
-  })
+    // when the test channel has opened a RTCDataChannel to a peer, let us know
+    .on("channel:opened:test", function(peerId: any, dc: any) {
+      console.log("opened channel", peerId, dc)
+      dc.send("WELCOME")
+      console.log("sending WELCOME to ", peerId)
+      cb(dc)
+    })
+    .on("channel:closed:test", (peerId: any, dc: any) => {
+      console.log("closed channel", peerId, dc)
+    })
 }
 
 export function connectAndCount(room: string): Promise<[quickconnect.connection, number]> {

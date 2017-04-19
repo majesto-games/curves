@@ -15,7 +15,7 @@ export default class Overlay {
   constructor(g: PIXI.Graphics) {
     this.graphics = g
     this.overlayText = new PIXI.Text("", { fill: "white", fontFamily: "Courier New", fontSize: "32px" })
-    this.overlayText.anchor = new PIXI.ObservablePoint(() => {; }, 0.5, 0.5)
+    this.overlayText.anchor = new PIXI.ObservablePoint(() => { ; }, 0.5, 0.5)
     this.overlayText.x = SERVER_WIDTH / 2
     this.overlayText.y = SERVER_HEIGHT / 3
 

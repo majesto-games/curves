@@ -1,4 +1,4 @@
 declare module "freeice" {
-  function freeice (opts?: any): string[]
+  function freeice(opts?: any): string[]
   export = freeice
 }

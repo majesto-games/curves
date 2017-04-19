@@ -62,9 +62,9 @@ export default class Lobby extends React.Component<any, { rooms: Room[] }> {
 
     return (
       <ul>
-      {
-        [<li key="new" ><NewRoom /></li>].concat(existingRooms)
-      }
+        {
+          [<li key="new" ><NewRoom /></li>].concat(existingRooms)
+        }
       </ul>
     )
   }

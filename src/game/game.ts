@@ -154,7 +154,7 @@ export class Game {
     }
 
     // TODO: Remove haxxor
-    if (this.snakes.length > 0)  { // Game has started
+    if (this.snakes.length > 0) { // Game has started
       this.overlay.removeOverlay()
       this.draw()
       this.scores = this.snakes.map(({ id }) => ({ id, score: 0 }))
@@ -218,7 +218,7 @@ export class Game {
     this.paint()
   }
 
-  private sendEvent (e: GameEvent) {
+  private sendEvent(e: GameEvent) {
     this.eventListeners.forEach(f => f(e))
   }
 }

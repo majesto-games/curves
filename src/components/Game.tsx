@@ -16,7 +16,7 @@ export default class GameC extends React.Component<void, GameState> {
   }
 
   private div: HTMLDivElement | null = null
-  private games: {[key: string]: HTMLCanvasElement | undefined} = {}
+  private games: { [key: string]: HTMLCanvasElement | undefined } = {}
 
   public render() {
     const room = qs.parse(history.location.search).room || "leif"
@@ -27,7 +27,7 @@ export default class GameC extends React.Component<void, GameState> {
       <div>
         <Canvas view={this.getGame(room)} />
         <div>{scores.map(({ score, id }) =>
-            <h1 key={id}>Player {id}: {score}</h1>)}</div>
+          <h1 key={id}>Player {id}: {score}</h1>)}</div>
       </div>
     )
   }
