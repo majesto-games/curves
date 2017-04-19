@@ -20,7 +20,7 @@ declare module "rtc-quickconnect" {
 
       plugins: any[];
 
-      addListener(name: any, handler: any): any;
+      addListener(name: string, handler: any): any;
 
       addStream(stream: any): any;
 
@@ -28,13 +28,13 @@ declare module "rtc-quickconnect" {
 
       broadcast(stream: any): any;
 
-      clear(name: any): void;
+      clear(name: string): void;
 
       close(): void;
 
       connect(): any;
 
-      createDataChannel(label: any, opts?: any): any;
+      createDataChannel(label: string, opts?: any): any;
 
       endCall(id: any): void;
 
@@ -42,7 +42,7 @@ declare module "rtc-quickconnect" {
 
       feed(handler: any): any;
 
-      get(name: any): any;
+      get(name: string): any;
 
       getLocalStreams(): any;
 
@@ -54,11 +54,11 @@ declare module "rtc-quickconnect" {
 
       leave(): void;
 
-      off(name: any, handler: any): void;
+      off(name: string, handler: any): void;
 
-      on(name: any, handler: any): any;
+      on(name: string, handler: any): any;
 
-      once(name: any, handler: any, ...args: any[]): any;
+      once(name: string, handler: any, ...args: any[]): any;
 
       profile(data: any): any;
 
@@ -68,13 +68,13 @@ declare module "rtc-quickconnect" {
 
       registerScheme(scheme: any): void;
 
-      removeAllListeners(name: any): void;
+      removeAllListeners(name: string): void;
 
-      removeListener(name: any, handler: any): void;
+      removeListener(name: string, handler: any): void;
 
       removeStream(stream: any): any;
 
-      requestChannel(targetId: any, label: any, callback: any): any;
+      requestChannel(targetId: any, label: string, callback: any): any;
 
       requestStream(targetId: any, idx: any, callback: any): any;
 

@@ -22,7 +22,7 @@ const POWERUP_CHANCE_INCREASE = 0.00001
 interface AlmostPlayerInit {
   name: string
   color: number
-  connectionId: any
+  connectionId: string | Object
   id: number
 }
 
@@ -63,10 +63,10 @@ export class Server {
 
   public addConnection(conn: ClientConnection) {
     this.clientConnections.push(conn)
-    console.log("connection added, total: ", this.clientConnections.length)
+    console.log("connection added to: ", conn.id, " total: ", this.clientConnections.length)
   }
 
-  public addPlayer(connectionId: any) {
+  public addPlayer(connectionId: string | Object) {
     if (this.playerInits.length > 2) {
       return
     }
@@ -104,14 +104,14 @@ export class Server {
     }
   }
 
-  public rotateLeft(id: number, connectionId: any) {
+  public rotateLeft(id: number, connectionId: string | Object) {
     const player = this.playerById(id)
     if (player != null && player.owner === connectionId) {
       player.snake!.rotate(-rotationSpeed(player.snake!.fatness))
     }
   }
 
-  public rotateRight(id: number, connectionId: any) {
+  public rotateRight(id: number, connectionId: string | Object) {
     const player = this.playerById(id)
     if (player != null && player.owner === connectionId) {
       player.snake!.rotate(rotationSpeed(player.snake!.fatness))

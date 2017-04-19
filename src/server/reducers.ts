@@ -18,7 +18,7 @@ import {
 } from "./actions"
 
 export function mapServerActions(server: Server) {
-  return (action: ServerAction, connectionId: any) => {
+  return (action: ServerAction, connectionId: string) => {
     switch (action.type) {
       case ADD_PLAYER: {
         server.addPlayer(connectionId)

@@ -26,7 +26,7 @@ import {
 } from "./actions"
 
 export interface ServerConnection {
-  id: any
+  id: string | Object
   addPlayer(): void
   rotateLeft(index: number): void
   rotateRight(index: number): void
@@ -34,7 +34,7 @@ export interface ServerConnection {
 }
 
 export interface ClientConnection {
-  id: any
+  id: string | Object
   updatePlayers(playerUpdates: PlayerUpdate[]): void
   start(playerInits: PlayerInit[]): void
   round(snakeInits: SnakeInit[]): void
@@ -47,7 +47,7 @@ export interface ClientConnection {
 
 export class LocalServerConnection implements ServerConnection {
 
-  constructor(private server: Server, public id: any) {
+  constructor(private server: Server, public id: string | Object) {
   }
 
   public addPlayer() {
@@ -71,7 +71,7 @@ export class LocalClientConnection implements ClientConnection {
 
   private client: Client
 
-  constructor(client: Client, public id: any) {
+  constructor(client: Client, public id: string | Object) {
     this.client = client
   }
 
@@ -109,11 +109,7 @@ export class LocalClientConnection implements ClientConnection {
 }
 
 export class NetworkServerConnection implements ServerConnection {
-  public id: any
-
-  constructor(private dataChannel: any) {
-    this.id = dataChannel
-  }
+  constructor(private dataChannel: DataChannel, public id: string | Object) {}
 
   public addPlayer() {
     this.send(addPlayer())
@@ -137,11 +133,7 @@ export class NetworkServerConnection implements ServerConnection {
 }
 
 export class NetworkClientConnection implements ClientConnection {
-
-  public id: any
-
-  constructor(private dataChannel: any) {
-    this.id = dataChannel
+  constructor(private dataChannel: DataChannel, public id: string) {
   }
 
   public updatePlayers(playerUpdates: PlayerUpdate[]) {
@@ -181,39 +173,47 @@ export class NetworkClientConnection implements ClientConnection {
   }
 }
 
-export type DataChannel = any
+export interface DataChannel {
+  onmessage: (evt: {
+    data: string,
+  }) => void
+  send: (msg: string) => void
+  close: () => void
+}
 
 export function clientDataChannel(rc: quickconnect.connection) {
-  return new Promise<DataChannel>((resolve, reject) => {
+  return new Promise<{
+    dc: DataChannel
+    id: string}>((resolve, reject) => {
 
     // tell quickconnect we want a datachannel called test
     rc.createDataChannel("test")
-      .on("channel:opened:test", (peerId: any, dc: any) => {
+      .on("channel:opened:test", (peerId: string, dc: DataChannel) => {
         console.log("opened channel", peerId, dc)
-        dc.onmessage = (evt: any) => {
+        dc.onmessage = (evt) => {
           if (evt.data === "WELCOME") {
             console.log("got WELCOME from ", peerId)
-            resolve(dc)
+            resolve({ dc, id: peerId })
           }
         }
       })
-      .on("channel:closed:test", (peerId: any, dc: any) => {
+      .on("channel:closed:test", (peerId: string, dc: DataChannel) => {
         console.log("closed channel", peerId, dc)
       })
   })
 }
 
-export function serverDataChannel(rc: quickconnect.connection, cb: (dc: DataChannel) => any) {
+export function serverDataChannel(rc: quickconnect.connection, cb: (dc: DataChannel, id: string) => void) {
   // tell quickconnect we want a datachannel called test
   rc.createDataChannel("test")
     // when the test channel has opened a RTCDataChannel to a peer, let us know
-    .on("channel:opened:test", function(peerId: any, dc: any) {
+    .on("channel:opened:test", function(peerId: string, dc: DataChannel) {
       console.log("opened channel", peerId, dc)
       dc.send("WELCOME")
       console.log("sending WELCOME to ", peerId)
-      cb(dc)
+      cb(dc, peerId)
     })
-    .on("channel:closed:test", (peerId: any, dc: any) => {
+    .on("channel:closed:test", (peerId: string, dc: DataChannel) => {
       console.log("closed channel", peerId, dc)
     })
 }

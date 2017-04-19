@@ -67,16 +67,16 @@ export default class Room {
     }
   }
 
-  private connectAsClient(rc: any) {
+  private connectAsClient(rc: quickconnect.connection) {
     console.log("Not server")
 
-    return clientDataChannel(rc).then((dc: DataChannel) => {
-      this.server = new NetworkServerConnection(dc)
+    return clientDataChannel(rc).then(({ dc, id }) => {
+      this.server = new NetworkServerConnection(dc, id)
       const client = new Client(this.server, this.game)
 
       const m = mapClientActions(client)
 
-      dc.onmessage = (evt: any) => {
+      dc.onmessage = (evt) => {
         m(JSON.parse(evt.data))
       }
 
@@ -85,7 +85,7 @@ export default class Room {
     })
   }
 
-  private connectAsServer(rc: any) {
+  private connectAsServer(rc: quickconnect.connection) {
     console.log("Server")
 
     this.game.waitForPlayers()
@@ -106,13 +106,13 @@ export default class Room {
   private handleClientConnections(server: Server) {
     const m = mapServerActions(server)
 
-    return (dc: DataChannel) => {
-      const netconn = new NetworkClientConnection(dc)
+    return (dc: DataChannel, id: string) => {
+      const netconn = new NetworkClientConnection(dc, id)
       server.addConnection(netconn)
 
-      dc.onmessage = (evt: any) => {
+      dc.onmessage = (evt) => {
         const data = JSON.parse(evt.data)
-        m(data, dc)
+        m(data, id)
       }
     }
   }
