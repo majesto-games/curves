@@ -109,7 +109,7 @@ export class LocalClientConnection implements ClientConnection {
 }
 
 export class NetworkServerConnection implements ServerConnection {
-  constructor(private dataChannel: DataChannel, public id: string | Object) {}
+  constructor(private dataChannel: DataChannel, public id: string | Object) { }
 
   public addPlayer() {
     this.send(addPlayer())
@@ -184,7 +184,8 @@ export interface DataChannel {
 export function clientDataChannel(rc: quickconnect.connection) {
   return new Promise<{
     dc: DataChannel
-    id: string}>((resolve, reject) => {
+    id: string
+  }>((resolve, reject) => {
 
     // tell quickconnect we want a datachannel called test
     rc.createDataChannel("test")
