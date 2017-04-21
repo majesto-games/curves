@@ -9,19 +9,27 @@ export default class Canvas extends React.Component<CanvasProps, void> {
   private games: { [key: string]: HTMLCanvasElement | undefined } = {}
 
   public componentDidMount() {
-    this.updateView()
+    this.updateView(this.props)
+  }
+
+  public shouldComponentUpdate() {
+    return false
+  }
+
+  public componentWillReceiveProps(p: CanvasProps) {
+    this.updateView(p)
   }
 
   public render() {
     return <div ref={n => this.div = n} />
   }
 
-  private updateView() {
+  private updateView(p: CanvasProps) {
     if (this.div) {
       while (this.div.firstChild) {
         this.div.removeChild(this.div.firstChild)
       }
-      this.div.appendChild(this.props.view)
+      this.div.appendChild(p.view)
       document.body.focus()
     }
   }

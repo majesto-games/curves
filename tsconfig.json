@@ -6,6 +6,10 @@
         "strictNullChecks": true,
         "jsx": "react",
         "target": "es5",
+        "lib": [
+          "es2016",
+          "dom"
+        ],
         "baseUrl": "./src"
     },
     "exclude": [

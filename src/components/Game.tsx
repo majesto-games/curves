@@ -1,6 +1,5 @@
 import * as React from "react"
 import history from "./history"
-import * as qs from "query-string"
 import { Game, GameEvent } from "../game/game"
 import { Score } from "server/actions"
 import Canvas from "components/Canvas"
@@ -10,7 +9,11 @@ interface GameState {
   scores: Score[]
 }
 
-export default class GameC extends React.Component<void, GameState> {
+interface GameProp {
+  room: string
+}
+
+export default class GameC extends React.Component<GameProp, GameState> {
   public state: GameState = {
     scores: [],
   }
@@ -19,13 +22,12 @@ export default class GameC extends React.Component<void, GameState> {
   private games: { [key: string]: HTMLCanvasElement | undefined } = {}
 
   public render() {
-    const room = qs.parse(history.location.search).room || "leif"
 
     const { scores } = this.state
 
     return (
       <div>
-        <Canvas view={this.getGame(room)} />
+        <Canvas view={this.getGame(this.props.room)} />
         <div>{scores.map(({ score, id }) =>
           <h1 key={id}>Player {id}: {score}</h1>)}</div>
       </div>

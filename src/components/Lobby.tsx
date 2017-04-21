@@ -1,5 +1,4 @@
 import * as React from "react"
-import * as qs from "query-string"
 import axios from "axios"
 import { SERVER_URL } from "../config"
 import history from "./history"
@@ -34,8 +33,7 @@ class NewRoom extends React.Component<void, void> {
     e.preventDefault()
 
     history.push({
-      pathname: "/game",
-      search: qs.stringify({ room: this.roomInput.value }),
+      pathname: `/game/${this.roomInput.value}`,
     })
   }
 }

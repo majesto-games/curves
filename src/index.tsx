@@ -8,26 +8,29 @@ import Lobby from "components/Lobby"
 import history from "components/history"
 import { Location, parsePath } from "history"
 
-function render(location: Location) {
-  let component: JSX.Element | undefined = undefined
 
-  switch (location.pathname) {
-    case "/": {
-      component = <Lobby />
-      break
-    }
-    case "/game": {
-      component = <Game />
-    }
-    default:
+function getComponent(location: Location): JSX.Element {
+  const split = location.pathname.substring(1).split("/")
 
+  if (split[0] === "") {
+    return <Lobby />
+  }
+  if (split[0] === "game") {
+    const room = split[1] || "leif"
+    return <Game room={room} />
   }
 
+  return <p>Error</p>
+}
+
+function render(location: Location) {
+
   ReactDOM.render(
-    component || <p>Error</p>,
+    getComponent(location),
     document.getElementById("content") as HTMLElement,
   )
 }
 
 history.listen(render)
+
 render(history.location)

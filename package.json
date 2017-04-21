@@ -21,7 +21,6 @@
   },
   "homepage": "https://github.com/bengt-games/curves#readme",
   "dependencies": {
-    "@types/es6-shim": "^0.31.32",
     "@types/history": "^4.5.0",
     "@types/pixi.js": "^4.4.2",
     "@types/query-string": "^4.3.1",
@@ -33,7 +32,6 @@
     "freeice": "^2.2.0",
     "history": "^4.6.1",
     "pixi.js": "^4.4.4",
-    "query-string": "^4.3.2",
     "react": "^15.4.2",
     "react-dom": "^15.4.2",
     "rtc-quickconnect": "^5.5.1",
