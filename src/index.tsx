@@ -8,7 +8,6 @@ import Lobby from "components/Lobby"
 import history from "components/history"
 import { Location, parsePath } from "history"
 
-
 function getComponent(location: Location): JSX.Element {
   const split = location.pathname.substring(1).split("/")
 

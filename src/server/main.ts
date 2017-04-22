@@ -9,9 +9,10 @@ import {
   TAIL,
   Tail,
   Score,
+  Action,
 } from "./actions"
 
-import { ClientConnection } from "./connections"
+import { ClientConnection, NetworkClientConnection, ConnectionId } from "./connections"
 
 export const SERVER_WIDTH = 1280
 export const SERVER_HEIGHT = 720
@@ -22,7 +23,7 @@ const POWERUP_CHANCE_INCREASE = 0.00001
 interface AlmostPlayerInit {
   name: string
   color: number
-  connectionId: string | Object
+  connectionId: ConnectionId
   id: number
 }
 
@@ -52,6 +53,7 @@ export class Server {
   private scores: Score[] = []
 
   private clientConnections: ClientConnection[] = []
+  private disconnected: { [id: string]: Action[]} = {}
   private pauseDelta: number = 0
   private paused: boolean = true
   private colors: number[] = getColors(7)
@@ -62,12 +64,23 @@ export class Server {
   }
 
   public addConnection(conn: ClientConnection) {
-    this.clientConnections.push(conn)
+    this.clientConnections = this.clientConnections.concat(conn)
     console.log("connection added to: ", conn.id, " total: ", this.clientConnections.length)
+    const sentActions = this.disconnected[conn.id as string]
+    if (sentActions != null) {
+      const nconn = conn as NetworkClientConnection
+      sentActions.forEach(a => nconn.send(a))
+    }
   }
 
-  public addPlayer(connectionId: string | Object) {
-    if (this.playerInits.length > 2) {
+  public removeConnection(conn: NetworkClientConnection) {
+    console.log("removing connection", conn)
+    this.clientConnections = this.clientConnections.filter(v => v !== conn)
+    this.disconnected[conn.id] = conn.sentActions
+  }
+
+  public addPlayer(connectionId: ConnectionId) {
+    if (this.playerInits.length >= 2) {
       return
     }
 
@@ -104,14 +117,14 @@ export class Server {
     }
   }
 
-  public rotateLeft(id: number, connectionId: string | Object) {
+  public rotateLeft(id: number, connectionId: ConnectionId) {
     const player = this.playerById(id)
     if (player != null && player.owner === connectionId) {
       player.snake!.rotate(-rotationSpeed(player.snake!.fatness))
     }
   }
 
-  public rotateRight(id: number, connectionId: string | Object) {
+  public rotateRight(id: number, connectionId: ConnectionId) {
     const player = this.playerById(id)
     if (player != null && player.owner === connectionId) {
       player.snake!.rotate(rotationSpeed(player.snake!.fatness))

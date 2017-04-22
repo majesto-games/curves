@@ -114,6 +114,10 @@ export default class Room {
         const data = JSON.parse(evt.data)
         m(data, id)
       }
+
+      dc.onclose = (evt) => {
+        server.removeConnection(netconn)
+      }
     }
   }
 }
