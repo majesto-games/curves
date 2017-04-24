@@ -39,8 +39,7 @@ import { Client } from "./client"
 
 import pressedKeys, { KEYS, registerKeys } from "./keys"
 
-import * as sizeupImage from "icons/sizeup.svg"
-import * as ghostImage from "icons/ghost.svg"
+import * as Icons from "icons"
 
 export enum GameEvent {
   START, END, ROUND_END, ADD_PLAYER,
@@ -180,8 +179,12 @@ export class Game {
 
   private getPowerupImage(powerupType: PowerupType): string {
     switch (powerupType) {
-      case "UPSIZE": return sizeupImage
-      case "GHOST": return ghostImage
+      case "UPSIZE": return Icons.sizeupThem
+      case "GHOST": return Icons.ghostMe
+      case "SPEEDDOWN_ME": return Icons.speeddownMe
+      case "SPEEDDOWN_THEM": return Icons.speeddownThem
+      case "SPEEDUP_ME": return Icons.speedupMe
+      case "SPEEDUP_THEM": return Icons.speedupThem
       default: return "" // TODO: add never
     }
   }

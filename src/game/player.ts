@@ -14,7 +14,13 @@ export interface Point {
   y: number
 }
 
-export type PowerupType = "UPSIZE" | "GHOST"
+export type PowerupType
+  = "UPSIZE"
+  | "GHOST"
+  | "SPEEDUP_ME"
+  | "SPEEDUP_THEM"
+  | "SPEEDDOWN_ME"
+  | "SPEEDDOWN_THEM"
 
 export interface Powerup {
   type: PowerupType

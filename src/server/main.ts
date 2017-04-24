@@ -53,7 +53,7 @@ export class Server {
   private scores: Score[] = []
 
   private clientConnections: ClientConnection[] = []
-  private disconnected: { [id: string]: Action[]} = {}
+  private disconnected: { [id: string]: Action[] } = {}
   private pauseDelta: number = 0
   private paused: boolean = true
   private colors: number[] = getColors(7)
@@ -222,7 +222,16 @@ export class Server {
       this.round.powerupChance = POWERUP_CHANCE_BASE
       const x = Math.round(Math.random() * SERVER_WIDTH)
       const y = Math.round(Math.random() * SERVER_HEIGHT)
-      const powerupType = frequency<PowerupType>([[0.7, "UPSIZE"], [0.3, "GHOST"]])
+
+      const powerupType = frequency<PowerupType>([
+        [0.4, "UPSIZE"],
+        [0.2, "GHOST"],
+        [0.1, "SPEEDUP_ME"],
+        [0.1, "SPEEDUP_THEM"],
+        [0.1, "SPEEDDOWN_ME"],
+        [0.1, "SPEEDDOWN_THEM"],
+      ])
+
       powerups.push({
         type: powerupType,
         id: this.round.nextPowerupId,
