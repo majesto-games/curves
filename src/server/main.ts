@@ -301,6 +301,28 @@ export class Server {
             player!.snake!.unghostify()
             break
           }
+          case "SPEEDDOWN_ME": {
+            const player = this.playerById(peek!.activator)
+            player!.snake!.speedup()
+            break
+          }
+          case "SPEEDDOWN_THEM": {
+            this.players
+              .filter(p => peek!.activator !== p.id)
+              .forEach(p => p.snake!.speedup())
+            break
+          }
+          case "SPEEDUP_ME": {
+            const player = this.playerById(peek!.activator)
+            player!.snake!.speeddown()
+            break
+          }
+          case "SPEEDUP_THEM": {
+            this.players
+              .filter(p => peek!.activator !== p.id)
+              .forEach(p => p.snake!.speeddown())
+            break
+          }
           default:
         }
 
@@ -345,6 +367,27 @@ export class Server {
               }
               case "GHOST": {
                 player.snake!.ghostify()
+                break
+              }
+              case "SPEEDDOWN_ME": {
+                player.snake!.speeddown()
+                break
+              }
+              case "SPEEDDOWN_THEM": {
+                this.players
+                  .filter(p => player.id !== p.id)
+                  .forEach(p => p.snake!.speeddown())
+                break
+              }
+              case "SPEEDUP_ME": {
+                player.snake!.speedup()
+                break
+              }
+              case "SPEEDUP_THEM": {
+                this.players
+                  .filter(p => player.id !== p.id)
+                  .forEach(p => p.snake!.speedup())
+                break
               }
               default:
             }

@@ -132,6 +132,14 @@ export class Snake {
     this.ghost--
   }
 
+  public speeddown() {
+    this.speed = Math.max(MOVE_SPEED_BASE - 1, this.speed - 0.5)
+  }
+
+  public speedup() {
+    this.speed = this.speed + 0.5
+  }
+
   public createTailPart = () => {
     let r = Math.random()
     let pol: number[] | undefined
