@@ -171,7 +171,7 @@ export class Game {
   }
 
   public waitForPlayers() {
-    this.overlay.setOverlay(`Wating for players...\nJoin room ${this.room} or\npress ENTER to add player`)
+    this.overlay.setOverlay(`Waiting for players...\nJoin room ${this.room} or\npress ENTER to add player`)
   }
 
   public preGame = () => {
