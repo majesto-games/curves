@@ -211,9 +211,12 @@ export class Game {
     const wscale = ww / SERVER_WIDTH
     const hscale = wh / SERVER_HEIGHT
     const scale = Math.min(wscale, hscale)
+    const density = window.devicePixelRatio
 
-    this.container.scale = new PPoint(scale, scale)
-    this.renderer.resize(SERVER_WIDTH * scale, SERVER_HEIGHT * scale)
+    this.container.scale = new PPoint(scale * density, scale * density)
+    this.renderer.resize(SERVER_WIDTH * scale * density, SERVER_HEIGHT * scale * density)
+    this.renderer.view.style.width = `${SERVER_WIDTH * scale}px`
+    this.renderer.view.style.height = `${SERVER_HEIGHT * scale}px`
   }
 
   private getPowerupImage(powerupType: PowerupType): string {
