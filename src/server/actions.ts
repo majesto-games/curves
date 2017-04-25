@@ -136,12 +136,18 @@ export interface Score {
 export const ROUND_END: "ROUND_END" = "ROUND_END"
 export interface RoundEnd extends Action {
   type: "ROUND_END"
-  payload: Score[]
+  payload: {
+    scores: Score[],
+    winners: number[],
+  }
 }
-export function roundEnd(scores: Score[]): RoundEnd {
+export function roundEnd(scores: Score[], winners: number[]): RoundEnd {
   return {
     type: ROUND_END,
-    payload: scores,
+    payload: {
+      scores,
+      winners,
+    },
   }
 }
 

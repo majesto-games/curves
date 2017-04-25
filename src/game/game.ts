@@ -126,8 +126,10 @@ export class Game {
     }
   }
 
-  public roundEnd(scores: Score[]) {
+  public roundEnd(scores: Score[], winners: Player[]) {
     this.scores = scores
+    // TODO: so so hacky yes yes
+    this.overlay.setOverlay(`Winner this round: Player ${winners[0].id}`)
     this.sendEvent(GameEvent.ROUND_END)
   }
 

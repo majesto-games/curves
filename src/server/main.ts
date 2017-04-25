@@ -57,6 +57,7 @@ export class Server {
   public players: Player[] = []
   private playerInits: AlmostPlayerInit[] = []
   private scores: Score[] = []
+  private losers: Player[] = []
 
   private clientConnections: ClientConnection[] = []
   // private disconnected: { [id: string]: Action[] } = {}
@@ -277,7 +278,10 @@ export class Server {
             score.score++
           }
         })
-        this.send(c => c.send(roundEnd(this.scores)))
+        this.send(c => c.send(roundEnd(this.scores,
+          (winnerId ? [winnerId] : []).concat(this.losers.map(p => p.id)))))
+          // TODO: this seems rather hacky... 😜
+
         this.pause()
         setTimeout(() => {
           this.startRound()
@@ -344,6 +348,7 @@ export class Server {
         if (p != null) {
           if (this.players.map(p => p.snake).some(this.collides(p.vertices, player.snake!))) {
             player.snake!.alive = false
+            this.losers.unshift(player)
           }
 
           tailAction = {
@@ -441,6 +446,7 @@ export class Server {
 
   private startRound() {
     this.round = new RoundState()
+    this.losers = []
     const snakeInits = this.players.map((p, i) => {
       const rotation = Math.random() * Math.PI * 2
       const startPoint: Point = {
