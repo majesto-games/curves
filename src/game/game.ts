@@ -48,7 +48,10 @@ export enum GameEvent {
 export class Game {
   public scores: Score[] = []
   public readonly container = new Container()
-  public readonly graphics = new Graphics()
+  public readonly playerLayer = new Graphics()
+  public readonly tailLayer = new Graphics()
+  public readonly powerupLayer = new Graphics()
+  public readonly overlayLayer = new Graphics()
   public readonly overlay: Overlay
   private closed = false
   private renderer: CanvasRenderer | WebGLRenderer
@@ -57,10 +60,17 @@ export class Game {
   private snakes: Snake[] = []
 
   constructor(private readonly room: string) {
-    this.overlay = new Overlay(this.graphics)
+    this.overlay = new Overlay(this.overlayLayer)
     this.renderer = autoDetectRenderer(SERVER_WIDTH, SERVER_HEIGHT,
       { antialias: true, backgroundColor: 0x000000 })
-    this.container.addChild(this.graphics)
+
+    // The order of these actually matters
+    // Order is back to front
+    this.container.addChild(this.powerupLayer)
+    this.container.addChild(this.tailLayer)
+    this.container.addChild(this.playerLayer)
+    this.container.addChild(this.overlayLayer)
+
     this.preConnect()
   }
 
@@ -99,12 +109,14 @@ export class Game {
 
   public newRound(snakes: Snake[]) {
     this.overlay.removeOverlay()
-    this.graphics.removeChildren()
+    this.playerLayer.removeChildren()
+    this.tailLayer.removeChildren()
+    this.powerupLayer.removeChildren()
 
     this.snakes = snakes
 
     for (let snake of snakes) {
-      this.graphics.addChild(snake.graphics)
+      this.playerLayer.addChild(snake.graphics)
     }
   }
 
@@ -119,11 +131,11 @@ export class Game {
   }
 
   public addTail({ graphics }: ClientTail) {
-    this.graphics.addChild(graphics)
+    this.tailLayer.addChild(graphics)
   }
 
   public removeTail({ graphics }: ClientTail) {
-    this.graphics.removeChild(graphics)
+    this.tailLayer.removeChild(graphics)
   }
 
   public addPowerup({ location, type }: Powerup) {
@@ -131,14 +143,14 @@ export class Game {
     powerupSprite.position.set(location.x, location.y)
     powerupSprite.anchor.set(0.5)
 
-    this.graphics.addChild(powerupSprite)
+    this.powerupLayer.addChild(powerupSprite)
 
     return powerupSprite
   }
 
   public removePowerup(powerupSprite: Sprite) {
     if (powerupSprite != null) {
-      this.graphics.removeChild(powerupSprite)
+      this.powerupLayer.removeChild(powerupSprite)
     }
   }
 
