@@ -24,7 +24,9 @@ import {
   spawnPowerup,
   fetchPowerup,
   Score,
+  ClientAction,
 } from "./actions"
+import { mapClientActions } from "server/reducers"
 
 export type ConnectionId = string | Object
 
@@ -38,14 +40,7 @@ export interface ServerConnection {
 
 export interface ClientConnection {
   id: ConnectionId
-  updatePlayers(playerUpdates: PlayerUpdate[]): void
-  start(playerInits: PlayerInit[]): void
-  round(snakeInits: SnakeInit[]): void
-  end(winnerId?: number): void
-  roundEnd(scores: Score[]): void
-  close(): void
-  spawnPowerup(powerup: Powerup): void
-  fetchPowerup(powerup: Powerup): void
+  send: (action: ClientAction) => void
 }
 
 export class LocalServerConnection implements ServerConnection {
@@ -72,42 +67,14 @@ export class LocalServerConnection implements ServerConnection {
 
 export class LocalClientConnection implements ClientConnection {
 
-  private client: Client
+  private mapper: (action: ClientAction) => void
 
   constructor(client: Client, public id: ConnectionId) {
-    this.client = client
+    this.mapper = mapClientActions(client)
   }
 
-  public updatePlayers(playerUpdates: PlayerUpdate[]) {
-    this.client.updatePlayers(playerUpdates)
-  }
-
-  public start(playerInits: PlayerInit[]) {
-    this.client.start(playerInits)
-  }
-
-  public round(snakeInits: SnakeInit[]): void {
-    this.client.round(snakeInits)
-  }
-
-  public roundEnd(scores: Score[]) {
-    this.client.roundEnd(scores)
-  }
-
-  public end(winnerId?: number) {
-    this.client.end(winnerId)
-  }
-
-  public spawnPowerup(powerup: Powerup) {
-    this.client.spawnPowerup(powerup)
-  }
-
-  public fetchPowerup(powerup: Powerup) {
-    this.client.fetchPowerup(powerup.id)
-  }
-
-  public close() {
-    return
+  public send(action: ClientAction) {
+    this.mapper(action)
   }
 }
 
@@ -136,45 +103,11 @@ export class NetworkServerConnection implements ServerConnection {
 }
 
 export class NetworkClientConnection implements ClientConnection {
-  public sentActions: Action[] = []
 
   constructor(private dataChannel: DataChannel, public id: string) {
   }
 
-  public updatePlayers(playerUpdates: PlayerUpdate[]) {
-    this.send(updatePlayers(playerUpdates))
-  }
-
-  public start(playerInits: PlayerInit[]) {
-    this.send(start(playerInits))
-  }
-
-  public round(snakeInits: SnakeInit[]): void {
-    this.send(round(snakeInits))
-  }
-
-  public roundEnd(scores: Score[]) {
-    this.send(roundEnd(scores))
-  }
-
-  public end(winnerId?: number) {
-    this.send(end(winnerId))
-  }
-
-  public close() {
-    this.dataChannel.close()
-  }
-
-  public spawnPowerup(powerup: Powerup) {
-    this.send(spawnPowerup(powerup))
-  }
-
-  public fetchPowerup(powerup: Powerup) {
-    this.send(fetchPowerup(powerup.id))
-  }
-
   public send(a: Action) {
-    this.sentActions.push(a)
     this.dataChannel.send(JSON.stringify(a))
   }
 }

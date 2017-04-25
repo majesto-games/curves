@@ -10,6 +10,12 @@ import {
   Tail,
   Score,
   Action,
+  start,
+  roundEnd,
+  updatePlayers,
+  spawnPowerup,
+  fetchPowerup,
+  round,
 } from "./actions"
 
 import { ClientConnection, NetworkClientConnection, ConnectionId } from "./connections"
@@ -53,7 +59,7 @@ export class Server {
   private scores: Score[] = []
 
   private clientConnections: ClientConnection[] = []
-  private disconnected: { [id: string]: Action[] } = {}
+  // private disconnected: { [id: string]: Action[] } = {}
   private pauseDelta: number = 0
   private paused: boolean = true
   private colors: number[] = getColors(7)
@@ -66,17 +72,18 @@ export class Server {
   public addConnection(conn: ClientConnection) {
     this.clientConnections = this.clientConnections.concat(conn)
     console.log("connection added to: ", conn.id, " total: ", this.clientConnections.length)
-    const sentActions = this.disconnected[conn.id as string]
+    // TODO: Re-add sent-actions
+    /*const sentActions = this.disconnected[conn.id as string]
     if (sentActions != null) {
       const nconn = conn as NetworkClientConnection
       sentActions.forEach(a => nconn.send(a))
-    }
+    }*/
   }
 
   public removeConnection(conn: NetworkClientConnection) {
     console.log("removing connection", conn)
     this.clientConnections = this.clientConnections.filter(v => v !== conn)
-    this.disconnected[conn.id] = conn.sentActions
+    // this.disconnected[conn.id] = conn.sentActions
   }
 
   public addPlayer(connectionId: ConnectionId) {
@@ -101,6 +108,7 @@ export class Server {
 
     if (this.playerInits.length > 1) {
       this.send(c => {
+        // TODO: Remove need for knowing c.id
         const playerInits = this.playerInits.map(v => {
           return {
             name: v.name,
@@ -109,7 +117,7 @@ export class Server {
             id: v.id,
           }
         })
-        c.start(playerInits)
+        c.send(start(playerInits))
       })
       console.log("starting server")
       this.startRound()
@@ -269,7 +277,7 @@ export class Server {
             score.score++
           }
         })
-        this.send(c => c.roundEnd(this.scores))
+        this.send(c => c.send(roundEnd(this.scores)))
         this.pause()
         setTimeout(() => {
           this.startRound()
@@ -367,9 +375,9 @@ export class Server {
       this.round.placedPowerups = this.round.placedPowerups.concat(newPowerups)
 
       this.send(c => {
-        c.updatePlayers(playerUpdates)
-        newPowerups.forEach(p => c.spawnPowerup(p))
-        collidedPowerups.forEach(p => c.fetchPowerup(p))
+        c.send(updatePlayers(playerUpdates))
+        newPowerups.forEach(p => c.send(spawnPowerup(p)))
+        collidedPowerups.forEach(p => c.send(fetchPowerup(p.id)))
       })
     }
 
@@ -409,7 +417,7 @@ export class Server {
     })
 
     this.send(c => {
-      c.round(snakeInits)
+      c.send(round(snakeInits))
     })
   }
 
