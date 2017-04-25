@@ -293,7 +293,7 @@ export class Server {
           case "UPSIZE": {
             this.players
               .filter(p => peek!.activator !== p.id)
-              .forEach(p => p.snake!.fatness -= 8)
+              .forEach(p => p.snake!.unfatify())
             break
           }
           case "GHOST": {
@@ -362,7 +362,7 @@ export class Server {
               case "UPSIZE": {
                 this.players
                   .filter(p => player.id !== p.id)
-                  .forEach(p => p.snake!.fatness += 8)
+                  .forEach(p => p.snake!.fatify())
                 break
               }
               case "GHOST": {

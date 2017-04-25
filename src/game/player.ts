@@ -140,6 +140,14 @@ export class Snake {
     this.speed = this.speed + 0.5
   }
 
+  public fatify() {
+    this.fatness += 8
+  }
+
+  public unfatify() {
+    this.fatness -= 8
+  }
+
   public createTailPart = () => {
     let r = Math.random()
     let pol: number[] | undefined
