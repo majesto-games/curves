@@ -1,4 +1,12 @@
-import { Sprite, Graphics, autoDetectRenderer, Container, CanvasRenderer, WebGLRenderer } from "pixi.js"
+import {
+  Sprite,
+  Graphics,
+  autoDetectRenderer,
+  Container,
+  CanvasRenderer,
+  WebGLRenderer,
+  Point as PPoint,
+} from "pixi.js"
 import { Point, Player, Snake, TICK_RATE, Powerup, PowerupType } from "./player"
 import { ClientTail, TailStorage } from "./tail"
 import Overlay from "./overlay"
@@ -198,17 +206,14 @@ export class Game {
   }
 
   private resize() {
-    let w = window.innerWidth
-    let h = window.innerHeight
+    const ww = window.innerWidth
+    const wh = window.innerHeight
+    const wscale = ww / SERVER_WIDTH
+    const hscale = wh / SERVER_HEIGHT
+    const scale = Math.min(wscale, hscale)
 
-    if (w / h >= ratio) {
-      w = h * ratio
-    } else {
-      h = w / ratio
-    }
-
-    this.renderer.view.style.width = `${w}px`
-    this.renderer.view.style.height = `${h}px`
+    this.container.scale = new PPoint(scale, scale)
+    this.renderer.resize(SERVER_WIDTH * scale, SERVER_HEIGHT * scale)
   }
 
   private getPowerupImage(powerupType: PowerupType): string {
