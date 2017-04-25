@@ -26,7 +26,7 @@ export default class GameC extends React.Component<GameProp, GameState> {
     const { scores } = this.state
 
     return (
-      <div>
+      <div className="GameContainer">
         <Canvas view={this.getGame(this.props.room)} />
         <div>{scores.map(({ score, id }) =>
           <h1 key={id}>Player {id}: {score}</h1>)}</div>

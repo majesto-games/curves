@@ -22,7 +22,7 @@ class NewRoom extends React.Component<void, void> {
 
   public render() {
     return (
-      <form onSubmit={this.onSubmit}>
+      <form onSubmit={this.onSubmit} className="NewRoom">
         <input type="text" placeholder="Room name" defaultValue="leif" ref={n => this.roomInput = n} />
         <button type="submit">Join room</button>
       </form>
@@ -38,8 +38,12 @@ class NewRoom extends React.Component<void, void> {
   }
 }
 
-export default class Lobby extends React.Component<any, { rooms: Room[] }> {
-  public state: { rooms: Room[] } = {
+interface LobbyState {
+  rooms: Room[],
+}
+
+export default class Lobby extends React.Component<any, LobbyState> {
+  public state: LobbyState = {
     rooms: [],
   }
 
@@ -54,16 +58,15 @@ export default class Lobby extends React.Component<any, { rooms: Room[] }> {
   public render() {
     const existingRooms = this.state.rooms.map(room => (
       <li key={`room_${room.name}`}>
-        <Link to={"/game?room=" + room.name}>{room.name}</Link>
+        <Link to={`game?room=${room.name}`}>{room.name}</Link>
       </li>
     ))
 
     return (
-      <ul>
-        {
-          [<li key="new" ><NewRoom /></li>].concat(existingRooms)
-        }
-      </ul>
+      <div className="Lobby">
+        <NewRoom />
+        <ul className="rooms">{existingRooms}</ul>
+      </div>
     )
   }
 }

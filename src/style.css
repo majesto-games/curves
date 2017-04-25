@@ -1,0 +1,11 @@
+body {
+  background: #333;
+}
+
+.GameContainer {
+  text-align: center;
+}
+
+.Lobby {
+  padding: 8px;
+}

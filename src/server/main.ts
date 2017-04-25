@@ -20,8 +20,8 @@ import {
 
 import { ClientConnection, NetworkClientConnection, ConnectionId } from "./connections"
 
-export const SERVER_WIDTH = 1280
-export const SERVER_HEIGHT = 720
+export const SERVER_WIDTH = 960
+export const SERVER_HEIGHT = 960
 
 const POWERUP_CHANCE_BASE = 0.0005
 const POWERUP_CHANCE_INCREASE = 0.00001

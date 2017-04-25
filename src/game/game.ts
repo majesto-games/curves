@@ -45,6 +45,8 @@ export enum GameEvent {
   START, END, ROUND_END, ADD_PLAYER,
 }
 
+const ratio = SERVER_WIDTH / SERVER_HEIGHT
+
 export class Game {
   public scores: Score[] = []
   public readonly container = new Container()
@@ -64,12 +66,16 @@ export class Game {
     this.renderer = autoDetectRenderer(SERVER_WIDTH, SERVER_HEIGHT,
       { antialias: true, backgroundColor: 0x000000 })
 
+    this.resize()
+
     // The order of these actually matters
     // Order is back to front
     this.container.addChild(this.powerupLayer)
     this.container.addChild(this.tailLayer)
     this.container.addChild(this.playerLayer)
     this.container.addChild(this.overlayLayer)
+
+    window.addEventListener("resize", () => this.resize())
 
     this.preConnect()
   }
@@ -187,6 +193,20 @@ export class Game {
       this.renderer.destroy()
       this.renderer = undefined as any
     }
+  }
+
+  private resize() {
+    let w = window.innerWidth
+    let h = window.innerHeight
+
+    if (w / h >= ratio) {
+      w = h * ratio
+    } else {
+      h = w / ratio
+    }
+
+    this.renderer.view.style.width = `${w}px`
+    this.renderer.view.style.height = `${h}px`
   }
 
   private getPowerupImage(powerupType: PowerupType): string {

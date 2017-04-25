@@ -20,6 +20,7 @@ module.exports = {
       { test: /\.tsx?$/, exclude: /node_modules/, loader: 'awesome-typescript-loader' },
       { test: /\.tsx?$/, exclude: /node_modules/, loader: 'tslint-loader', enforce: 'pre' },
       { test: /\.png$/, loader: 'file-loader' },
+      { test: /\.css$/, loader: 'style-loader!css-loader' },
       { test: /\.json$/, loader: 'json-loader' }
     ]
   },
