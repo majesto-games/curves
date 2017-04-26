@@ -54,7 +54,6 @@ class RoundState {
 }
 
 export class Server {
-  // TODO: How to reset the players?
   public players: Player[] = []
   private playerInits: AlmostPlayerInit[] = []
   private scores: Score[] = []
@@ -453,6 +452,7 @@ export class Server {
       }
 
       const snake = new Snake(startPoint, rotation, p.id)
+      // WARNING: Modifies player even though this is a .map
       p.snake = snake
       this.round.tails.initPlayer(snake)
 
