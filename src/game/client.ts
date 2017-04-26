@@ -116,13 +116,9 @@ export class Client {
     this.game.newRound(this.players.map(p => p.snake!))
   }
 
-  public roundEnd = (scores: Score[], winners: number[]) => {
-    // TODO: Hacky as fudge
-    const actualWinners = winners
-      .map(id => this.playerById(id))
-      .filter(p => p !== undefined) as Player[]
+  public roundEnd = (scores: Score[], winner: number) => {
 
-    this.game.roundEnd(scores, actualWinners)
+    this.game.roundEnd(scores, this.playerById(winner)!)
   }
 
   public rotateLeft = (id: number) => {

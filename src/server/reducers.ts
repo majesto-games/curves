@@ -74,7 +74,7 @@ export function mapClientActions(client: Client) {
       }
       case ROUND_END: {
         const { payload } = action
-        client.roundEnd(payload.scores, payload.winners)
+        client.roundEnd(payload.scores, payload.winner)
         break
       }
       default:

@@ -47,6 +47,7 @@ class RoundState {
   public tails = new TailStorage(() => new ServerTail())
   public activePowerups = new PriorityQueue<ActivePowerup>((a, b) => a.activeTo < b.activeTo)
   public placedPowerups: Powerup[] = []
+  public losers: Player[] = []
   public nextPowerupId = 0
   public powerupChance = POWERUP_CHANCE_BASE
   public lastUpdate: number
@@ -57,7 +58,6 @@ export class Server {
   public players: Player[] = []
   private playerInits: AlmostPlayerInit[] = []
   private scores: Score[] = []
-  private losers: Player[] = []
 
   private clientConnections: ClientConnection[] = []
   // private disconnected: { [id: string]: Action[] } = {}
@@ -272,15 +272,13 @@ export class Server {
       const playersAlive = this.players.filter(player => player.snake!.alive)
 
       if (playersAlive.length < 2) {
-        const winnerId = playersAlive[0] && playersAlive[0].id
-        this.scores.forEach(score => {
-          if (score.id === winnerId) {
-            score.score++
-          }
-        })
-        this.send(c => c.send(roundEnd(this.scores,
-          (winnerId ? [winnerId] : []).concat(this.losers.map(p => p.id)))))
-          // TODO: this seems rather hacky... 😜
+        const playerOrder = playersAlive.concat(this.round.losers)
+        for (let i = playerOrder.length - 1; i >= 0; i--) {
+          // TODO: Better score finding. And don't mutate?
+          const score = this.scores.find(s => s.id === playerOrder[i].id)!
+          score.score += i
+        }
+        this.send(c => c.send(roundEnd(this.scores, playerOrder[0].id)))
 
         this.pause()
         setTimeout(() => {
@@ -348,7 +346,8 @@ export class Server {
         if (p != null) {
           if (this.players.map(p => p.snake).some(this.collides(p.vertices, player.snake!))) {
             player.snake!.alive = false
-            this.losers.unshift(player)
+            // TODO: randomize order
+            this.round.losers.unshift(player)
           }
 
           tailAction = {
@@ -446,7 +445,6 @@ export class Server {
 
   private startRound() {
     this.round = new RoundState()
-    this.losers = []
     const snakeInits = this.players.map((p, i) => {
       const rotation = Math.random() * Math.PI * 2
       const startPoint: Point = {
