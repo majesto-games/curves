@@ -20,6 +20,7 @@ import {
   ADD_PLAYER,
   ROTATE,
   LEFT,
+  ClientAction,
 } from "./actions"
 
 import { ClientConnection, ConnectionId } from "./connections"
@@ -59,15 +60,17 @@ class RoundState {
   public nextPowerupId = 0
   public powerupChance = POWERUP_CHANCE_BASE
   public lastUpdate: number
+  public sentActions: ClientAction[] = []
 }
 
 export class Server {
   public players: Player[] = []
   private playerInits: AlmostPlayerInit[] = []
+  // TODO: playerInits and these sentActions should not be like this
+  private sentActions: ClientAction[] = []
   private scores: Score[] = []
 
   private clientConnections: ClientConnection[] = []
-  // private disconnected: { [id: string]: Action[] } = {}
   private pauseDelta: number = 0
   private paused: boolean = true
   private colors: number[] = getColors(7)
@@ -100,18 +103,15 @@ export class Server {
   public addConnection(conn: ClientConnection) {
     this.clientConnections = this.clientConnections.concat(conn)
     console.log("connection added to: ", conn.id, " total: ", this.clientConnections.length)
-    // TODO: Re-add sent-actions
-    /*const sentActions = this.disconnected[conn.id as string]
-    if (sentActions != null) {
-      const nconn = conn as NetworkClientConnection
-      sentActions.forEach(a => nconn.send(a))
-    }*/
+
+    this.sentActions.forEach(conn)
+    console.log(`resending ${this.round.sentActions.length} actions`)
+    this.round.sentActions.forEach(conn)
   }
 
   public removeConnection(conn: ClientConnection) {
     console.log("removing connection", conn)
-    this.clientConnections = this.clientConnections.filter(v => v !== conn)
-    // this.disconnected[conn.id] = conn.sentActions
+    this.clientConnections = this.clientConnections.filter(v => v.id !== conn.id)
   }
 
   private addPlayer(connectionId: ConnectionId) {
@@ -135,18 +135,19 @@ export class Server {
     })
 
     if (this.playerInits.length > 1) {
-      this.send(c => {
-        // TODO: Remove need for knowing c.id
-        const playerInits = this.playerInits.map(v => {
-          return {
-            name: v.name,
-            color: v.color,
-            owner: v.connectionId,
-            id: v.id,
-          }
-        })
-        c(start(playerInits))
+      const playerInits = this.playerInits.map(v => {
+        return {
+          name: v.name,
+          color: v.color,
+          owner: v.connectionId,
+          id: v.id,
+        }
       })
+      this.send([start(playerInits)])
+      // TODO: Remove this hack by figuring out a better way of doing playerInits
+      this.sentActions = this.round.sentActions
+      this.round.sentActions = []
+
       console.log("starting server")
       this.startRound()
       this.start()
@@ -167,8 +168,11 @@ export class Server {
     }
   }
 
-  private send(f: (client: ClientConnection) => void) {
-    this.clientConnections.forEach(f)
+  private send(actions: ClientAction[]) {
+    this.round.sentActions.push(...actions)
+    this.clientConnections.forEach(c => {
+      actions.forEach(a => c(a))
+    })
   }
 
   private pause() {
@@ -305,7 +309,7 @@ export class Server {
           const score = this.scores.find(s => s.id === playerOrder[i].id)!
           score.score += i
         }
-        this.send(c => c(roundEnd(this.scores, playerOrder[0].id)))
+        this.send([roundEnd(this.scores, playerOrder[0].id)])
 
         this.pause()
         setTimeout(() => {
@@ -448,11 +452,13 @@ export class Server {
       const newPowerups = this.spawnPowerups()
       this.round.placedPowerups = this.round.placedPowerups.concat(newPowerups)
 
-      this.send(c => {
-        c(updatePlayers(playerUpdates))
-        newPowerups.forEach(p => c(spawnPowerup(p)))
-        collidedPowerups.forEach(p => c(fetchPowerup(p.id)))
-      })
+      const actions = [
+        updatePlayers(playerUpdates),
+        ...newPowerups.map(spawnPowerup),
+        ...collidedPowerups.map(p => fetchPowerup(p.id)),
+      ]
+
+      this.send(actions)
     }
 
     setTimeout(() => this.serverTick(), (this.round.lastUpdate + (1000 / this.tickRate)) - Date.now())
@@ -491,9 +497,7 @@ export class Server {
       }
     })
 
-    this.send(c => {
-      c(round(snakeInits))
-    })
+    this.send([round(snakeInits)])
   }
 
 }

@@ -66,7 +66,11 @@ export function networkServerConnection(
   id: ConnectionId,
   ): ServerConnection {
   return Object.assign(
-    (a: ServerAction) => dataChannel.send(JSON.stringify(a)),
+    (a: ServerAction) => {
+      if (dataChannel.readyState === "open") {
+        dataChannel.send(JSON.stringify(a))
+      }
+    },
     {id,
     close: () => dataChannel.close()},
   )
@@ -94,6 +98,7 @@ export interface DataChannel {
   }) => void
   send: (msg: string) => void
   close: () => void
+  readyState: "connecting" | "open" | "closing" | "closed"
 }
 
 function getId() {
@@ -116,15 +121,17 @@ export function clientDataChannel(rc: quickconnect.connection) {
       .on("channel:opened:test", (peerId: string, dc: DataChannel) => {
         console.log("opened channel", peerId, dc)
 
+        const id = getId()
+
         dc.send(JSON.stringify({
           type: "CONNECT",
-          id: getId(),
+          id,
         }))
 
         dc.onmessage = (evt) => {
           if (evt.data === "WELCOME") {
-            console.log("got WELCOME from ", peerId)
-            resolve({ dc, id: peerId })
+            console.log(`got WELCOME from peer ${peerId}`)
+            resolve({ dc, id })
           }
         }
       })
@@ -150,7 +157,7 @@ export function serverDataChannel(rc: quickconnect.connection, cb: (dc: DataChan
         const data = JSON.parse(evt.data)
         if (data.type === "CONNECT" && data.id != null) {
           dc.send("WELCOME")
-          console.log("sending WELCOME to ", peerId)
+          console.log(`sending WELCOME to peer ${peerId} with client ID ${data.id}`)
           cb(dc, data.id)
         }
       }
