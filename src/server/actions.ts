@@ -1,5 +1,6 @@
 import { Point, Powerup } from "game/player"
 import { TailPart, NotRemoved } from "game/tail"
+import { ConnectionId } from "server/connections"
 
 export interface Action {
   readonly type: string
@@ -95,7 +96,7 @@ export function updatePlayers(updates: PlayerUpdate[]): UpdatePlayers {
 export interface PlayerInit {
   name: string
   color: number
-  isOwner: boolean
+  owner: ConnectionId
   id: number
 }
 export const START: "START" = "START"

@@ -16,9 +16,13 @@ import {
   spawnPowerup,
   fetchPowerup,
   round,
+  ServerAction,
+  ADD_PLAYER,
+  ROTATE,
+  LEFT,
 } from "./actions"
 
-import { ClientConnection, NetworkClientConnection, ConnectionId } from "./connections"
+import { ClientConnection, ConnectionId } from "./connections"
 
 export const SERVER_WIDTH = 960
 export const SERVER_HEIGHT = 960
@@ -41,6 +45,10 @@ function fastDistance(x1: number, y1: number, x2: number, y2: number) {
 
 function rotationSpeed(fatness: number) {
   return ROTATION_SPEED / (10 + fatness) - 0.02
+}
+
+function failedToHandle(x: never): never {
+  throw new Error(`Server didn't handle ${x}`)
 }
 
 class RoundState {
@@ -69,6 +77,26 @@ export class Server {
     this.round = new RoundState()
   }
 
+  public receive(action: ServerAction, connectionId: ConnectionId) {
+    switch (action.type) {
+      case ADD_PLAYER: {
+        this.addPlayer(connectionId)
+        break
+      }
+      case ROTATE: {
+        const { payload } = action
+        if (payload.direction === LEFT) {
+          this.rotateLeft(payload.index, connectionId)
+        } else {
+          this.rotateRight(payload.index, connectionId)
+        }
+        break
+      }
+      default:
+        failedToHandle( action)
+    }
+  }
+
   public addConnection(conn: ClientConnection) {
     this.clientConnections = this.clientConnections.concat(conn)
     console.log("connection added to: ", conn.id, " total: ", this.clientConnections.length)
@@ -80,13 +108,13 @@ export class Server {
     }*/
   }
 
-  public removeConnection(conn: NetworkClientConnection) {
+  public removeConnection(conn: ClientConnection) {
     console.log("removing connection", conn)
     this.clientConnections = this.clientConnections.filter(v => v !== conn)
     // this.disconnected[conn.id] = conn.sentActions
   }
 
-  public addPlayer(connectionId: ConnectionId) {
+  private addPlayer(connectionId: ConnectionId) {
     if (this.playerInits.length >= 2) {
       return
     }
@@ -113,11 +141,11 @@ export class Server {
           return {
             name: v.name,
             color: v.color,
-            isOwner: v.connectionId === c.id,
+            owner: v.connectionId,
             id: v.id,
           }
         })
-        c.send(start(playerInits))
+        c(start(playerInits))
       })
       console.log("starting server")
       this.startRound()
@@ -125,14 +153,14 @@ export class Server {
     }
   }
 
-  public rotateLeft(id: number, connectionId: ConnectionId) {
+  private rotateLeft(id: number, connectionId: ConnectionId) {
     const player = this.playerById(id)
     if (player != null && player.owner === connectionId) {
       player.snake!.rotate(-rotationSpeed(player.snake!.fatness))
     }
   }
 
-  public rotateRight(id: number, connectionId: ConnectionId) {
+  private rotateRight(id: number, connectionId: ConnectionId) {
     const player = this.playerById(id)
     if (player != null && player.owner === connectionId) {
       player.snake!.rotate(rotationSpeed(player.snake!.fatness))
@@ -277,7 +305,7 @@ export class Server {
           const score = this.scores.find(s => s.id === playerOrder[i].id)!
           score.score += i
         }
-        this.send(c => c.send(roundEnd(this.scores, playerOrder[0].id)))
+        this.send(c => c(roundEnd(this.scores, playerOrder[0].id)))
 
         this.pause()
         setTimeout(() => {
@@ -421,9 +449,9 @@ export class Server {
       this.round.placedPowerups = this.round.placedPowerups.concat(newPowerups)
 
       this.send(c => {
-        c.send(updatePlayers(playerUpdates))
-        newPowerups.forEach(p => c.send(spawnPowerup(p)))
-        collidedPowerups.forEach(p => c.send(fetchPowerup(p.id)))
+        c(updatePlayers(playerUpdates))
+        newPowerups.forEach(p => c(spawnPowerup(p)))
+        collidedPowerups.forEach(p => c(fetchPowerup(p.id)))
       })
     }
 
@@ -464,7 +492,7 @@ export class Server {
     })
 
     this.send(c => {
-      c.send(round(snakeInits))
+      c(round(snakeInits))
     })
   }
 

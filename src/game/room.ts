@@ -2,24 +2,22 @@ import * as quickconnect from "rtc-quickconnect"
 
 import {
   ServerConnection,
-  LocalServerConnection,
-  NetworkClientConnection,
-  NetworkServerConnection,
-  LocalClientConnection,
+  networkClientConnection,
+  localClientConnection,
   clientDataChannel,
   serverDataChannel,
   connectAndCount,
   DataChannel,
+  networkServerConnection,
+  localServerConnection,
 } from "server/connections"
 import { Game, GameEvent } from "game/game"
+import * as cuid from "cuid"
 
-import {
-  mapServerActions,
-  mapClientActions,
-} from "server/reducers"
 import { Server } from "server/main"
 import { Client } from "game/client"
 import { TICK_RATE } from "game/player"
+import { addPlayer } from "server/actions"
 
 export default class Room {
   public game: Game
@@ -31,7 +29,7 @@ export default class Room {
     this.game.onEvent(e => {
       switch (e) {
         case GameEvent.ADD_PLAYER: {
-          this.server.addPlayer()
+          this.server(addPlayer())
           break
         }
         default:
@@ -71,16 +69,14 @@ export default class Room {
     console.log("Not server")
 
     return clientDataChannel(rc).then(({ dc, id }) => {
-      this.server = new NetworkServerConnection(dc, id)
+      this.server = networkServerConnection(dc, id)
       const client = new Client(this.server, this.game)
 
-      const m = mapClientActions(client)
-
       dc.onmessage = (evt) => {
-        m(JSON.parse(evt.data))
+        client.receive(JSON.parse(evt.data))
       }
 
-      this.server.addPlayer()
+      this.server(addPlayer())
       return
     })
   }
@@ -91,28 +87,27 @@ export default class Room {
     this.game.waitForPlayers()
 
     const server = new Server(TICK_RATE)
-    const id = {}
+    const id = cuid()
 
-    this.server = new LocalServerConnection(server, id)
+    this.server = localServerConnection(server, id)
     const client = new Client(this.server, this.game)
 
-    server.addConnection(new LocalClientConnection(client, id))
+    server.addConnection(localClientConnection(client, id))
 
     serverDataChannel(rc, this.handleClientConnections(server))
 
-    this.server.addPlayer()
+    this.server(addPlayer())
   }
 
   private handleClientConnections(server: Server) {
-    const m = mapServerActions(server)
 
     return (dc: DataChannel, id: string) => {
-      const netconn = new NetworkClientConnection(dc, id)
+      const netconn = networkClientConnection(dc, id)
       server.addConnection(netconn)
 
       dc.onmessage = (evt) => {
         const data = JSON.parse(evt.data)
-        m(data, id)
+        server.receive(data, id)
       }
 
       dc.onclose = (evt) => {

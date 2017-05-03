@@ -26,10 +26,6 @@ import {
 
 import {
   ServerConnection,
-  LocalServerConnection,
-  NetworkClientConnection,
-  NetworkServerConnection,
-  LocalClientConnection,
   clientDataChannel,
   serverDataChannel,
   connectAndCount,
@@ -37,13 +33,6 @@ import {
 } from "server/connections"
 
 import * as quickconnect from "rtc-quickconnect"
-
-import {
-  mapServerActions,
-  mapClientActions,
-} from "server/reducers"
-
-import { Client } from "./client"
 
 import pressedKeys, { KEYS, registerKeys } from "./keys"
 

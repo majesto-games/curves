@@ -2,10 +2,6 @@ import { Point, Player, Snake, TICK_RATE, Powerup } from "./player"
 import { ClientTail, TailStorage } from "./tail"
 import {
   ServerConnection,
-  LocalServerConnection,
-  NetworkClientConnection,
-  NetworkServerConnection,
-  LocalClientConnection,
   clientDataChannel,
   serverDataChannel,
   connectAndCount,
@@ -17,7 +13,23 @@ import {
   TAIL,
   SnakeInit,
   Score,
+  ClientAction,
+  LEFT,
+  Action,
+  ServerAction,
+  ADD_PLAYER,
+  ROTATE,
+  START,
+  UPDATE_PLAYERS,
+  END,
+  POWERUP_SPAWN,
+  POWERUP_FETCH,
+  ROUND,
+  ROUND_END,
+  rotate,
+  RIGHT,
 } from "server/actions"
+
 import { Sprite, Graphics, autoDetectRenderer, Container, CanvasRenderer, WebGLRenderer } from "pixi.js"
 
 import pressedKeys, { KEYS, registerKeys } from "./keys"
@@ -59,9 +71,12 @@ class RoundState {
   }
 }
 
+function failedToHandle(x: never): never {
+  throw new Error(`Client didn't handle ${x}`)
+}
+
 export class Client {
   public players: Player[] = []
-  public id: number
   private currentRound: RoundState
 
   constructor(private connection: ServerConnection, private game: Game) {
@@ -69,7 +84,49 @@ export class Client {
     this.game.onDraw(() => this.handleKeys())
   }
 
-  public updatePlayers = (playerUpdates: PlayerUpdate[]) => {
+  public receive(action: ClientAction) {
+    switch (action.type) {
+      case START: {
+        const { payload } = action
+        this.start(payload)
+        break
+      }
+      case UPDATE_PLAYERS: {
+        const { payload } = action
+        this.updatePlayers(payload)
+        break
+      }
+      case END: {
+        const { payload } = action
+        this.end(payload)
+        break
+      }
+      case POWERUP_SPAWN: {
+        const { payload } = action
+        this.spawnPowerup(payload)
+        break
+      }
+      case POWERUP_FETCH: {
+        const { payload } = action
+        this.fetchPowerup(payload)
+        break
+      }
+      case ROUND: {
+        const { payload } = action
+        this.round(payload)
+        break
+      }
+      case ROUND_END: {
+        const { payload } = action
+        this.roundEnd(payload.scores, payload.winner)
+        break
+      }
+      default:
+        failedToHandle(action)
+    }
+  }
+
+  private updatePlayers = (playerUpdates: PlayerUpdate[]) => {
     for (let i = 0; i < playerUpdates.length; i++) {
       const update = playerUpdates[i]
       // TODO fix ids
@@ -88,13 +145,13 @@ export class Client {
     }
   }
 
-  public start = (players: PlayerInit[]) => {
+  private start = (players: PlayerInit[]) => {
     console.log("starting with", players)
     this.players = players.map((player) => createPlayer(player.name,
-      player.color, player.isOwner, player.id))
+      player.color, player.owner === this.connection.id, player.id))
   }
 
-  public round = (snakeInits: SnakeInit[]) => {
+  private round = (snakeInits: SnakeInit[]) => {
     snakeInits.forEach(({ startPoint, rotation, id }) => {
       const snake = new Snake(startPoint, rotation, id)
       const player = this.playerById(id)!
@@ -116,24 +173,24 @@ export class Client {
     this.game.newRound(this.players.map(p => p.snake!))
   }
 
-  public roundEnd = (scores: Score[], winner: number) => {
+  private roundEnd = (scores: Score[], winner: number) => {
 
     this.game.roundEnd(scores, this.playerById(winner)!)
   }
 
-  public rotateLeft = (id: number) => {
-    this.connection.rotateLeft(id)
+  private rotateLeft = (id: number) => {
+    this.connection(rotate(LEFT, id))
   }
 
-  public rotateRight = (id: number) => {
-    this.connection.rotateRight(id)
+  private rotateRight = (id: number) => {
+    this.connection(rotate(RIGHT, id))
   }
 
-  public playerById(id: number): Player | undefined {
+  private playerById(id: number): Player | undefined {
     return this.players.find(p => p.id === id)
   }
 
-  public end = (winnerId?: number) => {
+  private end = (winnerId?: number) => {
     if (winnerId != null) {
       this.game.end(this.playerById(winnerId))
     } else {
@@ -143,11 +200,11 @@ export class Client {
     resetCombos()
   }
 
-  public spawnPowerup(powerup: Powerup) {
+  private spawnPowerup(powerup: Powerup) {
     this.currentRound.powerupSprites[powerup.id] = this.game.addPowerup(powerup)
   }
 
-  public fetchPowerup(id: number) {
+  private fetchPowerup(id: number) {
     const powerupSprite = this.currentRound.powerupSprites[id]!
     this.game.removePowerup(powerupSprite)
     this.currentRound.powerupSprites[id] = undefined

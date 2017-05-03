@@ -25,91 +25,64 @@ import {
   fetchPowerup,
   Score,
   ClientAction,
+  ServerAction,
 } from "./actions"
-import { mapClientActions } from "server/reducers"
 
-export type ConnectionId = string | Object
+export type ConnectionId = string
 
 export interface ServerConnection {
   id: ConnectionId
-  addPlayer(): void
-  rotateLeft(index: number): void
-  rotateRight(index: number): void
   close(): void
+  (action: ServerAction): void
 }
 
 export interface ClientConnection {
   id: ConnectionId
-  send: (action: ClientAction) => void
+  (action: ClientAction): void
 }
 
-export class LocalServerConnection implements ServerConnection {
-
-  constructor(private server: Server, public id: ConnectionId) {
-  }
-
-  public addPlayer() {
-    this.server.addPlayer(this.id)
-  }
-
-  public rotateLeft(id: number) {
-    this.server.rotateLeft(id, this.id)
-  }
-
-  public rotateRight(id: number) {
-    this.server.rotateRight(id, this.id)
-  }
-
-  public close() {
-    return
-  }
+export function networkClientConnection(
+  dataChannel: DataChannel,
+  id: ConnectionId,
+  ): ClientConnection {
+  return Object.assign(
+    (a: ClientAction) => dataChannel.send(JSON.stringify(a)),
+    {id},
+  )
 }
 
-export class LocalClientConnection implements ClientConnection {
-
-  private mapper: (action: ClientAction) => void
-
-  constructor(client: Client, public id: ConnectionId) {
-    this.mapper = mapClientActions(client)
-  }
-
-  public send(action: ClientAction) {
-    this.mapper(action)
-  }
+export function localClientConnection(
+  client: Client,
+  id: ConnectionId,
+  ): ClientConnection {
+  return Object.assign(
+    (a: ClientAction) => client.receive(a),
+    {id},
+  )
 }
 
-export class NetworkServerConnection implements ServerConnection {
-  constructor(private dataChannel: DataChannel, public id: ConnectionId) { }
-
-  public addPlayer() {
-    this.send(addPlayer())
-  }
-
-  public rotateLeft(index: number) {
-    this.send(rotate(LEFT, index))
-  }
-
-  public rotateRight(index: number) {
-    this.send(rotate(RIGHT, index))
-  }
-
-  public close() {
-    this.dataChannel.close()
-  }
-
-  private send(a: Action) {
-    this.dataChannel.send(JSON.stringify(a))
-  }
+export function networkServerConnection(
+  dataChannel: DataChannel,
+  id: ConnectionId,
+  ): ServerConnection {
+  return Object.assign(
+    (a: ServerAction) => dataChannel.send(JSON.stringify(a)),
+    {id,
+    close: () => dataChannel.close()},
+  )
 }
 
-export class NetworkClientConnection implements ClientConnection {
-
-  constructor(private dataChannel: DataChannel, public id: string) {
-  }
-
-  public send(a: Action) {
-    this.dataChannel.send(JSON.stringify(a))
-  }
+export function localServerConnection(
+  server: Server,
+  id: ConnectionId,
+  ): ServerConnection {
+  return Object.assign(
+    (a: ServerAction) => server.receive(a, id),
+    {
+      id,
+      close: () => { ; },
+    },
+  )
 }
 
 export interface DataChannel {

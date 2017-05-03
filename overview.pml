@@ -9,20 +9,29 @@ hide empty fields
 
 React.Game "creates and listens to, based on name" o-- Room
 React.Game "gets view from & listens to" o-- Game
-Room "creates 1" o-- Game
+React.Canvas "renders" -- PIXI
+React.Game "uses" *-- React.Canvas
+
 class "quickconnect.connection" as qcc
+Room "creates 1" o-- Game
 Room "connects to" *-- qcc
 Room "creates" *-- ServerConnection
 Room "creates" *-- ClientConnection
+Room "creates" *-- Client
+Room "creates" *-- Server
+
 ServerConnection "uses" o-- qcc
 ClientConnection "uses" o-- qcc
-ClientConnection "messages" o-- Client
-ServerConnection "messages" -- Server
-Client "messages" o-- ServerConnection
+Client "sends" -- ServerConnection
+Server "receives" -- ServerAction
+ClientConnection "forwards" -- ClientAction
+ServerConnection "forwards" -- ServerAction
+Server "sends" -- ClientAction
+Client "receives" -- ClientAction
+
 Client "uses" o-- Game
-Game "uses" -- PIXI
-React.Canvas "renders" -- PIXI
-React.Game "uses" *-- React.Canvas
+Game "uses" *-- PIXI
 Client "has" *-- ClientRoundState
+
 Server "has many" *-- Player
 Server "has" *-- ServerRoundState
