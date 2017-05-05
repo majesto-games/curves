@@ -7,7 +7,7 @@ import {
   WebGLRenderer,
   Point as PPoint,
 } from "pixi.js"
-import { Point, Player, Snake, TICK_RATE, Powerup, PowerupType } from "./player"
+import { Point, Player, Snake, Powerup, PowerupType } from "./player"
 import { ClientTail, TailStorage } from "./tail"
 import Overlay from "./overlay"
 import {

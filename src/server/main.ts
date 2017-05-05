@@ -1,5 +1,5 @@
 import { getColors, frequency } from "game/util"
-import { Point, Player, Snake, ROTATION_SPEED, Powerup, ActivePowerup, PowerupType } from "game/player"
+import { Point, Player, Snake, Powerup, ActivePowerup, PowerupType } from "game/player"
 import { containsPoint, ServerTail, TailStorage } from "game/tail"
 import PriorityQueue = require("fastpriorityqueue")
 import {
@@ -45,7 +45,7 @@ function fastDistance(x1: number, y1: number, x2: number, y2: number) {
 }
 
 function rotationSpeed(fatness: number) {
-  return ROTATION_SPEED / (10 + fatness) - 0.02
+  return window.getGlobal("ROTATION_SPEED") / (10 + fatness) - 0.02
 }
 
 function failedToHandle(x: never): never {

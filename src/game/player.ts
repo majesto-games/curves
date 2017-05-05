@@ -1,14 +1,6 @@
 import { ClientKeys } from "./client"
 import { Tail, TailPart, NotRemoved } from "./tail"
 
-export const TICK_RATE = 64
-export const SKIP_TAIL_FATNESS_MULTIPLIER = 0.03 * TICK_RATE
-export const ROTATION_SPEED = 1
-export const MOVE_SPEED_BASE = 100 / TICK_RATE
-export const HOLE_CHANCE_BASE = -0.002 / TICK_RATE
-export const HOLE_CHANCE_INCREASE = 0.0018 / TICK_RATE
-export const FATNESS_BASE = 5
-
 export interface Point {
   x: number
   y: number
@@ -107,12 +99,12 @@ export class Snake {
     this.y = startPoint.y
     this.lastX = this.x
     this.lastY = this.y
-    this.fatness = FATNESS_BASE
-    this.lfatness = FATNESS_BASE
+    this.fatness = window.getGlobal("FATNESS_BASE")
+    this.lfatness = window.getGlobal("FATNESS_BASE")
     this.lastEnd = null
-    this.holeChance = HOLE_CHANCE_BASE
+    this.holeChance = window.getGlobal("HOLE_CHANCE_BASE")
     this.tailTicker = 0
-    this.speed = MOVE_SPEED_BASE
+    this.speed = window.getGlobal("MOVE_SPEED_BASE")
     this.tailId = 0
     this.skipTailTicker = 0
     this.ghost = 0
@@ -133,7 +125,7 @@ export class Snake {
   }
 
   public speeddown() {
-    this.speed = Math.max(MOVE_SPEED_BASE - 1, this.speed - 0.5)
+    this.speed = Math.max(window.getGlobal("MOVE_SPEED_BASE") - 1, this.speed - 0.5)
   }
 
   public speedup() {
@@ -164,10 +156,10 @@ export class Snake {
         }
 
         this.lastEnd = pol.slice(0, 2).concat(pol.slice(-2))
-        this.holeChance += HOLE_CHANCE_INCREASE
+        this.holeChance += window.getGlobal("HOLE_CHANCE_INCREASE")
       } else {
-        this.skipTailTicker = this.fatness * SKIP_TAIL_FATNESS_MULTIPLIER
-        this.holeChance = HOLE_CHANCE_BASE
+        this.skipTailTicker = this.fatness * window.getGlobal("SKIP_TAIL_FATNESS_MULTIPLIER")
+        this.holeChance = window.getGlobal("HOLE_CHANCE_BASE")
         this.stopTail()
       }
     } else {

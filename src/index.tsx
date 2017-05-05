@@ -5,6 +5,7 @@ import * as ReactDOM from "react-dom"
 
 import Game from "components/Game"
 import Lobby from "components/Lobby"
+import GlobalConfig, { initGlobalConfig } from "components/GlobalConfig"
 import history from "components/history"
 import { Location, parsePath } from "history"
 
@@ -20,6 +21,9 @@ function getComponent(location: Location): JSX.Element {
     const room = split[1] || "leif"
     return <Game room={room} />
   }
+  if (split[0] === "globalconfig") {
+    return <GlobalConfig />
+  }
 
   return <p>Error</p>
 }
@@ -32,6 +36,7 @@ function render(location: Location) {
   )
 }
 
+initGlobalConfig()
 history.listen(render)
 
 render(history.location)

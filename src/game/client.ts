@@ -1,4 +1,4 @@
-import { Point, Player, Snake, TICK_RATE, Powerup } from "./player"
+import { Point, Player, Snake, Powerup } from "./player"
 import { ClientTail, TailStorage } from "./tail"
 import {
   ServerConnection,

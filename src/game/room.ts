@@ -16,7 +16,6 @@ import * as cuid from "cuid"
 
 import { Server } from "server/main"
 import { Client } from "game/client"
-import { TICK_RATE } from "game/player"
 import { addPlayer } from "server/actions"
 
 export default class Room {
@@ -86,7 +85,7 @@ export default class Room {
 
     this.game.waitForPlayers()
 
-    const server = new Server(TICK_RATE)
+    const server = new Server(window.getGlobal("TICK_RATE"))
     const id = cuid()
 
     this.server = localServerConnection(server, id)
