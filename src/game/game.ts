@@ -9,7 +9,6 @@ import {
 } from "pixi.js"
 import { Point, Player, Snake, Powerup, PowerupType } from "./player"
 import { ClientTail, TailStorage } from "./tail"
-import Overlay from "./overlay"
 import {
   PlayerUpdate,
   PlayerInit,
@@ -38,8 +37,9 @@ import pressedKeys, { KEYS, registerKeys } from "./keys"
 
 import * as Icons from "icons"
 
+// TODO: Move Overlay out of GameEvent?
 export enum GameEvent {
-  START, END, ROUND_END, ADD_PLAYER,
+  START, END, ROUND_END, ADD_PLAYER, OVERLAY,
 }
 
 const ratio = SERVER_WIDTH / SERVER_HEIGHT
@@ -50,16 +50,13 @@ export class Game {
   public readonly playerLayer = new Graphics()
   public readonly tailLayer = new Graphics()
   public readonly powerupLayer = new Graphics()
-  public readonly overlayLayer = new Graphics()
-  public readonly overlay: Overlay
   private closed = false
   private renderer: CanvasRenderer | WebGLRenderer
-  private eventListeners: ((e: GameEvent) => void)[] = []
+  private eventListeners: ((e: GameEvent, data?: any) => void)[] = []
   private drawListeners: (() => void)[] = []
   private snakes: Snake[] = []
 
   constructor(private readonly room: string) {
-    this.overlay = new Overlay(this.overlayLayer)
     this.renderer = autoDetectRenderer(SERVER_WIDTH, SERVER_HEIGHT,
       { antialias: true, backgroundColor: 0x000000 })
 
@@ -70,7 +67,6 @@ export class Game {
     this.container.addChild(this.powerupLayer)
     this.container.addChild(this.tailLayer)
     this.container.addChild(this.playerLayer)
-    this.container.addChild(this.overlayLayer)
 
     window.addEventListener("resize", () => this.resize())
 
@@ -79,9 +75,9 @@ export class Game {
 
   public end(player?: Player) {
     if (player != null) {
-      this.overlay.setOverlay(`Winner: Player ${player.id}`)
+      this.setOverlay(`Winner: Player ${player.id}`)
     } else {
-      this.overlay.setOverlay(`No winner!`)
+      this.setOverlay(`No winner!`)
     }
 
     this.paint()
@@ -111,7 +107,7 @@ export class Game {
   }
 
   public newRound(snakes: Snake[]) {
-    this.overlay.removeOverlay()
+    this.removeOverlay()
     this.playerLayer.removeChildren()
     this.tailLayer.removeChildren()
     this.powerupLayer.removeChildren()
@@ -126,7 +122,7 @@ export class Game {
   public roundEnd(scores: Score[], winner: Player) {
     this.scores = scores
     // TODO: so so hacky yes yes
-    this.overlay.setOverlay(`Winner this round: Player ${winner.id}`)
+    this.setOverlay(`Winner this round: Player ${winner.id}`)
     this.sendEvent(GameEvent.ROUND_END)
   }
 
@@ -160,7 +156,7 @@ export class Game {
   }
 
   public waitForPlayers() {
-    this.overlay.setOverlay(`Waiting for players...\nJoin room ${this.room} or\npress ENTER to add player`)
+    this.setOverlay(`Waiting for players...\nJoin room ${this.room} or\npress ENTER to add player`)
   }
 
   public preGame = () => {
@@ -171,7 +167,7 @@ export class Game {
 
     // TODO: Remove haxxor
     if (this.snakes.length > 0) { // Game has started
-      this.overlay.removeOverlay()
+      this.removeOverlay()
       this.draw()
       this.scores = this.snakes.map(({ id }) => ({ id, score: 0 }))
       this.sendEvent(GameEvent.START)
@@ -206,6 +202,14 @@ export class Game {
     this.renderer.resize(SERVER_WIDTH * scale * density, SERVER_HEIGHT * scale * density)
     this.renderer.view.style.width = `${SERVER_WIDTH * scale}px`
     this.renderer.view.style.height = `${SERVER_HEIGHT * scale}px`
+  }
+
+  private setOverlay(text: string) {
+    this.sendEvent(GameEvent.OVERLAY, text)
+  }
+
+  private removeOverlay() {
+    this.sendEvent(GameEvent.OVERLAY, null)
   }
 
   private getPowerupImage(powerupType: PowerupType): string {
@@ -248,11 +252,12 @@ export class Game {
   }
 
   private preConnect = () => {
-    this.overlay.setOverlay("Connecting...")
+    this.setOverlay("Connecting...")
     this.paint()
   }
 
-  private sendEvent(e: GameEvent) {
-    this.eventListeners.forEach(f => f(e))
+  // TODO: Give data a type
+  private sendEvent(e: GameEvent, data?: any) {
+    this.eventListeners.forEach(f => f(e, data))
   }
 }

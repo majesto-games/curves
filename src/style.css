@@ -9,3 +9,16 @@ body {
 .Lobby {
   padding: 8px;
 }
+
+.Overlay {
+  position: absolute;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  z-index: 2;
+  color: white;
+  width: 100%;
+  height: 100%;
+  white-space: pre-line;
+  font-size: 32px;
+}

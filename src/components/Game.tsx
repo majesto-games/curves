@@ -4,9 +4,11 @@ import { Game, GameEvent } from "../game/game"
 import { Score } from "server/actions"
 import Canvas from "components/Canvas"
 import Room from "game/room"
+import Overlay from "components/Overlay"
 
 interface GameState {
   scores: Score[]
+  overlay: string | undefined
 }
 
 interface GameProp {
@@ -16,6 +18,7 @@ interface GameProp {
 export default class GameC extends React.Component<GameProp, GameState> {
   public state: GameState = {
     scores: [],
+    overlay: undefined,
   }
 
   private div: HTMLDivElement | null = null
@@ -27,6 +30,7 @@ export default class GameC extends React.Component<GameProp, GameState> {
 
     return (
       <div className="GameContainer">
+        <Overlay text={this.state.overlay} />
         <Canvas view={this.getGame(this.props.room)} />
         <div>{scores.map(({ score, id }) =>
           <h1 key={id}>Player {id}: {score}</h1>)}</div>
@@ -37,7 +41,7 @@ export default class GameC extends React.Component<GameProp, GameState> {
   private getGame = (roomName: string) => {
     const newGame = () => {
       const room = new Room(roomName)
-      room.game.onEvent((e) => {
+      room.game.onEvent((e, data?: any) => {
         if (e === GameEvent.END) {
           this.games[roomName] = undefined
           history.goBack()
@@ -46,6 +50,12 @@ export default class GameC extends React.Component<GameProp, GameState> {
         if (e === GameEvent.ROUND_END || e === GameEvent.START) {
           this.setState((prevState, props) => ({
             scores: room.game.scores,
+          }))
+        }
+
+        if (e === GameEvent.OVERLAY) {
+          this.setState((prevState, props) => ({
+            overlay: data,
           }))
         }
       })

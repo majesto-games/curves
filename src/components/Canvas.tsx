@@ -6,7 +6,6 @@ interface CanvasProps {
 
 export default class Canvas extends React.Component<CanvasProps, void> {
   private div: HTMLDivElement | null = null
-  private games: { [key: string]: HTMLCanvasElement | undefined } = {}
 
   public componentDidMount() {
     this.updateView(this.props)
