@@ -64,8 +64,8 @@ export class Game {
 
     // The order of these actually matters
     // Order is back to front
-    this.container.addChild(this.powerupLayer)
     this.container.addChild(this.tailLayer)
+    this.container.addChild(this.powerupLayer)
     this.container.addChild(this.playerLayer)
 
     window.addEventListener("resize", () => this.resize())
