@@ -38,29 +38,7 @@ import { Game } from "./game"
 
 let keyCombos: { left: KEYS, right: KEYS }[] = []
 
-function resetCombos() {
-  keyCombos = [{ left: KEYS.LEFT, right: KEYS.RIGHT }, { left: KEYS.A, right: KEYS.D }]
-}
-resetCombos()
-registerKeys(Array.prototype.concat.apply([], keyCombos.map(n => [n.left, n.right])))
 registerKeys([KEYS.RETURN])
-
-function createPlayer(name: string, color: number, isOwner: boolean, id: number) {
-  let keys: ClientKeys | undefined
-
-  if (isOwner) {
-    keys = keyCombos.pop()
-  }
-
-  const player = new Player(undefined, name, id, color, keys)
-
-  return player
-}
-
-export interface ClientKeys {
-  left: KEYS
-  right: KEYS
-}
 
 class RoundState {
   public powerupSprites: { [id: number]: Sprite | undefined } = {}
@@ -78,6 +56,7 @@ function failedToHandle(x: never): never {
 export class Client {
   public players: Player[] = []
   private currentRound: RoundState
+  private localIndex = 0
 
   constructor(private connection: ServerConnection, private game: Game) {
     this.currentRound = new RoundState((id) => this.newTail(id))
@@ -126,6 +105,18 @@ export class Client {
     }
   }
 
+  private createPlayer(name: string, color: number, isOwner: boolean, id: number) {
+    let localIndex: number | undefined
+
+    if (isOwner) {
+      localIndex = this.localIndex++
+    }
+
+    const player = new Player(undefined, name, id, color, localIndex)
+
+    return player
+  }
+
   private updatePlayers = (playerUpdates: PlayerUpdate[]) => {
     for (let i = 0; i < playerUpdates.length; i++) {
       const update = playerUpdates[i]
@@ -147,7 +138,8 @@ export class Client {
 
   private start = (players: PlayerInit[]) => {
     console.log("starting with", players)
-    this.players = players.map((player) => createPlayer(player.name,
+    let i = 0
+    this.players = players.map((player) => this.createPlayer(player.name,
       player.color, player.owner === this.connection.id, player.id))
   }
 
@@ -196,8 +188,6 @@ export class Client {
     } else {
       this.game.end()
     }
-
-    resetCombos()
   }
 
   private spawnPowerup(powerup: Powerup) {
@@ -221,15 +211,16 @@ export class Client {
 
   private handleKeys() {
     this.players.forEach(p => {
-      if (!p.keys) {
+      let keys = window.UserConfig.playerKeys[p.localIndex!]
+      if (!keys) {
         return
       }
 
-      if (pressedKeys[p.keys.left]) {
+      if (pressedKeys[keys.left]) {
         this.rotateLeft(p.id)
       }
 
-      if (pressedKeys[p.keys.right]) {
+      if (pressedKeys[keys.right]) {
         this.rotateRight(p.id)
       }
     })

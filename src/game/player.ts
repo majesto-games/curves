@@ -1,4 +1,3 @@
-import { ClientKeys } from "./client"
 import { Tail, TailPart, NotRemoved } from "./tail"
 
 export interface Point {
@@ -64,7 +63,7 @@ export class Player {
     public name: string,
     public id: number,
     public color: number,
-    public keys?: ClientKeys,
+    public localIndex?: number,
     public owner?: any,
   ) {
 

@@ -8,6 +8,8 @@ interface GlobalConfigValues {
   HOLE_CHANCE_BASE: number
   HOLE_CHANCE_INCREASE: number
   FATNESS_BASE: number
+  POWERUP_CHANCE_BASE: number
+  POWERUP_CHANCE_INCREASE: number
 }
 
 interface GlobalConfig {
@@ -32,6 +34,8 @@ const SHAPE: Configurable<GlobalConfigValues> = {
   HOLE_CHANCE_BASE: [-0.2, -0.002, 1],
   HOLE_CHANCE_INCREASE: [0, 0.0018, 0.018],
   FATNESS_BASE: [0.5, 5, 50],
+  POWERUP_CHANCE_BASE: [0.0032, 0.032, 64],
+  POWERUP_CHANCE_INCREASE: [0.000064, 0.00064, 0.1],
 }
 
 type getConfigValue<T, K extends keyof T> = (key: keyof T) => T[K]
@@ -97,6 +101,8 @@ export function initGlobalConfig() {
       case "MOVE_SPEED_BASE":
       case "HOLE_CHANCE_BASE":
       case "HOLE_CHANCE_INCREASE":
+      case "POWERUP_CHANCE_BASE":
+      case "POWERUP_CHANCE_INCREASE":
         return window.Globals.VALUES[key] / window.Globals.VALUES.TICK_RATE
       case "SKIP_TAIL_FATNESS_MULTIPLIER":
         return window.Globals.VALUES[key] * window.Globals.VALUES.TICK_RATE

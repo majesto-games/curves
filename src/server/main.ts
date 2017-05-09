@@ -28,9 +28,6 @@ import { ClientConnection, ConnectionId } from "./connections"
 export const SERVER_WIDTH = 960
 export const SERVER_HEIGHT = 960
 
-const POWERUP_CHANCE_BASE = 0.0005
-const POWERUP_CHANCE_INCREASE = 0.00001
-
 interface AlmostPlayerInit {
   name: string
   color: number
@@ -58,7 +55,7 @@ class RoundState {
   public placedPowerups: Powerup[] = []
   public losers: Player[] = []
   public nextPowerupId = 0
-  public powerupChance = POWERUP_CHANCE_BASE
+  public powerupChance = window.getGlobal("POWERUP_CHANCE_BASE")
   public lastUpdate: number
   public sentActions: ClientAction[] = []
 }
@@ -259,7 +256,7 @@ export class Server {
   private spawnPowerups() {
     const powerups: Powerup[] = []
     if (Math.random() < this.round.powerupChance) {
-      this.round.powerupChance = POWERUP_CHANCE_BASE
+      this.round.powerupChance = window.getGlobal("POWERUP_CHANCE_BASE")
       const x = Math.round(Math.random() * SERVER_WIDTH)
       const y = Math.round(Math.random() * SERVER_HEIGHT)
 
@@ -283,7 +280,7 @@ export class Server {
 
       this.round.nextPowerupId++
     } else {
-      this.round.powerupChance += POWERUP_CHANCE_INCREASE
+      this.round.powerupChance += window.getGlobal("POWERUP_CHANCE_INCREASE")
     }
 
     return powerups
