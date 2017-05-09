@@ -1,0 +1,62 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "0.1.0",
+    "command": "yarn",
+    "isShellCommand": true,
+    "echoCommand": true,
+    "suppressTaskName": true,
+    "showOutput": "never",
+    "args": [],
+    "tasks": [
+        {
+            "taskName": "watch",
+            "args": ["watch"],
+            "isBuildCommand": true,
+            "isBackground": true,
+            "problemMatcher": [{
+              "owner": "webpack",
+              "severity": "error",
+              "fileLocation": "relative",
+              "pattern": [
+                {
+                "regexp": "ERROR in \\[at-loader\\] (.*):(\\d+):(\\d+)",
+                "file" : 1,
+                "line": 2,
+                "column": 3
+                },
+                {
+                "regexp": " *[^:]*:(.*)",
+                "message": 1
+                }
+              ],
+              "watching": {
+                "activeOnStart": true,
+                "beginsPattern": "webpack: Compiling...",
+                "endsPattern": "webpack: (Failed to compile|Compiled successfully|Compiled with warnings)."
+              }
+            },{
+              "owner": "webpack",
+              "severity": "warning",
+              "fileLocation": "relative",
+              "pattern": [
+                {
+                "regexp": "WARNING in (.*)",
+                "file" : 1
+                },
+                {
+                "regexp": "\\(Emitted value instead of an instance of Error\\) \\[(\\d+), (\\d+)]: (.*)",
+                "line": 1,
+                "column": 2,
+                "message": 3
+                }
+              ],
+              "watching": {
+                "activeOnStart": true,
+                "beginsPattern": "webpack: Compiling...",
+                "endsPattern": "webpack: (Failed to compile|Compiled successfully|Compiled with warnings)."
+              }
+            }]
+        }
+    ]
+}
