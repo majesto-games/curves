@@ -10,6 +10,7 @@ import UserConfig, { initUserConfig } from "components/UserConfig"
 import history from "components/history"
 import { Location, parsePath } from "history"
 
+import "bootstrap/dist/css/bootstrap.css"
 import "style.css"
 
 function getComponent(location: Location): JSX.Element {

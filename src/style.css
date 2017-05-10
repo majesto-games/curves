@@ -1,10 +1,23 @@
 
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spinning {
+  animation: spin 1s infinite linear;
+}
+
 .GameContainer {
   text-align: center;
 }
 
-.Lobby {
-  padding: 8px;
+.Lobby h1 {
+  margin-bottom: .75em;
+}
+
+.Lobby .glyphicon {
+  vertical-align: text-top;
 }
 
 .Overlay {

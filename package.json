@@ -28,6 +28,7 @@
     "@types/react": "^15.0.21",
     "@types/react-dom": "^0.14.23",
     "axios": "^0.16.0",
+    "bootstrap": "^3.3.7",
     "cuid": "^1.3.8",
     "fastpriorityqueue": "^0.2.4",
     "file-loader": "^0.11.1",
