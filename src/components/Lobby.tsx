@@ -66,7 +66,7 @@ export default class Lobby extends React.Component<any, LobbyState> {
   public render() {
     const existingRooms = this.state.rooms.map(room => (
       <tr key={`room_${room.name}`}>
-        <td><Link to={`game?room=${room.name}`}>{room.name}</Link></td>
+        <td><Link to={`game/${room.name}`}>{room.name}</Link></td>
         <td className="text-right">{room.memberCount}</td>
       </tr>
     ))
