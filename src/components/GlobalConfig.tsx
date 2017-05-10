@@ -174,7 +174,7 @@ export default class GlobalConfigC extends React.Component<{}, GlobalConfig> {
     }
 
     return (
-      <div>
+      <div className="Config">
         <button onClick={this.reset}>Reset</button><br /><br />
         {sliders}
       </div>

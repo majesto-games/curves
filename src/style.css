@@ -81,3 +81,11 @@ body {
   font-size: 32px;
   user-select: none;
 }
+
+.Config {
+  padding: 16px;
+}
+
+.Config label {
+  padding: 8px;
+}

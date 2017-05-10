@@ -115,7 +115,7 @@ export default class UserConfigC extends React.Component<{}, UserConfig> {
     }
 
     return (
-      <div>
+      <div className="Config">
         <button onClick={this.reset}>Reset</button><br /><br />
         {changers}
       </div>
