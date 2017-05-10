@@ -17,7 +17,9 @@ function getRooms() {
   return axi.get("/")
 }
 
-class NewRoom extends React.Component<{}, {}> {
+class NewRoom extends React.Component<{
+  onUpdateRooms: () => void,
+}, {}> {
   private roomInput: HTMLInputElement
 
   public render() {
@@ -28,10 +30,19 @@ class NewRoom extends React.Component<{}, {}> {
             className="form-control input-lg" ref={n => this.roomInput = n} />
           <span className="input-group-btn">
             <button type="submit" className="btn-lg btn btn-primary">Join room</button>
+            <button className="btn-lg btn btn-success" onClick={this.onUpdateClick}>
+              <span className="glyphicon glyphicon-refresh" /> Update
+            </button>
           </span>
         </div>
       </form>
     )
+  }
+
+  private onUpdateClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault()
+
+    this.props.onUpdateRooms()
   }
 
   private onSubmit = (e: React.FormEvent<any>) => {
@@ -55,12 +66,7 @@ export default class Lobby extends React.Component<any, LobbyState> {
   }
 
   public componentDidMount() {
-    getRooms().then(rooms => {
-      this.setState({
-        rooms: rooms.data,
-        loading: false,
-      })
-    })
+    this.fetchRooms()
   }
 
   public render() {
@@ -75,7 +81,7 @@ export default class Lobby extends React.Component<any, LobbyState> {
       <div className="container-fluid Lobby">
         <div className="col-md-6 col-md-offset-3">
           <h1 className="text-center">Curves</h1>
-          <NewRoom />
+          <NewRoom onUpdateRooms={() => this.fetchRooms()} />
           <table className="table table-striped rooms">
             <thead>
               <tr>
@@ -94,5 +100,15 @@ export default class Lobby extends React.Component<any, LobbyState> {
         </div>
       </div>
     )
+  }
+
+  private fetchRooms() {
+    this.setState({ loading: true })
+    getRooms().then(rooms => {
+      this.setState({
+        rooms: rooms.data,
+        loading: false,
+      })
+    })
   }
 }
