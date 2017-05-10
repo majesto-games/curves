@@ -4,7 +4,7 @@ import * as React from "react"
 import * as ReactDOM from "react-dom"
 
 import Game from "components/Game"
-import Lobby from "components/Lobby"
+import RoomBrowser from "components/RoomBrowser"
 import GlobalConfig, { initGlobalConfig } from "components/GlobalConfig"
 import UserConfig, { initUserConfig } from "components/UserConfig"
 import history from "components/history"
@@ -17,7 +17,7 @@ function getComponent(location: Location): JSX.Element {
   const split = location.pathname.substring(1).split("/")
 
   if (split[0] === "") {
-    return <Lobby />
+    return <RoomBrowser />
   }
   if (split[0] === "game") {
     const room = split[1] || "leif"

@@ -58,11 +58,11 @@ body {
   padding: 16px;
 }
 
-.Lobby h1 {
+.RoomBrowser h1 {
   margin-bottom: .75em;
 }
 
-.Lobby .glyphicon {
+.RoomBrowser .glyphicon {
   vertical-align: text-top;
 }
 

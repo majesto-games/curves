@@ -54,13 +54,13 @@ class NewRoom extends React.Component<{
   }
 }
 
-interface LobbyState {
+interface RoomBrowserState {
   rooms: Room[],
   loading: boolean,
 }
 
-export default class Lobby extends React.Component<any, LobbyState> {
-  public state: LobbyState = {
+export default class RoomBrowser extends React.Component<any, RoomBrowserState> {
+  public state: RoomBrowserState = {
     rooms: [],
     loading: true,
   }
@@ -78,7 +78,7 @@ export default class Lobby extends React.Component<any, LobbyState> {
     ))
 
     return (
-      <div className="container-fluid Lobby">
+      <div className="container-fluid RoomBrowser">
         <div className="col-md-6 col-md-offset-3">
           <h1 className="text-center">Curves</h1>
           <NewRoom onUpdateRooms={() => this.fetchRooms()} />
