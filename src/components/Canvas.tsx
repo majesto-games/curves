@@ -20,7 +20,7 @@ export default class Canvas extends React.Component<CanvasProps, void> {
   }
 
   public render() {
-    return <div ref={n => this.div = n} />
+    return <div className="Canvas" ref={n => this.div = n} />
   }
 
   private updateView(p: CanvasProps) {

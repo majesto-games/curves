@@ -8,6 +8,7 @@ import Overlay from "components/Overlay"
 
 interface GameState {
   scores: Score[]
+  colors: string[]
   overlay: string | undefined
 }
 
@@ -18,6 +19,7 @@ interface GameProp {
 export default class GameC extends React.Component<GameProp, GameState> {
   public state: GameState = {
     scores: [],
+    colors: [],
     overlay: undefined,
   }
 
@@ -29,11 +31,16 @@ export default class GameC extends React.Component<GameProp, GameState> {
     const { scores } = this.state
 
     return (
-      <div className="GameContainer">
-        <Overlay text={this.state.overlay} />
-        <Canvas view={this.getGame(this.props.room)} />
-        <div>{scores.map(({ score, id }) =>
-          <h1 key={id}>Player {id}: {score}</h1>)}</div>
+      <div className="container-fluid Game">
+        <div className="col-md-3" id="scores">{scores.map(({ score, id }, i) =>
+          <h1 key={id}
+            style={{ color: this.state.colors[i] }}>Player {id}: {score}</h1>)}
+        </div>
+        <div className="col-md-6 GameContainer" id="GameContainer">
+          <Overlay text={this.state.overlay} />
+          <Canvas view={this.getGame(this.props.room)} />
+        </div>
+        <div className="col-md-3" id="ads">Ads here or something</div>
       </div>
     )
   }
@@ -50,6 +57,7 @@ export default class GameC extends React.Component<GameProp, GameState> {
         if (e === GameEvent.ROUND_END || e === GameEvent.START) {
           this.setState((prevState, props) => ({
             scores: room.game.scores,
+            colors: room.game.colors,
           }))
         }
 

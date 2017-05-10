@@ -20,6 +20,10 @@ export function getColors(num: number) {
   return colors.slice(0, num)
 }
 
+export function hexToString(hex: number) {
+  return "#" + hex.toString(16)
+}
+
 /* tslint:disable no-bitwise */
 export function funColor() {
   const red = 0x80 + Math.random() * 0x80

@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css?family=Slabo+27px');
 
 @keyframes spin {
   from { transform: rotate(0deg); }
@@ -8,8 +9,53 @@
   animation: spin 1s infinite linear;
 }
 
-.GameContainer {
+body {
+  padding: 0;
+  margin: 0;
+  font-family: 'Slabo 27px', serif;
+  font-size: 18px;
+}
+
+.Game {
+  background: black;
+  color: white;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  padding: 0;
+}
+
+@media only screen and (max-width: 991px) {
+  .Game {
+    display: block;
+  }
+}
+
+.Game .GameContainer {
   text-align: center;
+  padding: 16px;
+}
+
+.Game .GameContainer Canvas {
+  border: 4px solid white;
+  display: inline-block;
+}
+
+@media only screen and (min-width: 1000px) {
+  /*.Game .GameContainer {
+    padding-right: 25%;
+  }*/
+}
+
+.Game #scores {
+  text-align: center;
+  padding: 16px;
+}
+
+.Game #ads {
+  text-align: center;
+  padding: 16px;
 }
 
 .Lobby h1 {
@@ -22,13 +68,16 @@
 
 .Overlay {
   position: absolute;
-  display:flex;
-  justify-content:center;
-  align-items:center;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   z-index: 2;
   color: white;
-  width: 100%;
-  height: 100%;
   white-space: pre-line;
   font-size: 32px;
+  user-select: none;
 }

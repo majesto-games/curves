@@ -31,6 +31,8 @@ import {
   DataChannel,
 } from "server/connections"
 
+import { hexToString } from "game/util"
+
 import * as quickconnect from "rtc-quickconnect"
 
 import pressedKeys, { KEYS, registerKeys } from "./keys"
@@ -46,6 +48,7 @@ const ratio = SERVER_WIDTH / SERVER_HEIGHT
 
 export class Game {
   public scores: Score[] = []
+  public colors: string[] = []
   public readonly container = new Container()
   public readonly playerLayer = new Graphics()
   public readonly tailLayer = new Graphics()
@@ -60,7 +63,7 @@ export class Game {
     this.renderer = autoDetectRenderer(SERVER_WIDTH, SERVER_HEIGHT,
       { antialias: true, backgroundColor: 0x000000 })
 
-    this.resize()
+    setTimeout(() => this.resize(), 0)
 
     // The order of these actually matters
     // Order is back to front
@@ -106,13 +109,14 @@ export class Game {
     return this.renderer.view
   }
 
-  public newRound(snakes: Snake[]) {
+  public newRound(snakes: Snake[], colors: number[]) {
     this.removeOverlay()
     this.playerLayer.removeChildren()
     this.tailLayer.removeChildren()
     this.powerupLayer.removeChildren()
 
     this.snakes = snakes
+    this.colors = colors.map(hexToString)
 
     for (let snake of snakes) {
       this.playerLayer.addChild(snake.graphics)
@@ -126,7 +130,7 @@ export class Game {
     this.sendEvent(GameEvent.ROUND_END)
   }
 
-  public updatePlayer({ graphics, x, y, fatness }: Snake) {
+  public updateSnakeGraphics({ graphics, x, y, fatness }: Snake) {
     graphics.position.set(x, y)
     graphics.scale.set(fatness, fatness)
   }
@@ -191,8 +195,20 @@ export class Game {
   }
 
   private resize() {
-    const ww = window.innerWidth
-    const wh = window.innerHeight
+    const scores = document.getElementById("scores")
+    const ads = document.getElementById("ads")
+
+    const scoresHeight = scores ? scores.offsetHeight : 0
+    const adsHeight = ads ? ads.offsetHeight : 0
+
+    // 992 is the breakpoint for mobile view.
+    // * .5 because the game container is 50% wide in CSS.
+    // 40 because 16px padding * 2 = 32 and 4px border * 2 = 8.
+    // Scores height and ads height are also subtracted from the height
+    // in mobile view.
+
+    const ww = (window.innerWidth >= 992 ? window.innerWidth * .5 : window.innerWidth) - 40
+    const wh = (window.innerWidth <= 992 ? window.innerHeight - scoresHeight - adsHeight : window.innerHeight) - 40
     const wscale = ww / SERVER_WIDTH
     const hscale = wh / SERVER_HEIGHT
     const scale = Math.min(wscale, hscale)
@@ -235,7 +251,7 @@ export class Game {
 
   private drawPlayers() {
     for (let snake of this.snakes) {
-      this.updatePlayer(snake)
+      this.updateSnakeGraphics(snake)
     }
   }
 

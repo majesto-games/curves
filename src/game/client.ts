@@ -97,7 +97,13 @@ export class Client {
       }
       case ROUND_END: {
         const { payload } = action
-        this.roundEnd(payload.scores, payload.winner)
+        const scoresWithColors = payload.scores.map(s => ({
+          id: s.id,
+          score: s.score,
+          color: 13,
+        }))
+
+        this.roundEnd(scoresWithColors, payload.winner)
         break
       }
       default:
@@ -128,7 +134,7 @@ export class Client {
       player.snake!.rotation = update.rotation
       player.snake!.alive = update.alive
       player.snake!.fatness = update.fatness
-      this.game.updatePlayer(player.snake!)
+      this.game.updateSnakeGraphics(player.snake!)
 
       if (update.tail.type === TAIL) {
         this.currentRound.tails.add(update.tail.payload)
@@ -162,11 +168,10 @@ export class Client {
       this.currentRound.tails.initPlayer(player.snake!)
     })
 
-    this.game.newRound(this.players.map(p => p.snake!))
+    this.game.newRound(this.players.map(p => p.snake!), this.players.map(p => p.color))
   }
 
   private roundEnd = (scores: Score[], winner: number) => {
-
     this.game.roundEnd(scores, this.playerById(winner)!)
   }
 

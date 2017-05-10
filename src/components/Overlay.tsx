@@ -5,11 +5,11 @@ interface OverlayProps {
 }
 
 // TODO: Better styling
-export default class Overlay extends React.Component<OverlayProps, void> {
+export default class Overlay extends React.Component<OverlayProps, {}> {
 
   public render() {
     if (this.props.text != null) {
-      return <p className="Overlay" >{this.props.text}</p>
+      return <div className="Overlay">{this.props.text}</div>
     }
     return null
   }
