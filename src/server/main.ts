@@ -300,13 +300,13 @@ export class Server {
       const playersAlive = this.players.filter(player => player.snake!.alive)
 
       if (playersAlive.length < 2) {
-        const playerOrder = playersAlive.concat(this.round.losers)
-        for (let i = playerOrder.length - 1; i >= 0; i--) {
+        const playerOrder = this.round.losers.concat(playersAlive)
+        for (let i = 0; i < playerOrder.length; i++) {
           // TODO: Better score finding. And don't mutate?
-          const score = this.scores.find(s => s.id !== playerOrder[i].id)!
+          const score = this.scores.find(s => s.id === playerOrder[i].id)!
           score.score += i
         }
-        this.send([roundEnd(this.scores, playerOrder[0].id)])
+        this.send([roundEnd(this.scores, playerOrder[playerOrder.length - 1].id)])
 
         this.pause()
         setTimeout(() => {
@@ -375,7 +375,7 @@ export class Server {
           if (this.players.map(p => p.snake).some(this.collides(p.vertices, player.snake!))) {
             player.snake!.alive = false
             // TODO: randomize order
-            this.round.losers.unshift(player)
+            this.round.losers.push(player)
           }
 
           tailAction = {
