@@ -10,7 +10,7 @@ import {
   Tail,
   Score,
   Action,
-  start,
+  started,
   roundEnd,
   updatePlayers,
   spawnPowerup,
@@ -21,6 +21,8 @@ import {
   ROTATE,
   LEFT,
   ClientAction,
+  START,
+  lobby,
 } from "./actions"
 
 import { ClientConnection, ConnectionId } from "./connections"
@@ -72,6 +74,7 @@ export class Server {
   private paused: boolean = true
   private colors: number[] = getColors(7)
   private round: RoundState
+  private joinable = true
 
   constructor(private tickRate: number) {
     this.round = new RoundState()
@@ -81,6 +84,10 @@ export class Server {
     switch (action.type) {
       case ADD_PLAYER: {
         this.addPlayer(connectionId)
+        break
+      }
+      case START: {
+        this.startGame()
         break
       }
       case ROTATE: {
@@ -93,7 +100,7 @@ export class Server {
         break
       }
       default:
-        failedToHandle( action)
+        failedToHandle(action)
     }
   }
 
@@ -112,7 +119,7 @@ export class Server {
   }
 
   private addPlayer(connectionId: ConnectionId) {
-    if (this.playerInits.length >= 2) {
+    if (!this.joinable) {
       return
     }
 
@@ -131,24 +138,28 @@ export class Server {
       id,
     })
 
-    if (this.playerInits.length > 1) {
-      const playerInits = this.playerInits.map(v => {
-        return {
-          name: v.name,
-          color: v.color,
-          owner: v.connectionId,
-          id: v.id,
-        }
-      })
-      this.send([start(playerInits)])
-      // TODO: Remove this hack by figuring out a better way of doing playerInits
-      this.sentActions = this.round.sentActions
-      this.round.sentActions = []
+    this.send([lobby(this.playerInits.map(v => v.name))])
+  }
 
-      console.log("starting server")
-      this.startRound()
-      this.start()
-    }
+  private startGame() {
+    this.joinable = false
+
+    const playerInits = this.playerInits.map(v => {
+      return {
+        name: v.name,
+        color: v.color,
+        owner: v.connectionId,
+        id: v.id,
+      }
+    })
+    this.send([started(playerInits)])
+    // TODO: Remove this hack by figuring out a better way of doing playerInits
+    this.sentActions = this.round.sentActions
+    this.round.sentActions = []
+
+    console.log("starting server")
+    this.startRound()
+    this.start()
   }
 
   private rotateLeft(id: number, connectionId: ConnectionId) {
@@ -443,6 +454,7 @@ export class Server {
           x: player.snake!.x,
           y: player.snake!.y,
           fatness: player.snake!.fatness,
+          id: player.id,
         })
       }
 
@@ -475,11 +487,19 @@ export class Server {
 
   private startRound() {
     this.round = new RoundState()
+    const rx = SERVER_WIDTH * 0.3
+    const ry = SERVER_HEIGHT * 0.3
+    const player1Radians = -Math.PI
+    const deltaRadians = (2 * Math.PI) / this.players.length
     const snakeInits = this.players.map((p, i) => {
       const rotation = Math.random() * Math.PI * 2
+
+      // Place players in a circle
+      const playerRadian = player1Radians + (i * deltaRadians)
+
       const startPoint: Point = {
-        x: SERVER_WIDTH / 2 + (SERVER_WIDTH / 4) * (i * 2 - 1), // perf 👌🏿
-        y: SERVER_HEIGHT / 2,
+        x: rx * Math.cos(playerRadian) + (SERVER_WIDTH / 2),
+        y: ry * Math.sin(playerRadian) + (SERVER_HEIGHT / 2),
       }
 
       const snake = new Snake(startPoint, rotation, p.id)

@@ -18,7 +18,7 @@ import {
   RIGHT,
   Action,
   updatePlayers,
-  start,
+  started,
   end,
   POWERUP_SPAWN,
   spawnPowerup,

@@ -17,6 +17,34 @@ export function addPlayer(): AddPlayer {
   }
 }
 
+export const START: "START" = "START"
+export interface Start extends Action {
+  type: "START"
+}
+export function start(): Start {
+  return {
+    type: START,
+  }
+}
+
+export interface Lobby {
+    names: string[]
+}
+
+export const LOBBY: "LOBBY" = "LOBBY"
+export interface LobbyAction extends Action {
+  type: "LOBBY"
+  payload: Lobby
+}
+export function lobby(names: string[]): LobbyAction {
+  return {
+    type: LOBBY,
+    payload: {
+      names,
+    },
+  }
+}
+
 export const ROTATE: "ROTATE" = "ROTATE"
 export interface Rotate extends Action {
   type: "ROTATE"
@@ -80,6 +108,7 @@ export interface PlayerUpdate {
   alive: boolean
   tail: Tail | Gap
   fatness: number
+  id: number
 }
 export const UPDATE_PLAYERS: "UPDATE_PLAYERS" = "UPDATE_PLAYERS"
 export interface UpdatePlayers extends Action {
@@ -99,14 +128,14 @@ export interface PlayerInit {
   owner: ConnectionId
   id: number
 }
-export const START: "START" = "START"
-export interface Start extends Action {
-  type: "START"
+export const STARTED: "STARTED" = "STARTED"
+export interface Started extends Action {
+  type: "STARTED"
   payload: PlayerInit[]
 }
-export function start(playerInits: PlayerInit[]): Start {
+export function started(playerInits: PlayerInit[]): Started {
   return {
-    type: START,
+    type: STARTED,
     payload: playerInits,
   }
 }
@@ -167,5 +196,5 @@ export function end(winnerId?: number): End {
 export const LEFT = -1
 export const RIGHT = 1
 
-export type ServerAction = AddPlayer | Rotate
-export type ClientAction = UpdatePlayers | Start | End | PowerupSpawn | PowerupFetch | Round | RoundEnd
+export type ServerAction = AddPlayer | Rotate | Start
+export type ClientAction = UpdatePlayers | Started | End | PowerupSpawn | PowerupFetch | Round | RoundEnd | LobbyAction

@@ -19,7 +19,7 @@ import {
   ServerAction,
   ADD_PLAYER,
   ROTATE,
-  START,
+  STARTED,
   UPDATE_PLAYERS,
   END,
   POWERUP_SPAWN,
@@ -28,6 +28,7 @@ import {
   ROUND_END,
   rotate,
   RIGHT,
+  LOBBY,
 } from "server/actions"
 
 import { Sprite, Graphics, autoDetectRenderer, Container, CanvasRenderer, WebGLRenderer } from "pixi.js"
@@ -54,7 +55,7 @@ function failedToHandle(x: never): never {
 }
 
 export class Client {
-  public players: Player[] = []
+  public players: (Player | undefined)[] = []
   private currentRound: RoundState
   private localIndex = 0
 
@@ -65,7 +66,7 @@ export class Client {
 
   public receive(action: ClientAction) {
     switch (action.type) {
-      case START: {
+      case STARTED: {
         const { payload } = action
         this.start(payload)
         break
@@ -106,6 +107,11 @@ export class Client {
         this.roundEnd(scoresWithColors, payload.winner)
         break
       }
+      case LOBBY: {
+        const { payload } = action
+        this.game.setLobby(payload)
+        break
+      }
       default:
         failedToHandle(action)
     }
@@ -124,10 +130,11 @@ export class Client {
   }
 
   private updatePlayers = (playerUpdates: PlayerUpdate[]) => {
-    for (let i = 0; i < playerUpdates.length; i++) {
-      const update = playerUpdates[i]
-      // TODO fix ids
-      const player = this.players[i]
+    for (let update of playerUpdates) {
+      const player = this.players[update.id]
+      if (player == null) {
+        continue
+      }
 
       player.snake!.x = update.x
       player.snake!.y = update.y
@@ -144,9 +151,10 @@ export class Client {
 
   private start = (players: PlayerInit[]) => {
     console.log("starting with", players)
-    let i = 0
-    this.players = players.map((player) => this.createPlayer(player.name,
-      player.color, player.owner === this.connection.id, player.id))
+    for (let player of players) {
+      const newPlayer = this.createPlayer(player.name, player.color, player.owner === this.connection.id, player.id)
+      this.players[player.id] = newPlayer
+    }
   }
 
   private round = (snakeInits: SnakeInit[]) => {
@@ -164,11 +172,13 @@ export class Client {
       player.snake!.graphics = graphics
     })
 
-    this.players.forEach(player => {
+    const players: Player[] = this.players.filter(p => p != null) as Player[]
+
+    players.forEach(player => {
       this.currentRound.tails.initPlayer(player.snake!)
     })
 
-    this.game.newRound(this.players.map(p => p.snake!), this.players.map(p => p.color))
+    this.game.newRound(players.map(p => p.snake!), players.map(p => p.color))
   }
 
   private roundEnd = (scores: Score[], winner: number) => {
@@ -184,7 +194,7 @@ export class Client {
   }
 
   private playerById(id: number): Player | undefined {
-    return this.players.find(p => p.id === id)
+    return this.players.find(p => p != null && p.id === id)
   }
 
   private end = (winnerId?: number) => {
@@ -216,6 +226,10 @@ export class Client {
 
   private handleKeys() {
     this.players.forEach(p => {
+      if (p == null) {
+        return
+      }
+
       let keys = window.UserConfig.playerKeys[p.localIndex!]
       if (!keys) {
         return

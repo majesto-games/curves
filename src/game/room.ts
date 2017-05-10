@@ -16,19 +16,28 @@ import * as cuid from "cuid"
 
 import { Server } from "server/main"
 import { Client } from "game/client"
-import { addPlayer } from "server/actions"
+import { addPlayer, start } from "server/actions"
+
+export enum RoomState {
+  UNCONNECTED,
+  LOBBY_CLIENT,
+  LOBBY_SERVER,
+  RUNNING,
+  CLOSED,
+}
 
 export default class Room {
   public game: Game
+  public state = RoomState.UNCONNECTED
   private server: ServerConnection
-  private closed: boolean
   private roomConnection: quickconnect.connection | undefined
+  private eventListeners: ((state: RoomState) => void)[] = []
   constructor(public readonly name: string) {
     this.game = new Game(name)
     this.game.onEvent(e => {
       switch (e) {
-        case GameEvent.ADD_PLAYER: {
-          this.server(addPlayer())
+        case GameEvent.START: {
+          this.setState(RoomState.RUNNING)
           break
         }
         default:
@@ -37,13 +46,12 @@ export default class Room {
   }
 
   public connect() {
+    if (this.state !== RoomState.UNCONNECTED) {
+      return
+    }
+
     connectAndCount(this.name).then(([rc, memberCount]) => {
       this.roomConnection = rc
-
-      if (this.closed) {
-        this.close()
-        return
-      }
 
       if (memberCount > 1) {
         return this.connectAsClient(rc)
@@ -55,8 +63,32 @@ export default class Room {
     })
   }
 
+  public addPlayer() {
+    this.server(addPlayer())
+  }
+
+  public onNewState(f: (state: RoomState) => void) {
+    this.eventListeners.push(f)
+
+    return () =>
+      this.eventListeners = this.eventListeners.filter(g => g !== f)
+  }
+
+  public start() {
+    if (this.state !== RoomState.LOBBY_SERVER) {
+      return
+    }
+
+    if (this.game.lobby.names.length < 2) {
+      this.server(addPlayer())
+    }
+
+    this.server(start())
+    this.setState(RoomState.RUNNING)
+  }
+
   public close() {
-    this.closed = true
+    this.setState(RoomState.CLOSED)
 
     if (this.roomConnection != null) {
       this.roomConnection.close()
@@ -65,6 +97,7 @@ export default class Room {
   }
 
   private connectAsClient(rc: quickconnect.connection) {
+    this.setState(RoomState.LOBBY_CLIENT)
     console.log("Not server")
 
     return clientDataChannel(rc).then(({ dc, id }) => {
@@ -81,9 +114,8 @@ export default class Room {
   }
 
   private connectAsServer(rc: quickconnect.connection) {
+    this.setState(RoomState.LOBBY_SERVER)
     console.log("Server")
-
-    this.game.waitForPlayers()
 
     const server = new Server(window.getGlobal("TICK_RATE"))
     const id = cuid()
@@ -113,5 +145,10 @@ export default class Room {
         server.removeConnection(netconn)
       }
     }
+  }
+
+  private setState(state: RoomState) {
+    this.state = state
+    this.eventListeners.forEach(f => f(state))
   }
 }

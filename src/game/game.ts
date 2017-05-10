@@ -15,6 +15,7 @@ import {
   GAP,
   TAIL,
   Score,
+  Lobby,
 } from "../server/actions"
 
 import {
@@ -41,7 +42,7 @@ import * as Icons from "icons"
 
 // TODO: Move Overlay out of GameEvent?
 export enum GameEvent {
-  START, END, ROUND_END, ADD_PLAYER, OVERLAY,
+  START, END, ROUND_END, OVERLAY, LOBBY_CHANGED,
 }
 
 const ratio = SERVER_WIDTH / SERVER_HEIGHT
@@ -49,6 +50,7 @@ const ratio = SERVER_WIDTH / SERVER_HEIGHT
 export class Game {
   public scores: Score[] = []
   public colors: string[] = []
+  public lobby: Lobby = { names: [] }
   public readonly container = new Container()
   public readonly playerLayer = new Graphics()
   public readonly tailLayer = new Graphics()
@@ -105,6 +107,12 @@ export class Game {
       this.drawListeners = this.drawListeners.filter(g => g !== f)
   }
 
+  // TODO: Game should probably not have a lobby, but that's what's least intrusive right now
+  public setLobby(lobby: Lobby) {
+    this.lobby = lobby
+    this.sendEvent(GameEvent.LOBBY_CHANGED, this.lobby)
+  }
+
   public getView() {
     return this.renderer.view
   }
@@ -159,10 +167,6 @@ export class Game {
     }
   }
 
-  public waitForPlayers() {
-    this.setOverlay(`Waiting for players...\nJoin room ${this.room} or\npress ENTER to add player`)
-  }
-
   public preGame = () => {
     if (this.closed) {
       this.close()
@@ -176,10 +180,6 @@ export class Game {
       this.scores = this.snakes.map(({ id }) => ({ id, score: 0 }))
       this.sendEvent(GameEvent.START)
       return
-    }
-
-    if (pressedKeys[KEYS.RETURN]) {
-      this.sendEvent(GameEvent.ADD_PLAYER)
     }
 
     this.repaint(this.preGame)
