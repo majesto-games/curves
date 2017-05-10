@@ -145,7 +145,7 @@ class Slider extends React.Component<SliderProps, void> {
   }
 }
 
-export default class GlobalConfigC extends React.Component<void, GlobalConfig> {
+export default class GlobalConfigC extends React.Component<{}, GlobalConfig> {
 
   public state: GlobalConfig
 

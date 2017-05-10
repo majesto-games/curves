@@ -17,7 +17,7 @@ function getRooms() {
   return axi.get("/")
 }
 
-class NewRoom extends React.Component<void, void> {
+class NewRoom extends React.Component<{}, {}> {
   private roomInput: HTMLInputElement
 
   public render() {

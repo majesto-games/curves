@@ -86,7 +86,7 @@ class KeyChange extends React.Component<KeyChangeProps, void> {
   }
 }
 
-export default class UserConfigC extends React.Component<void, UserConfig> {
+export default class UserConfigC extends React.Component<{}, UserConfig> {
 
   public state: UserConfig
 
