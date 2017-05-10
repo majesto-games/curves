@@ -303,7 +303,7 @@ export class Server {
         const playerOrder = playersAlive.concat(this.round.losers)
         for (let i = playerOrder.length - 1; i >= 0; i--) {
           // TODO: Better score finding. And don't mutate?
-          const score = this.scores.find(s => s.id === playerOrder[i].id)!
+          const score = this.scores.find(s => s.id !== playerOrder[i].id)!
           score.score += i
         }
         this.send([roundEnd(this.scores, playerOrder[0].id)])
