@@ -6,6 +6,7 @@ import Canvas from "components/Canvas"
 import { connect } from "game/room"
 import Overlay from "components/Overlay"
 import { ClientState, Client } from "game/client"
+import { hexToString } from "game/util"
 
 interface RunningGameProps {
   view: HTMLCanvasElement
@@ -56,7 +57,11 @@ class Lobby extends React.Component<LobbyProps, void> {
       <div>
         <button onClick={this.addPlayer}>Add player</button>
         <button onClick={this.onStart}>Start</button>
-        {lobby.names}
+        {lobby.players.map(player => (
+          <h1 key={player.id}
+            style={{ color: hexToString(player.color) }}
+            >Player {player.name}</h1>
+          ))}
       </div>
     )
   }
@@ -106,7 +111,7 @@ export default class GameContainer extends React.Component<GameContainerProps, G
   public state: GameContainerState = {
     scores: [],
     colors: [],
-    lobby: { names: [] },
+    lobby: { players: [] },
     overlay: undefined,
     state: ClientState.UNCONNECTED,
   }

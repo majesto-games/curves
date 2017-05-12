@@ -66,9 +66,10 @@ function failedToHandle(x: never): never {
 }
 
 export class Client {
+  // TODO: Join players, lobby, and game.colors
   public players: (Player | undefined)[] = []
   public game = new Game()
-  public lobby = new Observable<Lobby>({ names: [] })
+  public lobby = new Observable<Lobby>({ players: [] })
   public state = new Observable<ClientState>(ClientState.UNCONNECTED)
   private currentRound: RoundState
   private localIndex = 0
@@ -156,7 +157,7 @@ export class Client {
       return
     }
 
-    if (this.lobby.value.names.length < 2) {
+    if (this.lobby.value.players.length < 2) {
       this.connection(addPlayer())
     }
 

@@ -1,4 +1,4 @@
-import { Point, Powerup } from "game/player"
+import { Point, Powerup, Player } from "game/player"
 import { TailPart, NotRemoved } from "game/tail"
 import { ConnectionId } from "server/connections"
 
@@ -28,7 +28,7 @@ export function start(): Start {
 }
 
 export interface Lobby {
-    names: string[]
+    players: Player[]
 }
 
 export const LOBBY: "LOBBY" = "LOBBY"
@@ -36,11 +36,11 @@ export interface LobbyAction extends Action {
   type: "LOBBY"
   payload: Lobby
 }
-export function lobby(names: string[]): LobbyAction {
+export function lobby(players: Player[]): LobbyAction {
   return {
     type: LOBBY,
     payload: {
-      names,
+      players,
     },
   }
 }

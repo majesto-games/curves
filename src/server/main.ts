@@ -138,7 +138,7 @@ export class Server {
       id,
     })
 
-    this.send([lobby(this.playerInits.map(v => v.name))])
+    this.send([lobby(this.players)])
   }
 
   private startGame() {
