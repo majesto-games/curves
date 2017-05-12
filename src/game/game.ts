@@ -39,10 +39,10 @@ import * as quickconnect from "rtc-quickconnect"
 import pressedKeys, { KEYS, registerKeys } from "./keys"
 
 import * as Icons from "icons"
+import { Observable, SimpleEvent } from "utils/observable"
 
-// TODO: Move Overlay out of GameEvent?
 export enum GameEvent {
-  START, END, ROUND_END, OVERLAY, LOBBY_CHANGED,
+  START, END, ROUND_END,
 }
 
 const ratio = SERVER_WIDTH / SERVER_HEIGHT
@@ -50,7 +50,8 @@ const ratio = SERVER_WIDTH / SERVER_HEIGHT
 export class Game {
   public scores: Score[] = []
   public colors: string[] = []
-  public lobby: Lobby = { names: [] }
+  public overlay = new Observable<string | undefined>("")
+  public onDraw = new SimpleEvent<undefined>()
   public readonly container = new Container()
   public readonly playerLayer = new Graphics()
   public readonly tailLayer = new Graphics()
@@ -58,10 +59,9 @@ export class Game {
   private closed = false
   private renderer: CanvasRenderer | WebGLRenderer
   private eventListeners: ((e: GameEvent, data?: any) => void)[] = []
-  private drawListeners: (() => void)[] = []
   private snakes: Snake[] = []
 
-  constructor(private readonly room: string) {
+  constructor() {
     this.renderer = autoDetectRenderer(SERVER_WIDTH, SERVER_HEIGHT,
       { antialias: true, backgroundColor: 0x000000 })
 
@@ -98,19 +98,6 @@ export class Game {
 
     return () =>
       this.eventListeners = this.eventListeners.filter(g => g !== f)
-  }
-
-  public onDraw = (f: () => void) => {
-    this.drawListeners.push(f)
-
-    return () =>
-      this.drawListeners = this.drawListeners.filter(g => g !== f)
-  }
-
-  // TODO: Game should probably not have a lobby, but that's what's least intrusive right now
-  public setLobby(lobby: Lobby) {
-    this.lobby = lobby
-    this.sendEvent(GameEvent.LOBBY_CHANGED, this.lobby)
   }
 
   public getView() {
@@ -221,11 +208,11 @@ export class Game {
   }
 
   private setOverlay(text: string) {
-    this.sendEvent(GameEvent.OVERLAY, text)
+    this.overlay.set(text)
   }
 
   private removeOverlay() {
-    this.sendEvent(GameEvent.OVERLAY, null)
+    this.overlay.set(undefined)
   }
 
   private getPowerupImage(powerupType: PowerupType): string {
@@ -261,7 +248,7 @@ export class Game {
       return
     }
 
-    this.drawListeners.forEach(f => f())
+    this.onDraw.send(undefined)
     this.drawPlayers()
 
     this.repaint(this.draw)

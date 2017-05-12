@@ -32,6 +32,7 @@ export type ConnectionId = string
 
 export interface ServerConnection {
   id: ConnectionId
+  isOwner: boolean
   close(): void
   (action: ServerAction): void
 }
@@ -71,8 +72,10 @@ export function networkServerConnection(
         dataChannel.send(JSON.stringify(a))
       }
     },
-    {id,
-    close: () => dataChannel.close()},
+    {
+      id,
+      isOwner: false,
+      close: () => dataChannel.close()},
   )
 }
 
@@ -84,6 +87,7 @@ export function localServerConnection(
     (a: ServerAction) => server.receive(a, id),
     {
       id,
+      isOwner: true,
       close: () => { ; },
     },
   )

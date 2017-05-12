@@ -29,6 +29,9 @@ import {
   rotate,
   RIGHT,
   LOBBY,
+  Lobby,
+  addPlayer,
+  start,
 } from "server/actions"
 
 import { Sprite, Graphics, autoDetectRenderer, Container, CanvasRenderer, WebGLRenderer } from "pixi.js"
@@ -36,6 +39,7 @@ import { Sprite, Graphics, autoDetectRenderer, Container, CanvasRenderer, WebGLR
 import pressedKeys, { KEYS, registerKeys } from "./keys"
 
 import { Game } from "./game"
+import { Observable } from "utils/observable"
 
 let keyCombos: { left: KEYS, right: KEYS }[] = []
 
@@ -50,25 +54,43 @@ class RoundState {
   }
 }
 
+export enum ClientState {
+  UNCONNECTED,
+  LOBBY,
+  GAME,
+  CLOSED,
+}
+
 function failedToHandle(x: never): never {
   throw new Error(`Client didn't handle ${x}`)
 }
 
 export class Client {
   public players: (Player | undefined)[] = []
+  public game = new Game()
+  public lobby = new Observable<Lobby>({ names: [] })
+  public state = new Observable<ClientState>(ClientState.UNCONNECTED)
   private currentRound: RoundState
   private localIndex = 0
+  private connection: ServerConnection
+  private _close: () => void
 
-  constructor(private connection: ServerConnection, private game: Game) {
+  constructor(serverPromise: Promise<[ServerConnection, () => void]>) {
     this.currentRound = new RoundState((id) => this.newTail(id))
-    this.game.onDraw(() => this.handleKeys())
+    this.game.onDraw.subscribe(() => this.handleKeys())
+    serverPromise.then(([connection, close]) => {
+      this.connection = connection
+      this._close = close
+      this.game.preGame()
+      this.state.set(ClientState.LOBBY)
+    })
   }
 
   public receive(action: ClientAction) {
     switch (action.type) {
       case STARTED: {
         const { payload } = action
-        this.start(payload)
+        this.started(payload)
         break
       }
       case UPDATE_PLAYERS: {
@@ -109,12 +131,37 @@ export class Client {
       }
       case LOBBY: {
         const { payload } = action
-        this.game.setLobby(payload)
+        this.lobby.set(payload)
         break
       }
       default:
         failedToHandle(action)
     }
+  }
+
+  public close() {
+    this._close()
+    this.state.set(ClientState.CLOSED)
+  }
+
+  public addPlayer() {
+    this.connection(addPlayer())
+  }
+
+  public start() {
+    // TODO: add this owner check in server as well
+    // TODO: having isOwner in connection is not the right place
+    console.log(this.state.value !== ClientState.LOBBY, !this.connection.isOwner)
+    if (this.state.value !== ClientState.LOBBY  || !this.connection.isOwner) {
+      return
+    }
+
+    if (this.lobby.value.names.length < 2) {
+      this.connection(addPlayer())
+    }
+
+    this.connection(start())
+    this.state.set(ClientState.GAME)
   }
 
   private createPlayer(name: string, color: number, isOwner: boolean, id: number) {
@@ -149,7 +196,7 @@ export class Client {
     }
   }
 
-  private start = (players: PlayerInit[]) => {
+  private started(players: PlayerInit[]) {
     console.log("starting with", players)
     for (let player of players) {
       const newPlayer = this.createPlayer(player.name, player.color, player.owner === this.connection.id, player.id)

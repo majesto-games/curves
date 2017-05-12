@@ -3,8 +3,9 @@ import history from "./history"
 import { Game, GameEvent } from "../game/game"
 import { Score, Lobby as LobbyI } from "server/actions"
 import Canvas from "components/Canvas"
-import Room, { RoomState } from "game/room"
+import { connect } from "game/room"
 import Overlay from "components/Overlay"
+import { ClientState, Client } from "game/client"
 
 interface RunningGameProps {
   view: HTMLCanvasElement
@@ -41,7 +42,6 @@ class RunningGame extends React.Component<RunningGameProps, void> {
 // TODO: We need Players, which should be accessible from the room somehow
 interface LobbyProps {
   lobby: LobbyI
-  room: Room
   onStart: () => void
   addPlayer: () => void
 }
@@ -79,7 +79,7 @@ interface GameContainerState {
   colors: string[]
   lobby: LobbyI
   overlay: string | undefined
-  state: RoomState
+  state: ClientState
 }
 
 /*
@@ -108,11 +108,11 @@ export default class GameContainer extends React.Component<GameContainerProps, G
     colors: [],
     lobby: { names: [] },
     overlay: undefined,
-    state: RoomState.UNCONNECTED,
+    state: ClientState.UNCONNECTED,
   }
 
   private div: HTMLDivElement | null = null
-  private room: Room | undefined
+  private client: Client | undefined
   private localPlayers = 0
 
   public constructor(props: GameContainerProps) {
@@ -122,11 +122,11 @@ export default class GameContainer extends React.Component<GameContainerProps, G
   }
 
   public componentWillReceiveProps(nextProps: GameContainerProps) {
-    if (this.room != null) {
-      if (this.room.name === nextProps.room) {
+    if (this.client != null) {
+      if (this.props.room === nextProps.room) {
         return
       }
-      this.room.close()
+      this.client.close()
     }
     this.getRoom(nextProps.room)
   }
@@ -140,26 +140,25 @@ export default class GameContainer extends React.Component<GameContainerProps, G
       lobby,
     } = this.state
 
-    console.log("RENDER", RoomState[state], this.room)
+    console.log("RENDER", ClientState[state], this.client)
 
-    if (state === RoomState.LOBBY_CLIENT || state === RoomState.LOBBY_SERVER) {
+    if (state === ClientState.LOBBY) {
       return (
         <Lobby
           lobby={lobby}
-          room={this.room!}
           onStart={this.onStart}
           addPlayer={this.addPlayer}
         />
       )
     }
 
-    if (state === RoomState.UNCONNECTED) {
+    if (state === ClientState.UNCONNECTED) {
       return (
         <button onClick={this.readState} >Refresh room state</button>
       )
     }
 
-    if (state === RoomState.CLOSED) {
+    if (state === ClientState.CLOSED) {
       return (
         <div />
       )
@@ -170,76 +169,67 @@ export default class GameContainer extends React.Component<GameContainerProps, G
         colors={colors}
         scores={scores}
         overlay={overlay}
-        view={this.room!.game.getView()} />
+        view={this.client!.game.getView()} />
     )
   }
 
   private readState = () => {
-    const room = this.room!
+    const client = this.client!
     this.setState((prevState, props) => ({
-      scores: room.game.scores,
-      colors: room.game.colors,
-      state: room.state,
+      scores: client.game.scores,
+      colors: client.game.colors,
+      state: client.state,
     }))
   }
 
   private onStart = () => {
-    this.room!.start()
+    this.client!.start()
   }
 
   private addPlayer = () => {
     if (this.localPlayers < 2) {
       this.localPlayers++
-      this.room!.addPlayer()
+      this.client!.addPlayer()
     }
   }
 
   private getRoom = (roomName: string) => {
-    const room = new Room(roomName)
-    room.game.onEvent((e, data?: any) => {
+    const client = connect(roomName)
+    client.game.onEvent((e, data?: any) => {
       switch (e) {
         case GameEvent.END: {
-          this.room = undefined
+          this.client = undefined
           this.setState({
             scores: [],
             colors: [],
-            state: RoomState.CLOSED,
+            state: ClientState.CLOSED,
           })
           break
         }
         case GameEvent.ROUND_END:
         case GameEvent.START: {
           this.setState((prevState, props) => ({
-            scores: room.game.scores,
-            colors: room.game.colors,
-            state: room.state,
+            scores: client.game.scores,
+            colors: client.game.colors,
+            state: client.state,
           }))
-          break
-        }
-        case GameEvent.OVERLAY: {
-          this.setState((prevState, props) => ({
-            overlay: data,
-          }))
-          break
-        }
-        case GameEvent.LOBBY_CHANGED: {
-          this.setState({
-            lobby: data,
-          })
           break
         }
         default:
           failedToHandle(e)
       }
     })
-    room.onNewState(state => {
+    client.state.subscribe(state => {
       this.setState({
         state,
       })
     })
-    this.room = room
-    room.connect()
+
+    client.lobby.subscribe(lobby => this.setState({ lobby }))
+    client.game.overlay.subscribe(overlay => this.setState({ overlay }))
+
+    this.client = client
     this.localPlayers = 1
-    return room
+    return client
   }
 }
