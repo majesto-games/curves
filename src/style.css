@@ -58,6 +58,27 @@ body {
   padding: 16px;
 }
 
+.Lobby .header {
+  display: flex;
+  align-items: center;
+}
+
+.Lobby .header h1 {
+  width: 100%;
+}
+
+.Lobby .header button {
+  margin-left: 8px;
+}
+
+.Lobby .ball {
+  display: inline-block;
+  width: 1.25em;
+  height: 1.25em;
+  border-radius: 50%;
+  border: 2px solid #333;
+}
+
 .RoomBrowser h1 {
   margin-bottom: .75em;
 }

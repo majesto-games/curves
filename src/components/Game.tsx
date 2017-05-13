@@ -27,8 +27,7 @@ class RunningGame extends React.Component<RunningGameProps, void> {
     return (
       <div className="container-fluid Game">
         <div className="col-md-3" id="scores">{scores.map(({ score, id }, i) =>
-          <h1 key={id}
-            style={{ color: colors[i] }}>Player {id}: {score}</h1>)}
+          <h1 key={id} style={{ color: colors[i] }}>Player {id}: {score}</h1>)}
         </div>
         <div className="col-md-6 GameContainer" id="GameContainer">
           <Overlay text={overlay} />
@@ -43,6 +42,7 @@ class RunningGame extends React.Component<RunningGameProps, void> {
 // TODO: We need Players, which should be accessible from the room somehow
 interface LobbyProps {
   lobby: LobbyI
+  room: string
   onStart: () => void
   addPlayer: () => void
 }
@@ -51,17 +51,34 @@ class Lobby extends React.Component<LobbyProps, void> {
   public render() {
     const {
       lobby,
+      room,
     } = this.props
 
     return (
-      <div>
-        <button onClick={this.addPlayer}>Add player</button>
-        <button onClick={this.onStart}>Start</button>
-        {lobby.players.map(player => (
-          <h1 key={player.id}
-            style={{ color: hexToString(player.color) }}
-            >Player {player.name}</h1>
-          ))}
+      <div className="container-fluid Lobby">
+        <div className="col-md-6 col-md-offset-3">
+          <div className="header">
+            <h1>Lobby: {room}</h1>
+            <button className="btn btn-lg btn-success" onClick={this.addPlayer}>Add local player</button>
+            <button className="btn btn-lg btn-primary"onClick={this.onStart}>Start</button>
+          </div>
+          <table className="table table-striped">
+            <thead>
+              <tr>
+                <th>Color</th>
+                <th>Name</th>
+              </tr>
+            </thead>
+            <tbody>
+              {lobby.players.map(({ id, color, name }) => (
+                <tr key={id}>
+                  <td><span className="ball" style={{ backgroundColor: hexToString(color) }} /></td>
+                  <td>Player {name}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     )
   }
@@ -153,13 +170,14 @@ export default class GameContainer extends React.Component<GameContainerProps, G
           lobby={lobby}
           onStart={this.onStart}
           addPlayer={this.addPlayer}
+          room={this.props.room}
         />
       )
     }
 
     if (state === ClientState.UNCONNECTED) {
       return (
-        <button onClick={this.readState} >Refresh room state</button>
+        <button onClick={this.readState}>Refresh room state</button>
       )
     }
 
