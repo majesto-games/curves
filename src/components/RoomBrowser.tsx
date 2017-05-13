@@ -94,9 +94,10 @@ export default class RoomBrowser extends React.Component<any, RoomBrowserState> 
           {this.state.loading && <div className="text-center">
             <span className="glyphicon glyphicon-refresh spinning" /> Loading rooms...
           </div>}
-          {this.state.rooms.length === 0 && <div className="text-center">
-            <span className="glyphicon glyphicon-tower" /> No rooms found
-          </div>}
+          {!this.state.loading && this.state.rooms.length === 0 &&
+            <div className="text-center">
+              <span className="glyphicon glyphicon-tower" /> No rooms found
+            </div>}
         </div>
       </div>
     )
