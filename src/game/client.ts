@@ -227,7 +227,16 @@ export class Client {
       this.currentRound.tails.initPlayer(player.snake!)
     })
 
-    this.game.newRound(players.map(p => p.snake!), players.map(p => p.color), delay)
+    this.game.newRound(players.map(p => p.snake!), players.map(p => p.color), delay,
+      snake => {
+        const player = this.playerById(snake.id)!
+        if (player.localIndex != null) {
+          const keys = window.UserConfig.playerKeys[player.localIndex]
+          return [KEYS[keys.left], KEYS[keys.right], player.color]
+        }
+
+        return undefined
+      })
   }
 
   private roundEnd = (scores: Score[], winner: number) => {

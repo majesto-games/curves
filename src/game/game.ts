@@ -6,6 +6,8 @@ import {
   CanvasRenderer,
   WebGLRenderer,
   Point as PPoint,
+  ObservablePoint,
+  Text,
 } from "pixi.js"
 import { Point, Player, Snake, Powerup, PowerupType } from "./player"
 import { ClientTail, TailStorage } from "./tail"
@@ -40,6 +42,7 @@ import pressedKeys, { KEYS, registerKeys } from "./keys"
 
 import * as Icons from "icons"
 import { Observable, SimpleEvent } from "utils/observable"
+import { padEqual } from "utils/string"
 
 export enum GameEvent {
   START, END, ROUND_END,
@@ -56,11 +59,12 @@ export class Game {
   public colors: string[] = []
   public overlay = new Observable<string | undefined>("")
   public onDraw = new SimpleEvent<undefined>()
-  public readonly container = new Container()
-  public readonly playerLayer = new Graphics()
-  public readonly tailLayer = new Graphics()
-  public readonly powerupLayer = new Graphics()
   public roundState = RoundState.PRE
+  private readonly container = new Container()
+  private readonly playerLayer = new Graphics()
+  private readonly keysLayer = new Graphics()
+  private readonly tailLayer = new Graphics()
+  private readonly powerupLayer = new Graphics()
   private closed = false
   private renderer: CanvasRenderer | WebGLRenderer
   private eventListeners: ((e: GameEvent, data?: any) => void)[] = []
@@ -78,6 +82,7 @@ export class Game {
     this.container.addChild(this.tailLayer)
     this.container.addChild(this.powerupLayer)
     this.container.addChild(this.playerLayer)
+    this.container.addChild(this.keysLayer)
 
     window.addEventListener("resize", () => this.resize())
     this.draw()
@@ -109,7 +114,8 @@ export class Game {
     return this.renderer.view
   }
 
-  public newRound(snakes: Snake[], colors: number[], delay: number) {
+  public newRound(snakes: Snake[], colors: number[], delay: number,
+    getKeyTextAndColor: (snake: Snake) => [string, string, number] | undefined) {
     this.removeOverlay()
     this.playerLayer.removeChildren()
     this.tailLayer.removeChildren()
@@ -120,7 +126,23 @@ export class Game {
 
     for (let snake of snakes) {
       this.playerLayer.addChild(snake.graphics)
+      const keysAndColor = getKeyTextAndColor(snake)
+      if (keysAndColor != null) {
+        const [left, right, color] = keysAndColor
+        const [leftP, rightP] = padEqual(left, right)
+        const text = new Text(
+          `${leftP} ^ ${rightP}`,
+          {fontFamily : "Courier New", fill : color},
+        )
+        text.anchor.set(0.5, -0.35)
+        text.x = snake.x
+        text.y = snake.y
+        text.rotation = snake.rotation
+        this.keysLayer.addChild(text)
+
+      }
     }
+    this.drawPlayers()
 
     this.roundStartsAt = Date.now() + delay
     this.scores = this.snakes.map(({ id }) => ({ id, score: 0 }))
@@ -131,6 +153,7 @@ export class Game {
     if (this.roundState !== RoundState.IN) {
         this.roundState = RoundState.IN
         this.removeOverlay()
+        this.keysLayer.removeChildren()
         this.sendEvent(GameEvent.START)
       }
   }
@@ -255,7 +278,6 @@ export class Game {
         } else {
           this.setOverlay(`Round starting in ${Math.ceil((this.roundStartsAt - Date.now()) / 1000)}s`)
         }
-        this.drawPlayers()
         break
       }
       case RoundState.IN: {

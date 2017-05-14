@@ -1,4 +1,5 @@
-import { getColors, frequency } from "game/util"
+import { getColors } from "game/util"
+import { frequency, shuffle } from "utils/array"
 import { Point, Player, Snake, Powerup, ActivePowerup, PowerupType } from "game/player"
 import { containsPoint, ServerTail, TailStorage } from "game/tail"
 import PriorityQueue = require("fastpriorityqueue")
@@ -487,9 +488,12 @@ export class Server {
     this.round = new RoundState()
     const rx = SERVER_WIDTH * 0.3
     const ry = SERVER_HEIGHT * 0.3
-    const player1Radians = -Math.PI
+    const player1Radians = Math.random() * 2 * Math.PI
     const deltaRadians = (2 * Math.PI) / this.players.length
-    const snakeInits = this.players.map((p, i) => {
+
+    const shuffledPlayers = shuffle(this.players.slice())
+
+    const snakeInits = shuffledPlayers.map((p, i) => {
       const rotation = Math.random() * Math.PI * 2
 
       // Place players in a circle
