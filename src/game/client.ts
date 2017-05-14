@@ -161,7 +161,6 @@ export class Client {
     }
 
     this.connection(start())
-    this.state.set(ClientState.GAME)
   }
 
   private createPlayer(name: string, color: number, isOwner: boolean, id: number) {
@@ -199,6 +198,7 @@ export class Client {
   }
 
   private started(players: PlayerInit[]) {
+    this.state.set(ClientState.GAME)
     console.log("starting with", players)
     for (let player of players) {
       const newPlayer = this.createPlayer(player.name, player.color, player.owner === this.connection.id, player.id)
