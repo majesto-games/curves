@@ -162,8 +162,6 @@ export default class GameContainer extends React.Component<GameContainerProps, G
       lobby,
     } = this.state
 
-    console.log("RENDER", ClientState[state], this.client)
-
     if (state === ClientState.LOBBY) {
       return (
         <Lobby

@@ -149,12 +149,18 @@ export interface SnakeInit {
 export const ROUND: "ROUND" = "ROUND"
 export interface Round extends Action {
   type: "ROUND"
-  payload: SnakeInit[]
+  payload: {
+    snakes: SnakeInit[],
+    delay: number,
+  }
 }
-export function round(snakeInits: SnakeInit[]): Round {
+export function round(snakes: SnakeInit[], delay: number): Round {
   return {
     type: ROUND,
-    payload: snakeInits,
+    payload: {
+      snakes,
+      delay,
+    },
   }
 }
 

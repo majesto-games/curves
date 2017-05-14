@@ -45,6 +45,10 @@ export enum GameEvent {
   START, END, ROUND_END,
 }
 
+enum RoundState {
+  PRE, IN, POST,
+}
+
 const ratio = SERVER_WIDTH / SERVER_HEIGHT
 
 export class Game {
@@ -56,10 +60,12 @@ export class Game {
   public readonly playerLayer = new Graphics()
   public readonly tailLayer = new Graphics()
   public readonly powerupLayer = new Graphics()
+  public roundState = RoundState.PRE
   private closed = false
   private renderer: CanvasRenderer | WebGLRenderer
   private eventListeners: ((e: GameEvent, data?: any) => void)[] = []
   private snakes: Snake[] = []
+  private roundStartsAt: number | undefined
 
   constructor() {
     this.renderer = autoDetectRenderer(SERVER_WIDTH, SERVER_HEIGHT,
@@ -74,8 +80,7 @@ export class Game {
     this.container.addChild(this.playerLayer)
 
     window.addEventListener("resize", () => this.resize())
-
-    this.preConnect()
+    this.draw()
   }
 
   public end(player?: Player) {
@@ -104,7 +109,7 @@ export class Game {
     return this.renderer.view
   }
 
-  public newRound(snakes: Snake[], colors: number[]) {
+  public newRound(snakes: Snake[], colors: number[], delay: number) {
     this.removeOverlay()
     this.playerLayer.removeChildren()
     this.tailLayer.removeChildren()
@@ -116,18 +121,26 @@ export class Game {
     for (let snake of snakes) {
       this.playerLayer.addChild(snake.graphics)
     }
+
+    this.roundStartsAt = Date.now() + delay
+    this.scores = this.snakes.map(({ id }) => ({ id, score: 0 }))
+    this.roundState = RoundState.PRE
+  }
+
+  public inRound() {
+    if (this.roundState !== RoundState.IN) {
+        this.roundState = RoundState.IN
+        this.removeOverlay()
+        this.sendEvent(GameEvent.START)
+      }
   }
 
   public roundEnd(scores: Score[], winner: Player) {
     this.scores = scores
     // TODO: so so hacky yes yes
     this.setOverlay(`Winner this round: Player ${winner.id}`)
+    this.roundState = RoundState.POST
     this.sendEvent(GameEvent.ROUND_END)
-  }
-
-  public updateSnakeGraphics({ graphics, x, y, fatness }: Snake) {
-    graphics.position.set(x, y)
-    graphics.scale.set(fatness, fatness)
   }
 
   public addTail({ graphics }: ClientTail) {
@@ -152,24 +165,6 @@ export class Game {
     if (powerupSprite != null) {
       this.powerupLayer.removeChild(powerupSprite)
     }
-  }
-
-  public preGame = () => {
-    if (this.closed) {
-      this.close()
-      return
-    }
-
-    // TODO: Remove haxxor
-    if (this.snakes.length > 0) { // Game has started
-      this.removeOverlay()
-      this.draw()
-      this.scores = this.snakes.map(({ id }) => ({ id, score: 0 }))
-      this.sendEvent(GameEvent.START)
-      return
-    }
-
-    this.repaint(this.preGame)
   }
 
   public close() {
@@ -242,21 +237,39 @@ export class Game {
     }
   }
 
+  private updateSnakeGraphics({ graphics, x, y, fatness }: Snake) {
+    graphics.position.set(x, y)
+    graphics.scale.set(fatness, fatness)
+  }
+
   private draw = () => {
     if (this.closed) {
       this.close()
       return
     }
 
-    this.onDraw.send(undefined)
-    this.drawPlayers()
+    switch (this.roundState) {
+      case RoundState.PRE: {
+        if (this.roundStartsAt == null) {
+          this.setOverlay("Round starting...")
+        } else {
+          this.setOverlay(`Round starting in ${Math.ceil((this.roundStartsAt - Date.now()) / 1000)}s`)
+        }
+        this.drawPlayers()
+        break
+      }
+      case RoundState.IN: {
+        this.onDraw.send(undefined)
+        this.drawPlayers()
+        break
+      }
+      case RoundState.POST: {
+        break
+      }
+      default:
+    }
 
     this.repaint(this.draw)
-  }
-
-  private preConnect = () => {
-    this.setOverlay("Connecting...")
-    this.paint()
   }
 
   // TODO: Give data a type

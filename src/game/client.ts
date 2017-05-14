@@ -82,7 +82,6 @@ export class Client {
     serverPromise.then(([connection, close]) => {
       this.connection = connection
       this._close = close
-      this.game.preGame()
       this.state.set(ClientState.LOBBY)
     })
   }
@@ -116,7 +115,7 @@ export class Client {
       }
       case ROUND: {
         const { payload } = action
-        this.round(payload)
+        this.round(payload.snakes, payload.delay)
         break
       }
       case ROUND_END: {
@@ -189,7 +188,9 @@ export class Client {
       player.snake!.rotation = update.rotation
       player.snake!.alive = update.alive
       player.snake!.fatness = update.fatness
-      this.game.updateSnakeGraphics(player.snake!)
+
+      // TODO: Remove this code smell
+      this.game.inRound()
 
       if (update.tail.type === TAIL) {
         this.currentRound.tails.add(update.tail.payload)
@@ -205,7 +206,7 @@ export class Client {
     }
   }
 
-  private round = (snakeInits: SnakeInit[]) => {
+  private round = (snakeInits: SnakeInit[], delay: number) => {
     snakeInits.forEach(({ startPoint, rotation, id }) => {
       const snake = new Snake(startPoint, rotation, id)
       const player = this.playerById(id)!
@@ -226,7 +227,7 @@ export class Client {
       this.currentRound.tails.initPlayer(player.snake!)
     })
 
-    this.game.newRound(players.map(p => p.snake!), players.map(p => p.color))
+    this.game.newRound(players.map(p => p.snake!), players.map(p => p.color), delay)
   }
 
   private roundEnd = (scores: Score[], winner: number) => {

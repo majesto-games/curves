@@ -159,7 +159,6 @@ export class Server {
 
     console.log("starting server")
     this.startRound()
-    this.start()
   }
 
   private rotateLeft(id: number, connectionId: ConnectionId) {
@@ -322,7 +321,6 @@ export class Server {
         this.pause()
         setTimeout(() => {
           this.startRound()
-          this.start()
         }, 3000)
         return
       }
@@ -514,7 +512,13 @@ export class Server {
       }
     })
 
-    this.send([round(snakeInits)])
+    const startDelay = window.getGlobal("ROUND_START_DELAY")
+
+    this.send([round(snakeInits, startDelay)])
+
+    setTimeout(() => {
+      this.start()
+    }, startDelay)
   }
 
 }
