@@ -130,11 +130,13 @@ export class Game {
       if (keysAndColor != null) {
         const [left, right, color] = keysAndColor
         const [leftP, rightP] = padEqual(left, right)
-        const text = new Text(
-          `${leftP} ^ ${rightP}`,
-          {fontFamily : "Courier New", fill : color},
-        )
-        text.anchor.set(0.5, -0.35)
+        const text = new Text(`${leftP} ▲ ${rightP}`, {
+          fontFamily: "Courier New",
+          fill: color,
+          fontSize: 24,
+        })
+
+        text.anchor.set(0.5, 1.5)
         text.x = snake.x
         text.y = snake.y
         text.rotation = snake.rotation
