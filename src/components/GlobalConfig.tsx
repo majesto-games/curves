@@ -37,7 +37,7 @@ const SHAPE: Configurable<GlobalConfigValues> = {
   FATNESS_BASE: [0.5, 5, 50],
   POWERUP_CHANCE_BASE: [0.0032, 0.032, 64],
   POWERUP_CHANCE_INCREASE: [0.000064, 0.00064, 0.1],
-  ROUND_START_DELAY: [0, 2000, 10000],
+  ROUND_START_DELAY: [0, 4000, 10000],
 }
 
 type getConfigValue<T, K extends keyof T> = (key: keyof T) => T[K]
