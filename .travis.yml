@@ -1,0 +1,16 @@
+language: node_js
+node_js:
+  - "7"
+cache: yarn
+install:
+  - yarn install
+  - yarn run build
+deploy:
+  provider: pages
+  skip_cleanup: true
+  local_dir: game/
+  github_token: $GITHUB_TOKEN # Set in travis-ci.org dashboard
+  on:
+    branch: master
+notifications:
+  email: false
