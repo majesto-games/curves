@@ -6,7 +6,6 @@
   "scripts": {
     "build": "webpack",
     "watch": "webpack-dev-server --progress --inline --content-base game/",
-    "deploy": "webpack; git add -f game && git commit -m \"dist subtree\" && git push origin `git subtree split --prefix game master`:gh-pages --force && git reset HEAD~1",
     "format": "tsfmt -r",
     "clean": "rimraf game/"
   },
