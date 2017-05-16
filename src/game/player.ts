@@ -1,5 +1,7 @@
 import { Tail, TailPart, NotRemoved } from "./tail"
 
+import { TweenLite } from "gsap"
+
 export interface Point {
   x: number
   y: number
@@ -124,19 +126,19 @@ export class Snake {
   }
 
   public speeddown() {
-    this.speed = Math.max(window.getGlobal("MOVE_SPEED_BASE") - 1, this.speed - 0.5)
+    TweenLite.to(this, .5, { speed: Math.max(window.getGlobal("MOVE_SPEED_BASE") - 1, this.speed - 0.5) })
   }
 
   public speedup() {
-    this.speed = this.speed + 0.5
+    TweenLite.to(this, .5, { speed: this.speed + 0.5 })
   }
 
   public fatify() {
-    this.fatness += 8
+    TweenLite.to(this, .5, { fatness: this.fatness + 8 })
   }
 
   public unfatify() {
-    this.fatness -= 8
+    TweenLite.to(this, .5, { fatness: this.fatness - 8 })
   }
 
   public createTailPart = () => {
