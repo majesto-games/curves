@@ -36,13 +36,13 @@
     "react": "^15.4.2",
     "react-dom": "^15.4.2",
     "rtc-quickconnect": "^5.5.1",
-    "sillyname": "^0.1.0"
+    "sillyname": "^0.1.0",
+    "tween-functions": "^1.2.0"
   },
   "devDependencies": {
     "@types/gsap": "^1.19.1",
     "awesome-typescript-loader": "^3.1.2",
     "css-loader": "^0.28.0",
-    "gsap": "^1.19.1",
     "imports-loader": "^0.7.1",
     "json-loader": "^0.5.4",
     "rimraf": "^2.6.1",

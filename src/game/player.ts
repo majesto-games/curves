@@ -1,6 +1,7 @@
 import { Tail, TailPart, NotRemoved } from "./tail"
 
-import { TweenLite } from "gsap"
+import { Animation } from "utils/animation"
+import { linear } from "tween-functions"
 
 export interface Point {
   x: number
@@ -91,6 +92,9 @@ export class Snake {
   private tailId: number
   private ghost: number
 
+  private fatnessAnimation: Animation
+  private speedAnimation: Animation
+
   constructor(
     startPoint: Point,
     public rotation: number,
@@ -110,6 +114,17 @@ export class Snake {
     this.skipTailTicker = 0
     this.ghost = 0
     this.alive = true
+
+    this.fatnessAnimation = new Animation(values => {
+        const sum = values.reduce((prev, curr) => prev + curr, window.getGlobal("FATNESS_BASE"))
+        this.fatness = sum
+      })
+
+    this.speedAnimation = new Animation(values => {
+        const sum = values.reduce((prev, curr) => prev + curr, window.getGlobal("MOVE_SPEED_BASE"))
+        console.log("speed", values, sum)
+        this.speed = Math.max(sum, window.getGlobal("MOVE_SPEED_BASE") - 1)
+      })
   }
 
   public rotate = (amount: number) => {
@@ -126,24 +141,67 @@ export class Snake {
   }
 
   public speeddown() {
-    TweenLite.to(this, .5, { speed: Math.max(window.getGlobal("MOVE_SPEED_BASE") - 1, this.speed - 0.5) })
+    const duration = window.getGlobal("POWERUP_ACTIVE_DURATION")
+    const halfSecond = Math.floor(window.getGlobal("TICK_RATE") * 0.5)
+
+    this.speedAnimation.add(duration, (step, left) => {
+      if (step <= halfSecond) {
+        return linear(step, 0, -0.5, halfSecond)
+      } else if (left <= halfSecond) {
+        return linear(halfSecond - left, -0.5, 0, halfSecond)
+      }
+      return -0.5
+    })
   }
 
   public speedup() {
-    TweenLite.to(this, .5, { speed: this.speed + 0.5 })
+    const duration = window.getGlobal("POWERUP_ACTIVE_DURATION")
+    const halfSecond = Math.floor(window.getGlobal("TICK_RATE") * 0.5)
+
+    this.speedAnimation.add(duration, (step, left) => {
+      if (step <= halfSecond) {
+        return linear(step, 0, 0.5, halfSecond)
+      } else if (left <= halfSecond) {
+        return linear(halfSecond - left, 0.5, 0, halfSecond)
+      }
+      return 0.5
+    })
   }
 
   public fatify() {
-    TweenLite.to(this, .5, { fatness: this.fatness + 8 })
+    const duration = window.getGlobal("POWERUP_ACTIVE_DURATION")
+    const halfSecond = Math.floor(window.getGlobal("TICK_RATE") * 0.5)
+
+    this.fatnessAnimation.add(duration, (step, left) => {
+      if (step <= halfSecond) {
+        return linear(step, 0, 8, halfSecond)
+      } else if (left <= halfSecond) {
+        return linear(halfSecond - left, 8, 0, halfSecond)
+      }
+      return 8
+    })
   }
 
   public unfatify() {
-    TweenLite.to(this, .5, { fatness: this.fatness - 8 })
+    const duration = window.getGlobal("POWERUP_ACTIVE_DURATION")
+    const halfSecond = Math.floor(window.getGlobal("TICK_RATE") * 0.5)
+
+    this.fatnessAnimation.add(duration, (step, left) => {
+      if (step <= halfSecond) {
+        return linear(step, 0, -8, halfSecond)
+      } else if (left <= halfSecond) {
+        return linear(halfSecond - left, -8, 0, halfSecond)
+      }
+      return -8
+    })
   }
 
-  public createTailPart = () => {
+  public tick() {
     let r = Math.random()
     let pol: number[] | undefined
+
+    this.fatnessAnimation.tick()
+    this.speedAnimation.tick()
 
     if (this.ghost > 0) {
       this.lastEnd = null

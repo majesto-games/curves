@@ -2,7 +2,6 @@ import { getColors } from "game/util"
 import { frequency, shuffle } from "utils/array"
 import { Point, Player, Snake, Powerup, ActivePowerup, PowerupType } from "game/player"
 import { containsPoint, ServerTail, TailStorage } from "game/tail"
-import PriorityQueue = require("fastpriorityqueue")
 import {
   PlayerUpdate,
   Gap,
@@ -54,7 +53,6 @@ function failedToHandle(x: never): never {
 
 class RoundState {
   public tails = new TailStorage(() => new ServerTail())
-  public activePowerups = new PriorityQueue<ActivePowerup>((a, b) => a.activeTo < b.activeTo)
   public placedPowerups: Powerup[] = []
   public losers: Player[] = []
   public nextPowerupId = 0
@@ -326,49 +324,6 @@ export class Server {
         return
       }
 
-      let peek = this.round.activePowerups.peek()
-      while (peek && peek.activeTo < Date.now()) {
-        this.round.activePowerups.poll()
-        switch (peek.type) {
-          case "UPSIZE": {
-            this.players
-              .filter(p => peek!.activator !== p.id)
-              .forEach(p => p.snake!.unfatify())
-            break
-          }
-          case "GHOST": {
-            const player = this.playerById(peek!.activator)
-            player!.snake!.unghostify()
-            break
-          }
-          case "SPEEDDOWN_ME": {
-            const player = this.playerById(peek!.activator)
-            player!.snake!.speedup()
-            break
-          }
-          case "SPEEDDOWN_THEM": {
-            this.players
-              .filter(p => peek!.activator !== p.id)
-              .forEach(p => p.snake!.speedup())
-            break
-          }
-          case "SPEEDUP_ME": {
-            const player = this.playerById(peek!.activator)
-            player!.snake!.speeddown()
-            break
-          }
-          case "SPEEDUP_THEM": {
-            this.players
-              .filter(p => peek!.activator !== p.id)
-              .forEach(p => p.snake!.speeddown())
-            break
-          }
-          default:
-        }
-
-        peek = this.round.activePowerups.peek()
-      }
-
       const collidedPowerups: Powerup[] = []
 
       for (let player of playersAlive) {
@@ -377,7 +332,7 @@ export class Server {
         this.wrapEdge(player.snake!)
 
         // Create tail polygon, this returns undefined if it's supposed to be a hole
-        const p = player.snake!.createTailPart()
+        const p = player.snake!.tick()
 
         let tailAction: Tail | Gap = { type: GAP }
 
@@ -433,13 +388,6 @@ export class Server {
               }
               default:
             }
-
-            this.round.activePowerups.add({
-              type: powerup.type,
-              id: powerup.id,
-              activator: player.id,
-              activeTo: Date.now() + 10000,
-            })
 
             return false
           }

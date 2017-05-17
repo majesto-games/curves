@@ -10,6 +10,7 @@ interface GlobalConfigValues {
   FATNESS_BASE: number
   POWERUP_CHANCE_BASE: number
   POWERUP_CHANCE_INCREASE: number
+  POWERUP_ACTIVE_DURATION: number
   ROUND_START_DELAY: number
 }
 
@@ -26,7 +27,7 @@ type ConfigurableValue<T> = keyof T
 
 const TICK_RATE = 64
 
-const SHAPE_VERSION = 2
+const SHAPE_VERSION = 3
 const SHAPE: Configurable<GlobalConfigValues> = {
   TICK_RATE: [6, 64, 300],
   SKIP_TAIL_FATNESS_MULTIPLIER: [0.003, 0.03, 0.3],
@@ -37,6 +38,7 @@ const SHAPE: Configurable<GlobalConfigValues> = {
   FATNESS_BASE: [0.5, 5, 50],
   POWERUP_CHANCE_BASE: [0.0032, 0.032, 64],
   POWERUP_CHANCE_INCREASE: [0.000064, 0.00064, 0.1],
+  POWERUP_ACTIVE_DURATION: [0, 7, 20],
   ROUND_START_DELAY: [0, 4000, 10000],
 }
 
@@ -107,6 +109,7 @@ export function initGlobalConfig() {
       case "POWERUP_CHANCE_BASE":
       case "POWERUP_CHANCE_INCREASE":
         return window.Globals.VALUES[key] / window.Globals.VALUES.TICK_RATE
+      case "POWERUP_ACTIVE_DURATION":
       case "SKIP_TAIL_FATNESS_MULTIPLIER":
         return window.Globals.VALUES[key] * window.Globals.VALUES.TICK_RATE
       default:
