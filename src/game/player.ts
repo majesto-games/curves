@@ -197,11 +197,13 @@ export class Snake {
   }
 
   public tick() {
-    let r = Math.random()
-    let pol: number[] | undefined
-
     this.fatnessAnimation.tick()
     this.speedAnimation.tick()
+  }
+
+  public createTailPolygon() {
+    let r = Math.random()
+    let pol: number[] | undefined
 
     if (this.ghost > 0) {
       this.lastEnd = null

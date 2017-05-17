@@ -331,8 +331,9 @@ export class Server {
         this.moveTick(player.snake!)
         this.wrapEdge(player.snake!)
 
+        player.snake!.tick()
         // Create tail polygon, this returns undefined if it's supposed to be a hole
-        const p = player.snake!.tick()
+        const p = player.snake!.createTailPolygon()
 
         let tailAction: Tail | Gap = { type: GAP }
 
