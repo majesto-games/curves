@@ -21,6 +21,7 @@ declare global {
     UserConfig: UserConfig
   }
 }
+/* tslint:enable: no-namespace */
 
 function JsonSafeParse<T>(s: string | null | undefined, onFail: any): T {
   if (s != null) {

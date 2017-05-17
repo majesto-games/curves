@@ -293,11 +293,11 @@ export class Client {
         return
       }
 
-      if (pressedKeys[keys.left]) {
+      if (pressedKeys[keys.left] || window.PhoneControls.left) {
         this.rotateLeft(p.id)
       }
 
-      if (pressedKeys[keys.right]) {
+      if (pressedKeys[keys.right] || window.PhoneControls.right) {
         this.rotateRight(p.id)
       }
     })

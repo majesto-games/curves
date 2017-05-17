@@ -42,6 +42,21 @@ body {
   display: inline-block;
 }
 
+.Game .GameContainer .PhoneControls {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  z-index: 11;
+}
+
+.Game .GameContainer .PhoneControls div {
+  height: 100%;
+  width: 50%;
+}
+
 @media only screen and (min-width: 1000px) {
   /*.Game .GameContainer {
     padding-right: 25%;

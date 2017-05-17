@@ -16,6 +16,43 @@ interface RunningGameProps {
   overlay: string | undefined
 }
 
+/* tslint:disable: no-namespace */
+declare global {
+  interface Window {
+    PhoneControls: { left: boolean, right: boolean }
+  }
+}
+/* tslint:enable: no-namespace */
+window.PhoneControls = { left: false, right: false }
+
+class PhoneControls extends React.Component<void, void> {
+
+  public constructor(props: void) {
+    super(props)
+  }
+
+  public render() {
+    return (
+      <div className="PhoneControls" onContextMenu={(e) => e.preventDefault()}>
+        <div
+          onTouchStart={(e) => this.onTouchStart(e, "left")}
+          onTouchEnd={(e) => this.onTouchEnd(e, "left")} />
+        <div
+          onTouchStart={(e) => this.onTouchStart(e, "right")}
+          onTouchEnd={(e) => this.onTouchEnd(e, "right")} />
+      </div>
+    )
+  }
+
+  private onTouchStart = (e: React.TouchEvent<HTMLElement>, direction: "left" | "right") => {
+    window.PhoneControls[direction] = true
+  }
+
+  private onTouchEnd = (e: React.TouchEvent<HTMLElement>, direction: "left" | "right") => {
+    window.PhoneControls[direction] = false
+  }
+}
+
 class RunningGame extends React.Component<RunningGameProps, void> {
   public render() {
     const {
@@ -31,6 +68,7 @@ class RunningGame extends React.Component<RunningGameProps, void> {
           <h1 key={id} style={{ color: colors[i] }}>Player {id}: {score}</h1>)}
         </div>
         <div className="col-md-6 GameContainer" id="GameContainer">
+          <PhoneControls />
           <Overlay text={overlay} />
           <Canvas view={view} />
         </div>
