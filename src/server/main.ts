@@ -408,6 +408,12 @@ export class Server {
                 }
                 break
               }
+              case "REVERSE_THEM": {
+                this.players
+                  .filter(p => player.id !== p.id)
+                  .forEach(p => p.snake!.reversify())
+                break
+              }
               default:
                 never("Picked up unknown powerup", powerup.type)
             }

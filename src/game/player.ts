@@ -19,6 +19,7 @@ export type PowerupType
   | "SPEEDDOWN_THEM"
   | "SWAP_ME"
   | "SWAP_THEM"
+  | "REVERSE_THEM"
 
 export interface Powerup {
   type: PowerupType
@@ -130,6 +131,7 @@ export class Snake {
   private skipTailTicker: number
   private tailId: number
   private ghost: boolean
+  private reversed: boolean
 
   private fatnessAnimation: Animation<AnimationProgress<number>>
   private fatnessProgress: PowerupProgress[] = []
@@ -137,6 +139,8 @@ export class Snake {
   private speedProgress: PowerupProgress[] = []
   private ghostAnimation: Animation<AnimationProgress<undefined>>
   private ghostProgress: PowerupProgress[] = []
+  private reversedAnimation: Animation<AnimationProgress<undefined>>
+  private reversedProgress: PowerupProgress[] = []
 
   constructor(
     startPoint: Point,
@@ -156,6 +160,7 @@ export class Snake {
     this.tailId = 0
     this.skipTailTicker = 0
     this.ghost = false
+    this.reversed = false
     this.alive = true
 
     this.fatnessAnimation = new Animation<AnimationProgress<number>>(values => {
@@ -180,9 +185,22 @@ export class Snake {
       }
     })
 
+    this.reversedAnimation = new Animation<AnimationProgress<undefined>>(values => {
+      if (values.length > 0) {
+        this.reversed = true
+        this.reversedProgress = [values[values.length - 1]]
+      } else {
+        this.reversed = false
+        this.reversedProgress = []
+      }
+    })
   }
 
   public rotate = (amount: number) => {
+    if (this.reversed) {
+      amount = -amount
+    }
+
     this.rotation = (this.rotation + amount) % (2 * Math.PI)
   }
 
@@ -260,6 +278,15 @@ export class Snake {
     })
   }
 
+  public reversify(powerup: Powerup) {
+    const duration = window.getGlobal("POWERUP_ACTIVE_DURATION")
+    this.reversedAnimation.add(duration, (step, left) => ({
+      progress: step / duration,
+      order: powerup.id,
+      value: undefined,
+    }))
+  }
+
   public swapWith(snake: Snake) {
     const snakeX = snake.x
     const snakeY = snake.y
@@ -272,6 +299,7 @@ export class Snake {
     this.fatnessAnimation.tick()
     this.speedAnimation.tick()
     this.ghostAnimation.tick()
+    this.reversedAnimation.tick()
     this.updatePowerupProgress()
   }
 
