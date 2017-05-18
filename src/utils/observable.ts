@@ -18,9 +18,13 @@ export class Observable<E> extends SimpleEvent<E> {
     super()
   }
 
-  public set(value: E) {
+  public send(value: E) {
     this.value = value
     super.send(value)
+  }
+
+  public set(value: E) {
+    this.send(value)
   }
 }
 

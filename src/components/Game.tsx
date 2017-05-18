@@ -194,7 +194,7 @@ export default class GameContainer extends React.Component<GameContainerProps, G
   private readState = () => {
     const client = this.client!
     this.setState((prevState, props) => ({
-      scores: client.game.scores,
+      scores: client.scores.value,
       colors: client.game.colors,
       state: client.state,
     }))
@@ -218,7 +218,6 @@ export default class GameContainer extends React.Component<GameContainerProps, G
         case GameEvent.END: {
           this.client = undefined
           this.setState({
-            scores: [],
             colors: [],
             state: ClientState.CLOSED,
           })
@@ -227,7 +226,6 @@ export default class GameContainer extends React.Component<GameContainerProps, G
         case GameEvent.ROUND_END:
         case GameEvent.START: {
           this.setState((prevState, props) => ({
-            scores: client.game.scores,
             colors: client.game.colors,
             state: client.state,
           }))
@@ -245,6 +243,7 @@ export default class GameContainer extends React.Component<GameContainerProps, G
 
     client.lobby.subscribe(lobby => this.setState({ lobby }))
     client.game.overlay.subscribe(overlay => this.setState({ overlay }))
+    client.scores.subscribe(scores => this.setState({ scores }))
 
     this.client = client
     this.localPlayers = 1

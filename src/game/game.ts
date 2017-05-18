@@ -55,7 +55,6 @@ enum RoundState {
 const ratio = SERVER_WIDTH / SERVER_HEIGHT
 
 export class Game {
-  public scores: Score[] = []
   public colors: string[] = []
   public overlay = new Observable<string | undefined>("")
   public onDraw = new SimpleEvent<undefined>()
@@ -141,7 +140,6 @@ export class Game {
     this.drawPlayers()
 
     this.roundStartsAt = Date.now() + delay
-    this.scores = this.snakes.map(({ id }) => ({ id, score: 0 }))
     this.roundState = RoundState.PRE
   }
 
@@ -154,8 +152,7 @@ export class Game {
       }
   }
 
-  public roundEnd(scores: Score[], winner: Player) {
-    this.scores = scores
+  public roundEnd(winner: Player) {
     // TODO: so so hacky yes yes
     this.setOverlay(`Winner this round: Player ${winner.id}`)
     this.roundState = RoundState.POST

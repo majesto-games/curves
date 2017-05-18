@@ -67,6 +67,7 @@ export class Client {
   public players: (Player | undefined)[] = []
   public game = new Game()
   public lobby = new Observable<Lobby>({ players: [] })
+  public scores =  new Observable<Score[]>([])
   public state = new Observable<ClientState>(ClientState.UNCONNECTED)
   private currentRound: RoundState
   private localIndex = 0
@@ -201,6 +202,8 @@ export class Client {
       const newPlayer = this.createPlayer(player.name, player.color, player.owner === this.connection.id, player.id)
       this.players[player.id] = newPlayer
     }
+
+    this.scores.set(players.map(({ id }) => ({ id, score: 0 })))
   }
 
   private round = (snakeInits: SnakeInit[], delay: number) => {
@@ -237,7 +240,8 @@ export class Client {
   }
 
   private roundEnd = (scores: Score[], winner: number) => {
-    this.game.roundEnd(scores, this.playerById(winner)!)
+    this.scores.set(scores)
+    this.game.roundEnd(this.playerById(winner)!)
   }
 
   private rotateLeft = (id: number) => {
