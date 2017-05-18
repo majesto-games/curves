@@ -1,5 +1,6 @@
 import { getColors } from "game/util"
 import { frequency, shuffle } from "utils/array"
+import never from "utils/never"
 import { Point, Player, Snake, Powerup, ActivePowerup, PowerupType } from "game/player"
 import { containsPoint, ServerTail, TailStorage } from "game/tail"
 import {
@@ -45,10 +46,6 @@ function fastDistance(x1: number, y1: number, x2: number, y2: number) {
 
 function rotationSpeed(fatness: number) {
   return window.getGlobal("ROTATION_SPEED") / (10 + fatness) - 0.02
-}
-
-function failedToHandle(x: never): never {
-  throw new Error(`Server didn't handle ${x}`)
 }
 
 class RoundState {
@@ -99,7 +96,7 @@ export class Server {
         break
       }
       default:
-        failedToHandle(action)
+        never("Server didn't handle", action)
     }
   }
 

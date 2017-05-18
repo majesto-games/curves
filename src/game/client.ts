@@ -40,6 +40,7 @@ import pressedKeys, { KEYS, registerKeys } from "./keys"
 
 import { Game } from "./game"
 import { Observable } from "utils/observable"
+import never from "utils/never"
 
 let keyCombos: { left: KEYS, right: KEYS }[] = []
 
@@ -59,10 +60,6 @@ export enum ClientState {
   LOBBY,
   GAME,
   CLOSED,
-}
-
-function failedToHandle(x: never): never {
-  throw new Error(`Client didn't handle ${x}`)
 }
 
 export class Client {
@@ -135,7 +132,7 @@ export class Client {
         break
       }
       default:
-        failedToHandle(action)
+        never("Client didn't handle", action)
     }
   }
 

@@ -59,6 +59,7 @@ export class Game {
   public colors: string[] = []
   public overlay = new Observable<string | undefined>("")
   public onDraw = new SimpleEvent<undefined>()
+  public event = new SimpleEvent<GameEvent>()
   public roundState = RoundState.PRE
   private readonly container = new Container()
   private readonly playerLayer = new Graphics()
@@ -98,16 +99,9 @@ export class Game {
     this.paint()
 
     setTimeout(() => {
-      this.sendEvent(GameEvent.END)
+      this.event.send(GameEvent.END)
       this.close()
     }, 3000)
-  }
-
-  public onEvent = (f: (e: GameEvent) => void) => {
-    this.eventListeners.push(f)
-
-    return () =>
-      this.eventListeners = this.eventListeners.filter(g => g !== f)
   }
 
   public getView() {
@@ -156,7 +150,7 @@ export class Game {
         this.roundState = RoundState.IN
         this.removeOverlay()
         this.keysLayer.removeChildren()
-        this.sendEvent(GameEvent.START)
+        this.event.send(GameEvent.START)
       }
   }
 
@@ -165,7 +159,7 @@ export class Game {
     // TODO: so so hacky yes yes
     this.setOverlay(`Winner this round: Player ${winner.id}`)
     this.roundState = RoundState.POST
-    this.sendEvent(GameEvent.ROUND_END)
+    this.event.send(GameEvent.ROUND_END)
   }
 
   public addTail({ graphics }: ClientTail) {
@@ -294,10 +288,5 @@ export class Game {
     }
 
     this.repaint(this.draw)
-  }
-
-  // TODO: Give data a type
-  private sendEvent(e: GameEvent, data?: any) {
-    this.eventListeners.forEach(f => f(e, data))
   }
 }

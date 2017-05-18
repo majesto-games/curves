@@ -7,6 +7,7 @@ import { connect } from "game/room"
 import Overlay from "components/Overlay"
 import { ClientState, Client } from "game/client"
 import { hexToString } from "game/util"
+import never from "utils/never"
 
 interface RunningGameProps {
   view: HTMLCanvasElement
@@ -120,10 +121,6 @@ Scenarios:
 
 */
 
-function failedToHandle(x: never): never {
-  throw new Error(`GameContainer didn't handle ${x}`)
-}
-
 export default class GameContainer extends React.Component<GameContainerProps, GameContainerState> {
   public state: GameContainerState = {
     scores: [],
@@ -216,7 +213,7 @@ export default class GameContainer extends React.Component<GameContainerProps, G
 
   private getRoom = (roomName: string) => {
     const client = connect(roomName)
-    client.game.onEvent((e, data?: any) => {
+    client.game.event.subscribe(e => {
       switch (e) {
         case GameEvent.END: {
           this.client = undefined
@@ -237,7 +234,7 @@ export default class GameContainer extends React.Component<GameContainerProps, G
           break
         }
         default:
-          failedToHandle(e)
+          never("GameContainer didn't handle", e)
       }
     })
     client.state.subscribe(state => {

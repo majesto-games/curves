@@ -1,5 +1,6 @@
 import * as React from "react"
 import { KEYS, registerKeys } from "game/keys"
+import never from "utils/never"
 
 export interface PlayerKeys {
   left: KEYS
@@ -49,10 +50,6 @@ function readState(): UserConfig {
 function writeState(state: UserConfig) {
   localStorage.setItem("userConfig", JSON.stringify(state))
   window.UserConfig = state
-}
-
-function failedToHandle(x: never): never {
-  throw new Error(`Unexpected global value requested: ${x}`)
 }
 
 export function initUserConfig() {

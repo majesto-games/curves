@@ -1,4 +1,5 @@
 import * as React from "react"
+import never from "utils/never"
 
 interface GlobalConfigValues {
   TICK_RATE: number
@@ -90,10 +91,6 @@ function writeState(state: GlobalConfig) {
   window.Globals = state
 }
 
-function failedToHandle(x: never): never {
-  throw new Error(`Unexpected global value requested: ${x}`)
-}
-
 export function initGlobalConfig() {
   writeState(readState())
   window.getGlobal = (key) => {
@@ -113,7 +110,7 @@ export function initGlobalConfig() {
       case "SKIP_TAIL_FATNESS_MULTIPLIER":
         return window.Globals.VALUES[key] * window.Globals.VALUES.TICK_RATE
       default:
-        return failedToHandle(key)
+        return never("Unexpected global value requested:", key)
     }
   }
 }
