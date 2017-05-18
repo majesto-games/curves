@@ -28,6 +28,14 @@ export class Observable<E> extends SimpleEvent<E> {
   }
 }
 
+export class Signal<E> extends Observable<E> {
+  public send(value: E) {
+    if (value !== this.value) {
+      super.send(value)
+    }
+  }
+}
+
 export class DataEvent<E, D> {
   private listeners: ((event: E, data: D) => void)[] = []
 

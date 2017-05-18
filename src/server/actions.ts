@@ -49,16 +49,18 @@ export const ROTATE: "ROTATE" = "ROTATE"
 export interface Rotate extends Action {
   type: "ROTATE"
   payload: {
-    direction: number
+    direction: number,
+    value: boolean,
     index: number,
   }
 }
 
-export function rotate(direction: number, index: number): Rotate {
+export function rotate(direction: number, value: boolean, index: number): Rotate {
   return {
     type: ROTATE,
     payload: {
       direction,
+      value,
       index,
     },
   }

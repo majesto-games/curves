@@ -9,7 +9,7 @@ import {
   ObservablePoint,
   Text,
 } from "pixi.js"
-import { Point, Player, Snake, Powerup, PowerupType } from "./player"
+import { Point, ClientPlayer, Snake, Powerup, PowerupType } from "./player"
 import { ClientTail, TailStorage } from "./tail"
 import {
   PlayerUpdate,
@@ -88,7 +88,7 @@ export class Game {
     this.draw()
   }
 
-  public end(player?: Player) {
+  public end(player?: ClientPlayer) {
     if (player != null) {
       this.setOverlay(`Winner: Player ${player.id}`)
     } else {
@@ -152,7 +152,7 @@ export class Game {
       }
   }
 
-  public roundEnd(winner: Player) {
+  public roundEnd(winner: ClientPlayer) {
     // TODO: so so hacky yes yes
     this.setOverlay(`Winner this round: Player ${winner.id}`)
     this.roundState = RoundState.POST

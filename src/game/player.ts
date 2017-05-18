@@ -2,6 +2,8 @@ import { Tail, TailPart, NotRemoved } from "./tail"
 
 import { Animation } from "utils/animation"
 import { linear } from "tween-functions"
+import { ConnectionId } from "server/connections"
+import { Signal } from "utils/observable"
 
 export interface Point {
   x: number
@@ -60,14 +62,36 @@ function createPolygon(point1: Point, point2: Point, thickness1: number, thickne
   ]
 }
 
-export class Player {
+export interface Player {
+  name: string
+  id: number
+  color: number
+}
+
+export class ServerPlayer {
+  public steeringLeft = false
+  public steeringRight = false
   constructor(
-    public snake: Snake | undefined,
     public name: string,
     public id: number,
     public color: number,
-    public localIndex?: number,
-    public owner?: any,
+    public owner: ConnectionId,
+    public snake?: Snake,
+  ) {
+
+  }
+}
+
+export class ClientPlayer {
+  public steeringLeft = new Signal<boolean>(false)
+  public steeringRight = new Signal<boolean>(false)
+
+  constructor(
+    public name: string,
+    public id: number,
+    public color: number,
+    public localIndex: number | undefined,
+    public snake?: Snake,
   ) {
 
   }

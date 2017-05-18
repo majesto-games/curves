@@ -1,4 +1,4 @@
-import { Point, Player, Snake, Powerup } from "./player"
+import { Point, ClientPlayer, Snake, Powerup } from "./player"
 import { ClientTail, TailStorage } from "./tail"
 import {
   ServerConnection,
@@ -64,7 +64,7 @@ export enum ClientState {
 
 export class Client {
   // TODO: Join players, lobby, and game.colors
-  public players: (Player | undefined)[] = []
+  public players: (ClientPlayer | undefined)[] = []
   public game = new Game()
   public lobby = new Observable<Lobby>({ players: [] })
   public scores =  new Observable<Score[]>([])
@@ -168,7 +168,16 @@ export class Client {
       localIndex = this.localIndex++
     }
 
-    const player = new Player(undefined, name, id, color, localIndex)
+    const player = new ClientPlayer(name, id, color, localIndex)
+
+    if (isOwner) {
+      player.steeringLeft.subscribe(value => {
+        this.connection(rotate(LEFT, value, id))
+      })
+      player.steeringRight.subscribe(value => {
+        this.connection(rotate(RIGHT, value, id))
+      })
+    }
 
     return player
   }
@@ -220,7 +229,7 @@ export class Client {
       player.snake!.graphics = graphics
     })
 
-    const players: Player[] = this.players.filter(p => p != null) as Player[]
+    const players: ClientPlayer[] = this.players.filter(p => p != null) as ClientPlayer[]
 
     players.forEach(player => {
       this.currentRound.tails.initPlayer(player.snake!)
@@ -243,15 +252,7 @@ export class Client {
     this.game.roundEnd(this.playerById(winner)!)
   }
 
-  private rotateLeft = (id: number) => {
-    this.connection(rotate(LEFT, id))
-  }
-
-  private rotateRight = (id: number) => {
-    this.connection(rotate(RIGHT, id))
-  }
-
-  private playerById(id: number): Player | undefined {
+  private playerById(id: number): ClientPlayer | undefined {
     return this.players.find(p => p != null && p.id === id)
   }
 
@@ -293,13 +294,8 @@ export class Client {
         return
       }
 
-      if (pressedKeys[keys.left] || window.PhoneControls.left) {
-        this.rotateLeft(p.id)
-      }
-
-      if (pressedKeys[keys.right] || window.PhoneControls.right) {
-        this.rotateRight(p.id)
-      }
+      p.steeringLeft.set(pressedKeys[keys.left] || window.PhoneControls.left)
+      p.steeringRight.set(pressedKeys[keys.right] || window.PhoneControls.right)
     })
   }
 }

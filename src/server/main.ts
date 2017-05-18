@@ -1,7 +1,7 @@
 import { getColors } from "game/util"
 import { frequency, shuffle } from "utils/array"
 import never from "utils/never"
-import { Point, Player, Snake, Powerup, ActivePowerup, PowerupType } from "game/player"
+import { Point, ServerPlayer, Snake, Powerup, ActivePowerup, PowerupType } from "game/player"
 import { containsPoint, ServerTail, TailStorage } from "game/tail"
 import {
   PlayerUpdate,
@@ -51,7 +51,7 @@ function rotationSpeed(fatness: number) {
 class RoundState {
   public tails = new TailStorage(() => new ServerTail())
   public placedPowerups: Powerup[] = []
-  public losers: Player[] = []
+  public losers: ServerPlayer[] = []
   public nextPowerupId = 0
   public powerupChance = window.getGlobal("POWERUP_CHANCE_BASE")
   public lastUpdate: number
@@ -59,7 +59,7 @@ class RoundState {
 }
 
 export class Server {
-  public players: Player[] = []
+  public players: ServerPlayer[] = []
   private playerInits: AlmostPlayerInit[] = []
   // TODO: playerInits and these sentActions should not be like this
   private sentActions: ClientAction[] = []
@@ -88,11 +88,16 @@ export class Server {
       }
       case ROTATE: {
         const { payload } = action
-        if (payload.direction === LEFT) {
-          this.rotateLeft(payload.index, connectionId)
-        } else {
-          this.rotateRight(payload.index, connectionId)
+        const player = this.playerById(payload.index)
+        if (player != null && player.owner === connectionId) {
+          if (payload.direction === LEFT) {
+            player.steeringLeft = payload.value
+          } else {
+            player.steeringRight = payload.value
+          }
+
         }
+
         break
       }
       default:
@@ -124,7 +129,7 @@ export class Server {
     const color = this.colors.pop() as number
 
     const playerInit: AlmostPlayerInit = { name, color, connectionId, id }
-    const player = new Player(undefined, name, id, color, undefined, connectionId)
+    const player = new ServerPlayer(name, id, color, connectionId)
     console.log("Added player with connection id:", connectionId)
 
     this.playerInits.push(playerInit)
@@ -157,20 +162,6 @@ export class Server {
     this.startRound()
   }
 
-  private rotateLeft(id: number, connectionId: ConnectionId) {
-    const player = this.playerById(id)
-    if (player != null && player.owner === connectionId) {
-      player.snake!.rotate(-rotationSpeed(player.snake!.fatness))
-    }
-  }
-
-  private rotateRight(id: number, connectionId: ConnectionId) {
-    const player = this.playerById(id)
-    if (player != null && player.owner === connectionId) {
-      player.snake!.rotate(rotationSpeed(player.snake!.fatness))
-    }
-  }
-
   private send(actions: ClientAction[]) {
     this.round.sentActions.push(...actions)
     this.clientConnections.forEach(c => {
@@ -183,8 +174,18 @@ export class Server {
     this.paused = true
   }
 
-  private playerById(id: number): Player | undefined {
+  private playerById(id: number): ServerPlayer | undefined {
     return this.players.find(p => p.id === id)
+  }
+
+  private rotateTick(player: ServerPlayer) {
+    const rotSpeed = rotationSpeed(player.snake!.fatness)
+    if (player.steeringLeft) {
+      player.snake!.rotate(-rotSpeed)
+    }
+    if (player.steeringRight) {
+      player.snake!.rotate(rotSpeed)
+    }
   }
 
   private moveTick(player: Snake) {
@@ -324,7 +325,7 @@ export class Server {
       const collidedPowerups: Powerup[] = []
 
       for (let player of playersAlive) {
-
+        this.rotateTick(player)
         this.moveTick(player.snake!)
         this.wrapEdge(player.snake!)
 

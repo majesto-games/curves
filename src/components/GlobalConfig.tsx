@@ -28,11 +28,11 @@ type ConfigurableValue<T> = keyof T
 
 const TICK_RATE = 64
 
-const SHAPE_VERSION = 3
+const SHAPE_VERSION = 4
 const SHAPE: Configurable<GlobalConfigValues> = {
   TICK_RATE: [6, 64, 300],
   SKIP_TAIL_FATNESS_MULTIPLIER: [0.003, 0.03, 0.3],
-  ROTATION_SPEED: [0.1, 1, 10],
+  ROTATION_SPEED: [0.64, 64, 640], // rotation speed is divided by fatness so it needs to be high
   MOVE_SPEED_BASE: [10, 100, 300],
   HOLE_CHANCE_BASE: [-0.2, -0.002, 1],
   HOLE_CHANCE_INCREASE: [0, 0.0018, 0.018],
@@ -96,7 +96,6 @@ export function initGlobalConfig() {
   window.getGlobal = (key) => {
     switch (key) {
       case "TICK_RATE":
-      case "ROTATION_SPEED":
       case "FATNESS_BASE":
       case "ROUND_START_DELAY":
         return window.Globals.VALUES[key]
@@ -105,6 +104,7 @@ export function initGlobalConfig() {
       case "HOLE_CHANCE_INCREASE":
       case "POWERUP_CHANCE_BASE":
       case "POWERUP_CHANCE_INCREASE":
+      case "ROTATION_SPEED":
         return window.Globals.VALUES[key] / window.Globals.VALUES.TICK_RATE
       case "POWERUP_ACTIVE_DURATION":
       case "SKIP_TAIL_FATNESS_MULTIPLIER":
