@@ -267,8 +267,8 @@ export class Server {
       const y = Math.round(Math.random() * SERVER_HEIGHT)
 
       const powerupType = frequency<PowerupType>([
+        [1, "GHOST"],
         [0.4, "UPSIZE"],
-        [0.2, "GHOST"],
         [0.1, "SPEEDUP_ME"],
         [0.1, "SPEEDUP_THEM"],
         [0.1, "SPEEDDOWN_ME"],

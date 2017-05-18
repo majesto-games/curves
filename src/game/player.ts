@@ -90,10 +90,11 @@ export class Snake {
   private tailTicker: number
   private skipTailTicker: number
   private tailId: number
-  private ghost: number
+  private ghost: boolean
 
   private fatnessAnimation: Animation
   private speedAnimation: Animation
+  private ghostAnimation: Animation
 
   constructor(
     startPoint: Point,
@@ -112,18 +113,21 @@ export class Snake {
     this.speed = window.getGlobal("MOVE_SPEED_BASE")
     this.tailId = 0
     this.skipTailTicker = 0
-    this.ghost = 0
+    this.ghost = false
     this.alive = true
 
     this.fatnessAnimation = new Animation(values => {
-        const sum = values.reduce((prev, curr) => prev + curr, window.getGlobal("FATNESS_BASE"))
-        this.fatness = sum
-      })
+      const sum = values.reduce((prev, curr) => prev + curr, window.getGlobal("FATNESS_BASE"))
+      this.fatness = sum
+    })
 
     this.speedAnimation = new Animation(values => {
-        const sum = values.reduce((prev, curr) => prev + curr, window.getGlobal("MOVE_SPEED_BASE"))
-        this.speed = Math.max(sum, window.getGlobal("MOVE_SPEED_BASE") - 1)
-      })
+      const sum = values.reduce((prev, curr) => prev + curr, window.getGlobal("MOVE_SPEED_BASE"))
+      this.speed = Math.max(sum, window.getGlobal("MOVE_SPEED_BASE") - 1)
+    })
+
+    this.ghostAnimation = new Animation(values =>
+      this.ghost = values.length > 0)
   }
 
   public rotate = (amount: number) => {
@@ -131,12 +135,9 @@ export class Snake {
   }
 
   public ghostify() {
+    const duration = window.getGlobal("POWERUP_ACTIVE_DURATION")
     this.stopTail()
-    this.ghost++
-  }
-
-  public unghostify() {
-    this.ghost--
+    this.ghostAnimation.add(duration, () => 1)
   }
 
   public speeddown() {
@@ -198,13 +199,14 @@ export class Snake {
   public tick() {
     this.fatnessAnimation.tick()
     this.speedAnimation.tick()
+    this.ghostAnimation.tick()
   }
 
   public createTailPolygon() {
     let r = Math.random()
     let pol: number[] | undefined
 
-    if (this.ghost > 0) {
+    if (this.ghost) {
       this.lastEnd = null
     } else if (this.skipTailTicker <= 0) {
       if (r > this.holeChance) {
