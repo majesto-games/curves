@@ -122,7 +122,6 @@ export class Snake {
 
     this.speedAnimation = new Animation(values => {
         const sum = values.reduce((prev, curr) => prev + curr, window.getGlobal("MOVE_SPEED_BASE"))
-        console.log("speed", values, sum)
         this.speed = Math.max(sum, window.getGlobal("MOVE_SPEED_BASE") - 1)
       })
   }
