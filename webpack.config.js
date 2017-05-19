@@ -1,4 +1,5 @@
-const path = require('path')
+var path = require('path')
+var HtmlWebpackPlugin = require('html-webpack-plugin')
 
 module.exports = {
   resolve: {
@@ -24,5 +25,12 @@ module.exports = {
       { test: /\.json$/, loader: 'json-loader' }
     ]
   },
-  externals: ['ws']
+  externals: ['ws'],
+  plugins: [
+    new HtmlWebpackPlugin({
+      template: './src/index.html',
+      inject: 'body',
+      hash: true,
+    })
+  ]
 }
