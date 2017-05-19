@@ -243,7 +243,7 @@ export class Snake {
     const halfSecond = Math.floor(window.getGlobal("TICK_RATE") * 0.5)
 
     this.fatnessAnimation.add(duration, (step, left) => {
-      let value = 0.5
+      let value = 8
       if (step <= halfSecond) {
         value = linear(step, 0, 8, halfSecond)
       } else if (left <= halfSecond) {
