@@ -33,10 +33,53 @@ function getComponent(location: Location): JSX.Element {
   return <p>Error</p>
 }
 
+interface PreferencesState {
+  showPreferences: boolean
+}
+
+class Preferences extends React.Component<void, PreferencesState> {
+  public state: PreferencesState = {
+    showPreferences: true,
+  }
+
+  constructor(props: void) {
+    super(props)
+
+    window.addEventListener("keydown", (e: KeyboardEvent) => {
+      if (e.keyCode === 80 && e.altKey) { // Alt-P
+        e.preventDefault()
+        this.togglePreferences()
+      }
+    })
+  }
+
+  public render() {
+    return (
+      <div className="Preferences">
+        {this.state.showPreferences && <div className="GlobalConfig">
+          <h1>Preferences</h1>
+          <GlobalConfig />
+        </div>}
+        {this.state.showPreferences && <div className="UserConfig">
+          <h1>Controls</h1>
+          <UserConfig />
+        </div>}
+      </div>
+    )
+  }
+
+  private togglePreferences = () => {
+    this.setState({ showPreferences: !this.state.showPreferences })
+  }
+}
+
 function render(location: Location) {
 
   ReactDOM.render(
-    getComponent(location),
+    <div>
+      <Preferences />
+      {getComponent(location)}
+    </div>,
     document.getElementById("content") as HTMLElement,
   )
 }
