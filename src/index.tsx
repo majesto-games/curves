@@ -55,16 +55,16 @@ class Preferences extends React.Component<void, PreferencesState> {
 
   public render() {
     return (
-      <div className="Preferences">
-        {this.state.showPreferences && <div className="GlobalConfig">
+      this.state.showPreferences ? <div className="Preferences">
+        <div className="GlobalConfig">
           <h1>Preferences</h1>
           <GlobalConfig />
-        </div>}
-        {this.state.showPreferences && <div className="UserConfig">
+        </div>
+        <div className="UserConfig">
           <h1>Controls</h1>
           <UserConfig />
-        </div>}
-      </div>
+        </div>
+      </div> : null
     )
   }
 
