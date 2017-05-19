@@ -1,21 +1,21 @@
 
-type TweenF = (step: number, stepsLeft: number) => number
+type TweenF<T> = (step: number, stepsLeft: number) => T
 
-interface Tween {
+interface Tween<T> {
   readonly start: number
   readonly end: number
-  readonly f: TweenF
+  readonly f: TweenF<T>
 }
 
-export class Animation {
-  private tweens: Tween[] = []
+export class Animation<T> {
+  private tweens: Tween<T>[] = []
   private currentTick = 0
 
-  constructor(private reducer: (values: number[]) => void) {
+  constructor(private reducer: (values: T[]) => void) {
 
   }
 
-  public add(duration: number, f: TweenF) {
+  public add(duration: number, f: TweenF<T>) {
     this.tweens.push({
       start: this.currentTick,
       end: this.currentTick + duration,

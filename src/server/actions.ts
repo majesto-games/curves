@@ -117,7 +117,7 @@ export interface PlayerUpdate {
   tail: Tail | Gap
   fatness: number
   id: number
-  powerupProgress: { [powerupId: number]: number }
+  powerupProgress: number[]
 }
 export const UPDATE_PLAYERS: "UPDATE_PLAYERS" = "UPDATE_PLAYERS"
 export interface UpdatePlayers extends Action {

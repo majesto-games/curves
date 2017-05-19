@@ -119,6 +119,7 @@ export class Game {
 
     for (let snake of snakes) {
       this.playerLayer.addChild(snake.graphics)
+      this.playerLayer.addChild(snake.powerupGraphics)
       const keysAndColor = getKeyTextAndColor(snake)
       if (keysAndColor != null) {
         const [left, right, color] = keysAndColor
@@ -145,11 +146,11 @@ export class Game {
 
   public inRound() {
     if (this.roundState !== RoundState.IN) {
-        this.roundState = RoundState.IN
-        this.removeOverlay()
-        this.keysLayer.removeChildren()
-        this.event.send(GameEvent.START)
-      }
+      this.roundState = RoundState.IN
+      this.removeOverlay()
+      this.keysLayer.removeChildren()
+      this.event.send(GameEvent.START)
+    }
   }
 
   public roundEnd(winner: ClientPlayer) {
@@ -184,10 +185,10 @@ export class Game {
 
     const snake = this.snakes.find(s => s.id === snakeId)!
 
-    const graphics = new Graphics()
+    // const graphics = new Graphics()
 
-    snake.graphics.addChild(graphics)
-    snake.powerupGraphics[powerupId] = graphics
+    // snake.graphics.addChild(graphics)
+    // snake.powerupGraphics[powerupId] = graphics
   }
 
   public close() {
@@ -263,28 +264,25 @@ export class Game {
   private updateSnakeGraphics({ graphics, x, y, fatness, powerupProgress, powerupGraphics }: Snake) {
     graphics.position.set(x, y)
     graphics.scale.set(fatness, fatness)
-    let i = 0
-    for (let p in powerupProgress) {
-      if (powerupProgress.hasOwnProperty(p)) {
-        const progress = powerupProgress[p]
-        if (powerupGraphics.hasOwnProperty(p)) {
-          const powerup = powerupGraphics[p]
+    powerupGraphics.clear()
+    powerupGraphics.position.set(x, y)
+    let i = 1
+    for (let progress of powerupProgress) {
+      powerupGraphics.beginFill(0x000000, 0)
+      const lineWidth = 5
+      powerupGraphics.lineStyle(lineWidth, 0xffffff)
 
-          // console.log(progress)
+      const r = fatness + (lineWidth * i)
+      i += 1.5
+      const startAngle = -graphics.rotation - Math.PI / 2
+      const endAngle = -graphics.rotation - Math.PI / 2 + Math.PI * 2 - Math.PI * 2 * progress % (Math.PI * 2)
+      const startX = Math.cos(startAngle) * r
+      const startY = Math.sin(startAngle) * r
 
-          if (progress > 0.97) {
-            graphics.removeChild(powerup)
-          } else {
-            powerup.clear()
-            powerup.beginFill(0x000000, 0)
-            powerup.lineStyle(1, 0xffffff)
-            powerup.arc(0, 0, 2 + 1.5 * i++, -graphics.rotation - Math.PI / 2,
-              -graphics.rotation - Math.PI / 2 + Math.PI * 2 - Math.PI * 2 * progress % (Math.PI * 2))
-            powerup.endFill()
-          }
-        }
-      }
-      // if (powerupProgress.)
+      // Perform moveTo so that no line is drawn between arcs
+      powerupGraphics.moveTo(startX, startY)
+      powerupGraphics.arc(0, 0, r, startAngle, endAngle)
+      powerupGraphics.endFill()
     }
   }
 

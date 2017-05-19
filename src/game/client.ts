@@ -220,14 +220,16 @@ export class Client {
       const snake = new Snake(startPoint, rotation, id)
       const player = this.playerById(id)!
 
-      player.snake = snake
-
+      // TODO: don't draw graphics in here
       const graphics = new Graphics()
       graphics.beginFill(player.color)
       graphics.drawCircle(0, 0, 1)
       graphics.endFill()
+      snake.graphics = graphics
 
-      player.snake!.graphics = graphics
+      snake.powerupGraphics = new Graphics()
+
+      player.snake = snake
     })
 
     const players: ClientPlayer[] = this.players.filter(p => p != null) as ClientPlayer[]

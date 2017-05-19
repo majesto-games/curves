@@ -97,9 +97,21 @@ export class ClientPlayer {
   }
 }
 
+interface PowerupProgress {
+  order: number
+  progress: number
+}
+
+interface AnimationProgress<T> {
+  value: T
+  progress: number
+  order: number
+}
+
 export class Snake {
 
   public graphics: PIXI.Graphics
+  public powerupGraphics: PIXI.Graphics
   public fatness: number
   public alive: boolean
   public lastX: number
@@ -108,8 +120,7 @@ export class Snake {
   public lastEnd: any
   public x: number
   public y: number
-  public powerupProgress: { [powerupId: number]: number }
-  public powerupGraphics: { [powerupId: number]: PIXI.Graphics }
+  public powerupProgress: number[] = []
 
   private lfatness: number
   private holeChance: number
@@ -118,9 +129,12 @@ export class Snake {
   private tailId: number
   private ghost: boolean
 
-  private fatnessAnimation: Animation
-  private speedAnimation: Animation
-  private ghostAnimation: Animation
+  private fatnessAnimation: Animation<AnimationProgress<number>>
+  private fatnessProgress: PowerupProgress[] = []
+  private speedAnimation: Animation<AnimationProgress<number>>
+  private speedProgress: PowerupProgress[] = []
+  private ghostAnimation: Animation<AnimationProgress<undefined>>
+  private ghostProgress: PowerupProgress[] = []
 
   constructor(
     startPoint: Point,
@@ -141,21 +155,29 @@ export class Snake {
     this.skipTailTicker = 0
     this.ghost = false
     this.alive = true
-    this.powerupProgress = {}
-    this.powerupGraphics = {}
 
-    this.fatnessAnimation = new Animation(values => {
-      const sum = values.reduce((prev, curr) => prev + curr, window.getGlobal("FATNESS_BASE"))
+    this.fatnessAnimation = new Animation<AnimationProgress<number>>(values => {
+      const sum = values.reduce((prev, curr) => prev + curr.value, window.getGlobal("FATNESS_BASE"))
+      this.fatnessProgress = values
       this.fatness = sum
     })
 
-    this.speedAnimation = new Animation(values => {
-      const sum = values.reduce((prev, curr) => prev + curr, window.getGlobal("MOVE_SPEED_BASE"))
+    this.speedAnimation = new Animation<AnimationProgress<number>>(values => {
+      const sum = values.reduce((prev, curr) => prev + curr.value, window.getGlobal("MOVE_SPEED_BASE"))
+      this.speedProgress = values
       this.speed = Math.max(sum, window.getGlobal("MOVE_SPEED_BASE") - 1)
     })
 
-    this.ghostAnimation = new Animation(values =>
-      this.ghost = values.length > 0)
+    this.ghostAnimation = new Animation<AnimationProgress<undefined>>(values => {
+      if (values.length > 0) {
+        this.ghost = true
+        this.ghostProgress = [values[values.length - 1]]
+      } else {
+        this.ghost = false
+        this.ghostProgress = []
+      }
+    })
+
   }
 
   public rotate = (amount: number) => {
@@ -167,8 +189,11 @@ export class Snake {
     this.stopTail()
 
     this.ghostAnimation.add(duration, (step, left) => {
-      this.powerupProgress[powerup.id] = step / duration
-      return 1
+      return {
+        progress: step / duration,
+        order: powerup.id,
+        value: undefined,
+      }
     })
   }
 
@@ -177,14 +202,19 @@ export class Snake {
     const halfSecond = Math.floor(window.getGlobal("TICK_RATE") * 0.5)
 
     this.speedAnimation.add(duration, (step, left) => {
-      this.powerupProgress[powerup.id] = step / duration
+      let value = -0.5
 
       if (step <= halfSecond) {
-        return linear(step, 0, -0.5, halfSecond)
+        value = linear(step, 0, -0.5, halfSecond)
       } else if (left <= halfSecond) {
-        return linear(halfSecond - left, -0.5, 0, halfSecond)
+        value = linear(halfSecond - left, -0.5, 0, halfSecond)
       }
-      return -0.5
+
+      return {
+        progress: step / duration,
+        order: powerup.id,
+        value,
+      }
     })
   }
 
@@ -193,13 +223,18 @@ export class Snake {
     const halfSecond = Math.floor(window.getGlobal("TICK_RATE") * 0.5)
 
     this.speedAnimation.add(duration, (step, left) => {
-      this.powerupProgress[powerup.id] = step / duration
+      let value = 0.5
       if (step <= halfSecond) {
-        return linear(step, 0, 0.5, halfSecond)
+        value = linear(step, 0, 0.5, halfSecond)
       } else if (left <= halfSecond) {
-        return linear(halfSecond - left, 0.5, 0, halfSecond)
+        value = linear(halfSecond - left, 0.5, 0, halfSecond)
       }
-      return 0.5
+
+      return {
+        progress: step / duration,
+        order: powerup.id,
+        value,
+      }
     })
   }
 
@@ -208,13 +243,18 @@ export class Snake {
     const halfSecond = Math.floor(window.getGlobal("TICK_RATE") * 0.5)
 
     this.fatnessAnimation.add(duration, (step, left) => {
-      this.powerupProgress[powerup.id] = step / duration
+      let value = 0.5
       if (step <= halfSecond) {
-        return linear(step, 0, 8, halfSecond)
+        value = linear(step, 0, 8, halfSecond)
       } else if (left <= halfSecond) {
-        return linear(halfSecond - left, 8, 0, halfSecond)
+        value = linear(halfSecond - left, 8, 0, halfSecond)
       }
-      return 8
+
+      return {
+        progress: step / duration,
+        order: powerup.id,
+        value,
+      }
     })
   }
 
@@ -222,6 +262,7 @@ export class Snake {
     this.fatnessAnimation.tick()
     this.speedAnimation.tick()
     this.ghostAnimation.tick()
+    this.updatePowerupProgress()
   }
 
   public createTailPolygon() {
@@ -255,6 +296,12 @@ export class Snake {
     this.lfatness = this.fatness
 
     return pol && new TailPart(pol, this.id, this.tailId) as (TailPart & NotRemoved)
+  }
+
+  private updatePowerupProgress() {
+    const progress = this.speedProgress.concat(this.ghostProgress, this.fatnessProgress)
+    progress.sort((a, b) => a.order - b.order)
+    this.powerupProgress = progress.map(v => v.progress)
   }
 
   private stopTail() {
