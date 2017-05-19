@@ -74,6 +74,8 @@ class KeyChange extends React.Component<KeyChangeProps, void> {
         <input
           value={KEYS[this.props.value]}
           onKeyDown={this.handleKey}
+          readOnly
+          className="form-control"
           /><br /><br />
       </label>
     )
@@ -103,12 +105,14 @@ export default class UserConfigC extends React.Component<{}, UserConfig> {
           index={i}
           name="left"
           value={keys.left}
-          handleChange={this.handleChange} />,
+          handleChange={this.handleChange}
+          key={"left" + i} />,
         <KeyChange
           index={i}
           name="right"
           value={keys.right}
-          handleChange={this.handleChange} />,
+          handleChange={this.handleChange}
+          key={"right" + i} />,
       )
     }
 
