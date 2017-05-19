@@ -39,7 +39,7 @@ interface PreferencesState {
 
 class Preferences extends React.Component<void, PreferencesState> {
   public state: PreferencesState = {
-    showPreferences: true,
+    showPreferences: false,
   }
 
   constructor(props: void) {
