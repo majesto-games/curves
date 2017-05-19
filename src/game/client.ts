@@ -108,7 +108,7 @@ export class Client {
       }
       case POWERUP_FETCH: {
         const { payload } = action
-        this.fetchPowerup(payload)
+        this.fetchPowerup(payload.snakeId, payload.powerupId)
         break
       }
       case ROUND: {
@@ -194,6 +194,7 @@ export class Client {
       player.snake!.rotation = update.rotation
       player.snake!.alive = update.alive
       player.snake!.fatness = update.fatness
+      player.snake!.powerupProgress = update.powerupProgress
 
       // TODO: Remove this code smell
       this.game.inRound()
@@ -268,10 +269,10 @@ export class Client {
     this.currentRound.powerupSprites[powerup.id] = this.game.addPowerup(powerup)
   }
 
-  private fetchPowerup(id: number) {
-    const powerupSprite = this.currentRound.powerupSprites[id]!
-    this.game.removePowerup(powerupSprite)
-    this.currentRound.powerupSprites[id] = undefined
+  private fetchPowerup(snakeId: number, powerupId: number) {
+    const powerupSprite = this.currentRound.powerupSprites[powerupId]!
+    this.game.removePowerup(powerupSprite, snakeId, powerupId)
+    this.currentRound.powerupSprites[powerupId] = undefined
 
     // play cool sound
   }

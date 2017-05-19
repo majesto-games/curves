@@ -93,13 +93,19 @@ export function spawnPowerup(powerup: Powerup): PowerupSpawn {
 export const POWERUP_FETCH: "POWERUP_FETCH" = "POWERUP_FETCH"
 export interface PowerupFetch extends Action {
   type: "POWERUP_FETCH",
-  payload: number
+  payload: {
+    snakeId: number,
+    powerupId: number,
+  }
 }
 
-export function fetchPowerup(id: number): PowerupFetch {
+export function fetchPowerup(snakeId: number, powerupId: number): PowerupFetch {
   return {
     type: POWERUP_FETCH,
-    payload: id,
+    payload: {
+      snakeId,
+      powerupId,
+    },
   }
 }
 
@@ -111,6 +117,7 @@ export interface PlayerUpdate {
   tail: Tail | Gap
   fatness: number
   id: number
+  powerupProgress: { [powerupId: number]: number }
 }
 export const UPDATE_PLAYERS: "UPDATE_PLAYERS" = "UPDATE_PLAYERS"
 export interface UpdatePlayers extends Action {

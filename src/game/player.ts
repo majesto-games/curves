@@ -108,6 +108,8 @@ export class Snake {
   public lastEnd: any
   public x: number
   public y: number
+  public powerupProgress: { [powerupId: number]: number }
+  public powerupGraphics: { [powerupId: number]: PIXI.Graphics }
 
   private lfatness: number
   private holeChance: number
@@ -139,6 +141,8 @@ export class Snake {
     this.skipTailTicker = 0
     this.ghost = false
     this.alive = true
+    this.powerupProgress = {}
+    this.powerupGraphics = {}
 
     this.fatnessAnimation = new Animation(values => {
       const sum = values.reduce((prev, curr) => prev + curr, window.getGlobal("FATNESS_BASE"))
@@ -158,17 +162,23 @@ export class Snake {
     this.rotation = (this.rotation + amount) % (2 * Math.PI)
   }
 
-  public ghostify() {
+  public ghostify(powerup: Powerup) {
     const duration = window.getGlobal("POWERUP_ACTIVE_DURATION")
     this.stopTail()
-    this.ghostAnimation.add(duration, () => 1)
+
+    this.ghostAnimation.add(duration, (step, left) => {
+      this.powerupProgress[powerup.id] = step / duration
+      return 1
+    })
   }
 
-  public speeddown() {
+  public speeddown(powerup: Powerup) {
     const duration = window.getGlobal("POWERUP_ACTIVE_DURATION")
     const halfSecond = Math.floor(window.getGlobal("TICK_RATE") * 0.5)
 
     this.speedAnimation.add(duration, (step, left) => {
+      this.powerupProgress[powerup.id] = step / duration
+
       if (step <= halfSecond) {
         return linear(step, 0, -0.5, halfSecond)
       } else if (left <= halfSecond) {
@@ -178,11 +188,12 @@ export class Snake {
     })
   }
 
-  public speedup() {
+  public speedup(powerup: Powerup) {
     const duration = window.getGlobal("POWERUP_ACTIVE_DURATION")
     const halfSecond = Math.floor(window.getGlobal("TICK_RATE") * 0.5)
 
     this.speedAnimation.add(duration, (step, left) => {
+      this.powerupProgress[powerup.id] = step / duration
       if (step <= halfSecond) {
         return linear(step, 0, 0.5, halfSecond)
       } else if (left <= halfSecond) {
@@ -192,31 +203,18 @@ export class Snake {
     })
   }
 
-  public fatify() {
+  public fatify(powerup: Powerup) {
     const duration = window.getGlobal("POWERUP_ACTIVE_DURATION")
     const halfSecond = Math.floor(window.getGlobal("TICK_RATE") * 0.5)
 
     this.fatnessAnimation.add(duration, (step, left) => {
+      this.powerupProgress[powerup.id] = step / duration
       if (step <= halfSecond) {
         return linear(step, 0, 8, halfSecond)
       } else if (left <= halfSecond) {
         return linear(halfSecond - left, 8, 0, halfSecond)
       }
       return 8
-    })
-  }
-
-  public unfatify() {
-    const duration = window.getGlobal("POWERUP_ACTIVE_DURATION")
-    const halfSecond = Math.floor(window.getGlobal("TICK_RATE") * 0.5)
-
-    this.fatnessAnimation.add(duration, (step, left) => {
-      if (step <= halfSecond) {
-        return linear(step, 0, -8, halfSecond)
-      } else if (left <= halfSecond) {
-        return linear(halfSecond - left, -8, 0, halfSecond)
-      }
-      return -8
     })
   }
 

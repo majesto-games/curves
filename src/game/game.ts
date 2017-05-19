@@ -177,10 +177,17 @@ export class Game {
     return powerupSprite
   }
 
-  public removePowerup(powerupSprite: Sprite) {
+  public removePowerup(powerupSprite: Sprite, snakeId: number, powerupId: number) {
     if (powerupSprite != null) {
       this.powerupLayer.removeChild(powerupSprite)
     }
+
+    const snake = this.snakes.find(s => s.id === snakeId)!
+
+    const graphics = new Graphics()
+
+    snake.graphics.addChild(graphics)
+    snake.powerupGraphics[powerupId] = graphics
   }
 
   public close() {
@@ -253,9 +260,32 @@ export class Game {
     }
   }
 
-  private updateSnakeGraphics({ graphics, x, y, fatness }: Snake) {
+  private updateSnakeGraphics({ graphics, x, y, fatness, powerupProgress, powerupGraphics }: Snake) {
     graphics.position.set(x, y)
     graphics.scale.set(fatness, fatness)
+    let i = 0
+    for (let p in powerupProgress) {
+      if (powerupProgress.hasOwnProperty(p)) {
+        const progress = powerupProgress[p]
+        if (powerupGraphics.hasOwnProperty(p)) {
+          const powerup = powerupGraphics[p]
+
+          // console.log(progress)
+
+          if (progress > 0.97) {
+            graphics.removeChild(powerup)
+          } else {
+            powerup.clear()
+            powerup.beginFill(0x000000, 0)
+            powerup.lineStyle(1, 0xffffff)
+            powerup.arc(0, 0, 2 + 1.5 * i++, -graphics.rotation - Math.PI / 2,
+              -graphics.rotation - Math.PI / 2 + Math.PI * 2 - Math.PI * 2 * progress % (Math.PI * 2))
+            powerup.endFill()
+          }
+        }
+      }
+      // if (powerupProgress.)
+    }
   }
 
   private draw = () => {

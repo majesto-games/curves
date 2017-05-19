@@ -322,7 +322,7 @@ export class Server {
         return
       }
 
-      const collidedPowerups: Powerup[] = []
+      const collidedPowerups: { snake: Snake, powerup: Powerup }[] = []
 
       for (let player of playersAlive) {
         this.rotateTick(player)
@@ -352,37 +352,37 @@ export class Server {
 
         this.round.placedPowerups = this.round.placedPowerups.filter(powerup => {
           if (this.collidesPowerup(player.snake!, powerup)) {
-            collidedPowerups.push(powerup)
+            collidedPowerups.push({ snake: player.snake!, powerup })
 
             switch (powerup.type) {
               case "UPSIZE": {
                 this.players
                   .filter(p => player.id !== p.id)
-                  .forEach(p => p.snake!.fatify())
+                  .forEach(p => p.snake!.fatify(powerup))
                 break
               }
               case "GHOST": {
-                player.snake!.ghostify()
+                player.snake!.ghostify(powerup)
                 break
               }
               case "SPEEDDOWN_ME": {
-                player.snake!.speeddown()
+                player.snake!.speeddown(powerup)
                 break
               }
               case "SPEEDDOWN_THEM": {
                 this.players
                   .filter(p => player.id !== p.id)
-                  .forEach(p => p.snake!.speeddown())
+                  .forEach(p => p.snake!.speeddown(powerup))
                 break
               }
               case "SPEEDUP_ME": {
-                player.snake!.speedup()
+                player.snake!.speedup(powerup)
                 break
               }
               case "SPEEDUP_THEM": {
                 this.players
                   .filter(p => player.id !== p.id)
-                  .forEach(p => p.snake!.speedup())
+                  .forEach(p => p.snake!.speedup(powerup))
                 break
               }
               default:
@@ -401,6 +401,7 @@ export class Server {
           y: player.snake!.y,
           fatness: player.snake!.fatness,
           id: player.id,
+          powerupProgress: player.snake!.powerupProgress,
         })
       }
 
@@ -410,7 +411,7 @@ export class Server {
       const actions = [
         updatePlayers(playerUpdates),
         ...newPowerups.map(spawnPowerup),
-        ...collidedPowerups.map(p => fetchPowerup(p.id)),
+        ...collidedPowerups.map(({ snake, powerup }) => fetchPowerup(snake.id, powerup.id)),
       ]
 
       this.send(actions)
