@@ -4,7 +4,7 @@
   "description": "HTML5 implementation of the popular multiplayer games 'achtung die kurve'",
   "main": "index.js",
   "scripts": {
-    "build": "webpack",
+    "build": "webpack -p --env.prod",
     "watch": "webpack-dev-server --host 0.0.0.0 --progress --inline --content-base game/",
     "format": "tsfmt -r",
     "clean": "rimraf game/"
