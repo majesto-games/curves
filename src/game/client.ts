@@ -118,13 +118,7 @@ export class Client {
       }
       case ROUND_END: {
         const { payload } = action
-        const scoresWithColors = payload.scores.map(s => ({
-          id: s.id,
-          score: s.score,
-          color: 13,
-        }))
-
-        this.roundEnd(scoresWithColors, payload.winner)
+        this.roundEnd(payload.scores, payload.winner)
         break
       }
       case LOBBY: {
