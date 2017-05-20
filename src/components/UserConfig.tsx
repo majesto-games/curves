@@ -1,6 +1,7 @@
 import * as React from "react"
 import { KEYS, registerKeys } from "game/keys"
 import never from "utils/never"
+import { JsonSafeParse } from "utils/misc"
 
 export interface PlayerKeys {
   left: KEYS
@@ -23,15 +24,6 @@ declare global {
 }
 /* tslint:enable: no-namespace */
 
-function JsonSafeParse<T>(s: string | null | undefined, onFail: any): T {
-  if (s != null) {
-    try {
-      return JSON.parse(s)
-    } catch (_) { ; }
-  }
-  return onFail
-}
-
 function defaultState(): UserConfig {
   return {
     playerKeys: [{ left: KEYS.A, right: KEYS.D }, { left: KEYS.LEFT, right: KEYS.RIGHT }],
@@ -40,7 +32,7 @@ function defaultState(): UserConfig {
 }
 
 function readState(): UserConfig {
-  let state = JsonSafeParse<UserConfig>(localStorage.getItem("userConfig"), {})
+  const state = JsonSafeParse<UserConfig>(localStorage.getItem("userConfig"), {})
   if (state.SHAPE_VERSION !== SHAPE_VERSION) {
     return defaultState()
   }

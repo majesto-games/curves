@@ -3,7 +3,7 @@ import { shuffle } from "utils/array"
 const MATERIAL_COLORS = [0xff5177, 0x7c4dff, 0x18ffff, 0x5af158, 0xeeff41, 0xffab40, 0xff6e40]
 
 export function getColors(num: number) {
-  let colors = MATERIAL_COLORS.slice()
+  const colors = MATERIAL_COLORS.slice()
 
   shuffle(colors)
 
@@ -25,7 +25,7 @@ export function funColor() {
 /* tslint: enable */
 
 export function superFunColor(input: number) {
-  let choices = [0xff00ff, 0xffff00, 0x00ffff, 0x0000ff, 0x00ff00, 0xff0000]
+  const choices = [0xff00ff, 0xffff00, 0x00ffff, 0x0000ff, 0x00ff00, 0xff0000]
 
   return input & choices[Math.floor(Math.random() * choices.length)]
 }

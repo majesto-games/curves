@@ -311,15 +311,15 @@ export class Server {
     this.round.lastUpdate += ticksNeeded * 1000 / tickRate
 
     for (let i = 0; i < ticksNeeded; i++) {
-      let playerUpdates: PlayerUpdate[] = []
+      const playerUpdates: PlayerUpdate[] = []
       const playersAlive = this.players.filter(player => player.snake!.alive)
 
       if (playersAlive.length < 2) {
         const playerOrder = this.round.losers.concat(playersAlive)
-        for (let i = 0; i < playerOrder.length; i++) {
+        for (let j = 0; j < playerOrder.length; j++) {
           // TODO: Better score finding. And don't mutate?
-          const score = this.scores.find(s => s.id === playerOrder[i].id)!
-          score.score += i
+          const score = this.scores.find(s => s.id === playerOrder[j].id)!
+          score.score += j
         }
         this.send([roundEnd(this.scores, playerOrder[playerOrder.length - 1].id)])
 
@@ -332,19 +332,19 @@ export class Server {
 
       const collidedPowerups: { snake: Snake, powerup: Powerup }[] = []
 
-      for (let player of playersAlive) {
+      for (const player of playersAlive) {
         this.rotateTick(player)
         this.moveTick(player.snake!)
         this.wrapEdge(player.snake!)
 
         player.snake!.tick()
         // Create tail polygon, this returns undefined if it's supposed to be a hole
-        const p = player.snake!.createTailPolygon()
+        const poly = player.snake!.createTailPolygon()
 
         let tailAction: Tail | Gap = { type: GAP }
 
-        if (p != null) {
-          if (this.players.map(p => p.snake).some(this.collides(p.vertices, player.snake!))) {
+        if (poly != null) {
+          if (this.players.map(playr => playr.snake).some(this.collides(poly.vertices, player.snake!))) {
             player.snake!.alive = false
             // TODO: randomize order
             this.round.losers.push(player)
@@ -352,10 +352,10 @@ export class Server {
 
           tailAction = {
             type: TAIL,
-            payload: p,
+            payload: poly,
           }
 
-          this.round.tails.add(p)
+          this.round.tails.add(poly)
         }
 
         this.round.placedPowerups = this.round.placedPowerups.filter(powerup => {
@@ -396,8 +396,8 @@ export class Server {
               case "SWAP_ME": {
                 const others = playersAlive
                   .filter(p => player.id !== p.id)
-                const i = Math.floor(Math.random() * others.length)
-                player.snake!.swapWith(others[i].snake!)
+                const swapIndex = Math.floor(Math.random() * others.length)
+                player.snake!.swapWith(others[swapIndex].snake!)
                 break
               }
               case "SWAP_THEM": {

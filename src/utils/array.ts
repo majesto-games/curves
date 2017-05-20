@@ -5,7 +5,7 @@ export function shuffle<T>(array: T[]) {
 
   for (i = array.length - 1; i > 0; i -= 1) {
     j = Math.floor(Math.random() * (i + 1))
-    let temp = array[i]
+    const temp = array[i]
     array[i] = array[j]
     array[j] = temp
   }
@@ -22,7 +22,7 @@ export function chunk<T>(arr: T[], n: number) {
 
 export function frequency<T>(choices: [number, T][], total?: number): T {
   let rand = Math.random() * (total || 1)
-  for (let choice of choices) {
+  for (const choice of choices) {
     rand -= choice[0]
     if (rand <= 0) {
       return choice[1]

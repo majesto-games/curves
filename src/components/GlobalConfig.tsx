@@ -1,5 +1,6 @@
 import * as React from "react"
 import never from "utils/never"
+import { JsonSafeParse } from "utils/misc"
 
 interface GlobalConfigValues {
   TICK_RATE: number
@@ -53,19 +54,10 @@ declare global {
   }
 }
 
-function JsonSafeParse<T>(s: string | null | undefined, onFail: any): T {
-  if (s != null) {
-    try {
-      return JSON.parse(s)
-    } catch (_) { ; }
-  }
-  return onFail
-}
-
 function defaultState(): GlobalConfig {
   const VALUES: GlobalConfigValues = {} as GlobalConfigValues
 
-  for (let key in SHAPE) {
+  for (const key in SHAPE) {
     if (SHAPE.hasOwnProperty(key)) {
       VALUES[key as keyof GlobalConfigValues] = SHAPE[key as keyof GlobalConfigValues][1]
     }
@@ -78,7 +70,7 @@ function defaultState(): GlobalConfig {
 }
 
 function readState(): GlobalConfig {
-  let state = JsonSafeParse<GlobalConfig>(localStorage.getItem("globalConfig"), {})
+  const state = JsonSafeParse<GlobalConfig>(localStorage.getItem("globalConfig"), {})
   if (state.SHAPE_VERSION !== SHAPE_VERSION) {
     return defaultState()
   }
@@ -160,7 +152,7 @@ export default class GlobalConfigC extends React.Component<{}, GlobalConfig> {
   public render() {
     const sliders = []
 
-    for (let key in SHAPE) {
+    for (const key in SHAPE) {
       if (SHAPE.hasOwnProperty(key)) {
         const [min, _, max] = SHAPE[key as keyof GlobalConfigValues]
         const value = window.Globals.VALUES[key as keyof GlobalConfigValues]

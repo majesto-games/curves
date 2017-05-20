@@ -42,7 +42,7 @@ import { Game } from "./game"
 import { Observable } from "utils/observable"
 import never from "utils/never"
 
-let keyCombos: { left: KEYS, right: KEYS }[] = []
+const keyCombos: { left: KEYS, right: KEYS }[] = []
 
 registerKeys([KEYS.RETURN])
 
@@ -177,7 +177,7 @@ export class Client {
   }
 
   private updatePlayers = (playerUpdates: PlayerUpdate[]) => {
-    for (let update of playerUpdates) {
+    for (const update of playerUpdates) {
       const player = this.players[update.id]
       if (player == null) {
         continue
@@ -201,7 +201,7 @@ export class Client {
 
   private started(players: PlayerInit[]) {
     this.state.set(ClientState.GAME)
-    for (let player of players) {
+    for (const player of players) {
       const newPlayer = this.createPlayer(player.name, player.color, player.owner === this.connection.id, player.id)
       this.players[player.id] = newPlayer
     }
@@ -286,7 +286,7 @@ export class Client {
         return
       }
 
-      let keys = window.UserConfig.playerKeys[p.localIndex!]
+      const keys = window.UserConfig.playerKeys[p.localIndex!]
       if (!keys) {
         return
       }

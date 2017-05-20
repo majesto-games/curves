@@ -267,4 +267,4 @@ export function containsPoint(points: number[], x: number, y: number) {
   }
 
   return inside
-};
+}

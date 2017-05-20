@@ -304,7 +304,7 @@ export class Snake {
   }
 
   public createTailPolygon() {
-    let r = Math.random()
+    const r = Math.random()
     let pol: number[] | undefined
 
     if (this.ghost) {

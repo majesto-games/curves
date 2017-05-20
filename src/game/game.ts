@@ -118,7 +118,7 @@ export class Game {
     this.snakes = snakes
     this.colors = colors.map(hexToString)
 
-    for (let snake of snakes) {
+    for (const snake of snakes) {
       this.playerLayer.addChild(snake.graphics)
       this.playerLayer.addChild(snake.powerupGraphics)
       const keysAndColor = getKeyTextAndColor(snake)
@@ -260,7 +260,7 @@ export class Game {
   }
 
   private drawPlayers() {
-    for (let snake of this.snakes) {
+    for (const snake of this.snakes) {
       this.updateSnakeGraphics(snake)
     }
   }
@@ -271,7 +271,7 @@ export class Game {
     powerupGraphics.clear()
     powerupGraphics.position.set(x, y)
     let i = 1
-    for (let progress of powerupProgress) {
+    for (const progress of powerupProgress) {
       powerupGraphics.beginFill(0x000000, 0)
       const lineWidth = 5
       powerupGraphics.lineStyle(lineWidth, 0xffffff)

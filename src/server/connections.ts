@@ -75,7 +75,7 @@ export function networkServerConnection(
     {
       id,
       isOwner: false,
-      close: () => dataChannel.close()
+      close: () => dataChannel.close(),
     },
   )
 }
@@ -89,7 +89,9 @@ export function localServerConnection(
     {
       id,
       isOwner: true,
-      close: () => { ; },
+      close: () => {
+        // no-op
+      },
     },
   )
 }
