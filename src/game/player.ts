@@ -335,7 +335,12 @@ export class Snake {
   }
 
   private updatePowerupProgress() {
-    const progress = this.speedProgress.concat(this.ghostProgress, this.fatnessProgress)
+    const progress = ([] as PowerupProgress[]).concat(
+      this.speedProgress,
+      this.ghostProgress,
+      this.fatnessProgress,
+      this.reversedProgress,
+    )
     progress.sort((a, b) => a.order - b.order)
     this.powerupProgress = progress.map(v => v.progress)
   }

@@ -275,7 +275,8 @@ export class Server {
         [1, "SWAP_ME"],
         [swapThemChance, "SWAP_THEM"],
         [2, "GHOST"],
-        [4, "UPSIZE"],
+        [3, "UPSIZE"],
+        [1, "REVERSE_THEM"],
         [1, "SPEEDUP_ME"],
         [1, "SPEEDUP_THEM"],
         [1, "SPEEDDOWN_ME"],
@@ -411,7 +412,7 @@ export class Server {
               case "REVERSE_THEM": {
                 this.players
                   .filter(p => player.id !== p.id)
-                  .forEach(p => p.snake!.reversify())
+                  .forEach(p => p.snake!.reversify(powerup))
                 break
               }
               default:
