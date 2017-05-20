@@ -5,6 +5,7 @@ import Game from "components/Game"
 import RoomBrowser from "components/RoomBrowser"
 import GlobalConfig, { initGlobalConfig } from "components/GlobalConfig"
 import UserConfig, { initUserConfig } from "components/UserConfig"
+import PIXIPlayground from "components/PIXIPlayground"
 import history from "components/history"
 import { Location, parsePath } from "history"
 
@@ -26,6 +27,9 @@ function getComponent(location: Location): JSX.Element {
   }
   if (split[0] === "userconfig") {
     return <UserConfig />
+  }
+  if (split[0] === "playground") {
+    return <PIXIPlayground />
   }
 
   return <p>Error</p>
