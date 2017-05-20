@@ -163,9 +163,9 @@ export class Snake {
     })
 
     this.speedAnimation = new Animation<AnimationProgress<number>>(values => {
-      const sum = values.reduce((prev, curr) => prev + curr.value, window.getGlobal("MOVE_SPEED_BASE"))
+      const sum = values.reduce((prev, curr) => prev + curr.value, 0) * 64 / window.getGlobal("TICK_RATE")
       this.speedProgress = values
-      this.speed = Math.max(sum, window.getGlobal("MOVE_SPEED_BASE") - 1)
+      this.speed = window.getGlobal("MOVE_SPEED_BASE") + Math.max(sum, - 1)
     })
 
     this.ghostAnimation = new Animation<AnimationProgress<undefined>>(values => {

@@ -45,7 +45,7 @@ function fastDistance(x1: number, y1: number, x2: number, y2: number) {
 }
 
 function rotationSpeed(fatness: number) {
-  return window.getGlobal("ROTATION_SPEED") / (10 + fatness) - 0.02
+  return window.getGlobal("ROTATION_SPEED") / (10 + fatness) - (0.02 * 64 / window.getGlobal("TICK_RATE"))
 }
 
 class RoundState {
@@ -72,7 +72,7 @@ export class Server {
   private round: RoundState
   private joinable = true
 
-  constructor(private tickRate: number) {
+  constructor() {
     this.round = new RoundState()
   }
 
@@ -297,10 +297,11 @@ export class Server {
     if (this.paused) {
       return
     }
+    const tickRate = window.getGlobal("TICK_RATE")
 
-    const ticksNeeded = Math.floor((Date.now() - this.round.lastUpdate) * this.tickRate / 1000)
+    const ticksNeeded = Math.floor((Date.now() - this.round.lastUpdate) * tickRate / 1000)
 
-    this.round.lastUpdate += ticksNeeded * 1000 / this.tickRate
+    this.round.lastUpdate += ticksNeeded * 1000 / tickRate
 
     for (let i = 0; i < ticksNeeded; i++) {
       let playerUpdates: PlayerUpdate[] = []
@@ -417,7 +418,7 @@ export class Server {
       this.send(actions)
     }
 
-    setTimeout(() => this.serverTick(), (this.round.lastUpdate + (1000 / this.tickRate)) - Date.now())
+    setTimeout(() => this.serverTick(), (this.round.lastUpdate + (1000 / tickRate)) - Date.now())
   }
 
   private start() {
@@ -425,7 +426,7 @@ export class Server {
       if (this.pauseDelta) {
         this.round.lastUpdate = Date.now() - this.pauseDelta
       } else {
-        this.round.lastUpdate = Date.now() - (1000 / this.tickRate)
+        this.round.lastUpdate = Date.now() - (1000 / window.getGlobal("TICK_RATE"))
       }
       this.paused = false
       this.serverTick()

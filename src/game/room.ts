@@ -37,7 +37,7 @@ function connectAsClient(client: Client, rc: quickconnect.connection) {
   function connectAsServer(client: Client, rc: quickconnect.connection): [ServerConnection, () => void] {
     console.log("Server")
 
-    const server = new Server(window.getGlobal("TICK_RATE"))
+    const server = new Server()
     const id = cuid()
 
     const serverConn = localServerConnection(server, id)
