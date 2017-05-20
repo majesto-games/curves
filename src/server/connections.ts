@@ -45,27 +45,27 @@ export interface ClientConnection {
 export function networkClientConnection(
   dataChannel: DataChannel,
   id: ConnectionId,
-  ): ClientConnection {
+): ClientConnection {
   return Object.assign(
     (a: ClientAction) => dataChannel.send(JSON.stringify(a)),
-    {id},
+    { id },
   )
 }
 
 export function localClientConnection(
   client: Client,
   id: ConnectionId,
-  ): ClientConnection {
+): ClientConnection {
   return Object.assign(
     (a: ClientAction) => client.receive(a),
-    {id},
+    { id },
   )
 }
 
 export function networkServerConnection(
   dataChannel: DataChannel,
   id: ConnectionId,
-  ): ServerConnection {
+): ServerConnection {
   return Object.assign(
     (a: ServerAction) => {
       if (dataChannel.readyState === "open") {
@@ -75,14 +75,15 @@ export function networkServerConnection(
     {
       id,
       isOwner: false,
-      close: () => dataChannel.close()},
+      close: () => dataChannel.close()
+    },
   )
 }
 
 export function localServerConnection(
   server: Server,
   id: ConnectionId,
-  ): ServerConnection {
+): ServerConnection {
   return Object.assign(
     (a: ServerAction) => server.receive(a, id),
     {

@@ -99,7 +99,7 @@ class Lobby extends React.Component<LobbyProps, void> {
           <div className="header">
             <h1>Lobby: {room}</h1>
             <button className="btn btn-lg btn-success" onClick={this.addPlayer}>Add local player</button>
-            <button className="btn btn-lg btn-primary"onClick={this.onStart}>Start</button>
+            <button className="btn btn-lg btn-primary" onClick={this.onStart}>Start</button>
           </div>
           <table className="table table-striped">
             <thead>

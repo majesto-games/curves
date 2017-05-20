@@ -1,4 +1,4 @@
-declare var process : {
+declare var process: {
   env: {
     NODE_ENV: "production" | "development"
   }

@@ -28,7 +28,7 @@ export function start(): Start {
 }
 
 export interface Lobby {
-    players: Player[]
+  players: Player[]
 }
 
 export const LOBBY: "LOBBY" = "LOBBY"

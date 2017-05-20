@@ -67,7 +67,7 @@ export class Client {
   public players: (ClientPlayer | undefined)[] = []
   public game = new Game()
   public lobby = new Observable<Lobby>({ players: [] })
-  public scores =  new Observable<Score[]>([])
+  public scores = new Observable<Score[]>([])
   public state = new Observable<ClientState>(ClientState.UNCONNECTED)
   private currentRound: RoundState
   private localIndex = 0
@@ -144,7 +144,7 @@ export class Client {
     // TODO: add this owner check in server as well
     // TODO: having isOwner in connection is not the right place
     console.log(this.state.value !== ClientState.LOBBY, !this.connection.isOwner)
-    if (this.state.value !== ClientState.LOBBY  || !this.connection.isOwner) {
+    if (this.state.value !== ClientState.LOBBY || !this.connection.isOwner) {
       return
     }
 

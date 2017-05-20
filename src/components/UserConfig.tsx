@@ -76,7 +76,7 @@ class KeyChange extends React.Component<KeyChangeProps, void> {
           onKeyDown={this.handleKey}
           readOnly
           className="form-control"
-          /><br /><br />
+        /><br /><br />
       </label>
     )
   }
