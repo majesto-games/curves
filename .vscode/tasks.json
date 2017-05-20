@@ -45,10 +45,11 @@
                 "file" : 1
                 },
                 {
-                "regexp": "\\(Emitted value instead of an instance of Error\\) \\[(\\d+), (\\d+)]: (.*)",
+                "regexp": "\\[(\\d+), (\\d+)\\]: (.*)",
                 "line": 1,
                 "column": 2,
-                "message": 3
+                "message": 3,
+                "loop": true
                 }
               ],
               "watching": {
