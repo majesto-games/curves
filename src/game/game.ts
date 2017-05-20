@@ -43,6 +43,7 @@ import pressedKeys, { KEYS, registerKeys } from "./keys"
 import * as Icons from "icons"
 import { Observable, SimpleEvent } from "utils/observable"
 import { padEqual } from "utils/string"
+import never from "utils/never"
 
 export enum GameEvent {
   START, END, ROUND_END,
@@ -242,7 +243,9 @@ export class Game {
       case "SPEEDDOWN_THEM": return Icons.speeddownThem
       case "SPEEDUP_ME": return Icons.speedupMe
       case "SPEEDUP_THEM": return Icons.speedupThem
-      default: return "" // TODO: add never
+      case "SWAP_ME": return Icons.undefinedIcon
+      case "SWAP_THEM": return Icons.undefinedIcon
+      default: return never("Unexpected powerup image", powerupType)
     }
   }
 

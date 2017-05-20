@@ -20,8 +20,8 @@ export function chunk<T>(arr: T[], n: number) {
 
 /* tslint: enable */
 
-export function frequency<T>(choices: [number, T][]): T {
-  let rand = Math.random()
+export function frequency<T>(choices: [number, T][], total?: number): T {
+  let rand = Math.random() * (total || 1)
   for (let choice of choices) {
     rand -= choice[0]
     if (rand <= 0) {

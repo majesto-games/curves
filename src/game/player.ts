@@ -17,6 +17,8 @@ export type PowerupType
   | "SPEEDUP_THEM"
   | "SPEEDDOWN_ME"
   | "SPEEDDOWN_THEM"
+  | "SWAP_ME"
+  | "SWAP_THEM"
 
 export interface Powerup {
   type: PowerupType
@@ -258,6 +260,14 @@ export class Snake {
     })
   }
 
+  public swapWith(snake: Snake) {
+    const snakeX = snake.x
+    const snakeY = snake.y
+    const snakeRot = snake.rotation
+    snake.teleportTo(this.x, this.y, this.rotation)
+    this.teleportTo(snakeX, snakeY, snakeRot)
+  }
+
   public tick() {
     this.fatnessAnimation.tick()
     this.speedAnimation.tick()
@@ -283,9 +293,7 @@ export class Snake {
         this.lastEnd = pol.slice(0, 2).concat(pol.slice(-2))
         this.holeChance += window.getGlobal("HOLE_CHANCE_INCREASE")
       } else {
-        this.skipTailTicker = this.fatness * window.getGlobal("SKIP_TAIL_FATNESS_MULTIPLIER")
-        this.holeChance = window.getGlobal("HOLE_CHANCE_BASE")
-        this.stopTail()
+        this.createHole()
       }
     } else {
       this.skipTailTicker--
@@ -309,5 +317,19 @@ export class Snake {
       this.lastEnd = null
       this.tailId++
     }
+  }
+
+  private createHole() {
+    this.skipTailTicker = this.fatness * window.getGlobal("SKIP_TAIL_FATNESS_MULTIPLIER")
+    this.holeChance = window.getGlobal("HOLE_CHANCE_BASE")
+    this.stopTail()
+  }
+
+  private teleportTo(x: number, y: number, rotation: number) {
+    this.stopTail()
+    this.lastX = this.x = x
+    this.lastY = this.y = y
+    this.rotation = rotation
+    this.createHole()
   }
 }

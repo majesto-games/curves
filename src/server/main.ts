@@ -267,14 +267,20 @@ export class Server {
       const x = Math.round(Math.random() * SERVER_WIDTH)
       const y = Math.round(Math.random() * SERVER_HEIGHT)
 
+      const alivePlayerCount = this.players.filter(player => player.snake!.alive).length
+
+      const swapThemChance = alivePlayerCount > 2 ? 0.5 : 0
+
       const powerupType = frequency<PowerupType>([
-        [0.2, "GHOST"],
-        [0.4, "UPSIZE"],
-        [0.1, "SPEEDUP_ME"],
-        [0.1, "SPEEDUP_THEM"],
-        [0.1, "SPEEDDOWN_ME"],
-        [0.1, "SPEEDDOWN_THEM"],
-      ])
+        [1, "SWAP_ME"],
+        [swapThemChance, "SWAP_THEM"],
+        [2, "GHOST"],
+        [4, "UPSIZE"],
+        [1, "SPEEDUP_ME"],
+        [1, "SPEEDUP_THEM"],
+        [1, "SPEEDDOWN_ME"],
+        [1, "SPEEDDOWN_THEM"],
+      ], 11 + swapThemChance)
 
       powerups.push({
         type: powerupType,
@@ -357,7 +363,7 @@ export class Server {
 
             switch (powerup.type) {
               case "UPSIZE": {
-                this.players
+                playersAlive
                   .filter(p => player.id !== p.id)
                   .forEach(p => p.snake!.fatify(powerup))
                 break
@@ -371,7 +377,7 @@ export class Server {
                 break
               }
               case "SPEEDDOWN_THEM": {
-                this.players
+                playersAlive
                   .filter(p => player.id !== p.id)
                   .forEach(p => p.snake!.speeddown(powerup))
                 break
@@ -381,12 +387,29 @@ export class Server {
                 break
               }
               case "SPEEDUP_THEM": {
-                this.players
+                playersAlive
                   .filter(p => player.id !== p.id)
                   .forEach(p => p.snake!.speedup(powerup))
                 break
               }
+              case "SWAP_ME": {
+                const others = playersAlive
+                  .filter(p => player.id !== p.id)
+                const i = Math.floor(Math.random() * others.length)
+                player.snake!.swapWith(others[i].snake!)
+                break
+              }
+              case "SWAP_THEM": {
+                const others = shuffle(playersAlive
+                  .filter(p => player.id !== p.id))
+                if (others.length >= 2) {
+                  others[0].snake!.swapWith(others[1].snake!)
+
+                }
+                break
+              }
               default:
+                never("Picked up unknown powerup", powerup.type)
             }
 
             return false
