@@ -43,12 +43,12 @@ function readState(): UserConfig {
 function writeState(state: UserConfig) {
   localStorage.setItem("userConfig", JSON.stringify(state))
   window.UserConfig = state
+  registerKeys(Array.prototype.concat.apply([], state.playerKeys.map(n => [n.left, n.right])))
 }
 
 export function initUserConfig() {
   const state = readState()
   writeState(state)
-  registerKeys(Array.prototype.concat.apply([], state.playerKeys.map(n => [n.left, n.right])))
 }
 
 interface KeyChangeProps {
