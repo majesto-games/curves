@@ -4,6 +4,8 @@ import { SERVER_URL } from "../config"
 import history from "./history"
 import Link from "./Link"
 
+import { randomAdjective, randomNoun } from "sillyname"
+
 interface Room {
   name: string
   memberCount: number
@@ -17,16 +19,20 @@ function getRooms() {
   return axi.get("/")
 }
 
-class NewRoom extends React.Component<{
+interface NewRoomProps {
   onUpdateRooms: () => void,
-}, {}> {
+}
+
+class NewRoom extends React.Component<NewRoomProps, {}> {
   private roomInput: HTMLInputElement
+
+  private randomRoomName = (`${randomAdjective()}${randomNoun()}-${randomNoun()}`).toLowerCase()
 
   public render() {
     return (
       <form onSubmit={this.onSubmit} className="NewRoom">
         <div className="input-group">
-          <input type="text" placeholder="Room name" defaultValue="leif"
+          <input type="text" placeholder="Room name" defaultValue={this.randomRoomName}
             className="form-control input-lg" ref={n => this.roomInput = n} />
           <span className="input-group-btn">
             <button type="submit" className="btn-lg btn btn-primary">Join room</button>
