@@ -243,9 +243,9 @@ export class Game {
       case "SPEEDDOWN_THEM": return Icons.speeddownThem
       case "SPEEDUP_ME": return Icons.speedupMe
       case "SPEEDUP_THEM": return Icons.speedupThem
-      case "SWAP_ME": return Icons.undefinedIcon
-      case "SWAP_THEM": return Icons.undefinedIcon
-      case "REVERSE_THEM": return Icons.undefinedIcon
+      case "SWAP_ME": return Icons.swapMe
+      case "SWAP_THEM": return Icons.swapThem
+      case "REVERSE_THEM": return Icons.reverseThem
       default: return never("Unexpected powerup image", powerupType)
     }
   }
