@@ -344,7 +344,7 @@ export class Server {
         let tailAction: Tail | Gap = { type: GAP }
 
         if (poly != null) {
-          if (this.players.map(playr => playr.snake).some(this.collides(poly.vertices, player.snake!))) {
+          if (this.players.map(p => p.snake).some(this.collides(poly.vertices, player.snake!))) {
             player.snake!.alive = false
             // TODO: randomize order
             this.round.losers.push(player)
