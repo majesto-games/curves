@@ -9,8 +9,8 @@ import {
 } from "pixi.js"
 import Canvas from "components/Canvas"
 
-const TEXTURE_WIDTH = 1024
-const TEXTURE_HEIGHT = 128
+const TEXTURE_WIDTH = 32
+const TEXTURE_HEIGHT = 32
 
 export default class PIXIPlayground extends React.Component<void, void> {
   private renderer: WebGLRenderer | CanvasRenderer
@@ -151,18 +151,16 @@ function textureTemplate(x: number, y: number, context: CanvasRenderingContext2D
 
 function createTexture() {
   const canvas = document.createElement("canvas")
-  canvas.width = TEXTURE_WIDTH
-  canvas.height = TEXTURE_HEIGHT
+  canvas.width = 32
+  canvas.height = 32
 
   const context = canvas.getContext("2d")!
 
-  for (let x = 0; x < TEXTURE_WIDTH; x += 32) {
-    for (let y = 0; y < TEXTURE_HEIGHT; y += 32) {
-      textureTemplate(x, y, context)
-    }
-  }
+  textureTemplate(0, 0, context)
   document.body.appendChild(canvas)
-  return new Texture(new BaseTexture(canvas))
+  const l = new BaseTexture(canvas)
+  l.wrapMode = PIXI.WRAP_MODES.REPEAT
+  return new Texture(l)
 }
 
 interface Point {
