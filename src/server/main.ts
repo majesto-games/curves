@@ -360,65 +360,7 @@ export class Server {
 
         this.round.placedPowerups = this.round.placedPowerups.filter(powerup => {
           if (this.collidesPowerup(player.snake!, powerup)) {
-            collidedPowerups.push({ snake: player.snake!, powerup })
-
-            switch (powerup.type) {
-              case "UPSIZE": {
-                playersAlive
-                  .filter(p => player.id !== p.id)
-                  .forEach(p => p.snake!.fatify(powerup))
-                break
-              }
-              case "GHOST": {
-                player.snake!.ghostify(powerup)
-                break
-              }
-              case "SPEEDDOWN_ME": {
-                player.snake!.speeddown(powerup)
-                break
-              }
-              case "SPEEDDOWN_THEM": {
-                playersAlive
-                  .filter(p => player.id !== p.id)
-                  .forEach(p => p.snake!.speeddown(powerup))
-                break
-              }
-              case "SPEEDUP_ME": {
-                player.snake!.speedup(powerup)
-                break
-              }
-              case "SPEEDUP_THEM": {
-                playersAlive
-                  .filter(p => player.id !== p.id)
-                  .forEach(p => p.snake!.speedup(powerup))
-                break
-              }
-              case "SWAP_ME": {
-                const others = playersAlive
-                  .filter(p => player.id !== p.id)
-                const swapIndex = Math.floor(Math.random() * others.length)
-                player.snake!.swapWith(others[swapIndex].snake!)
-                break
-              }
-              case "SWAP_THEM": {
-                const others = shuffle(playersAlive
-                  .filter(p => player.id !== p.id))
-                if (others.length >= 2) {
-                  others[0].snake!.swapWith(others[1].snake!)
-
-                }
-                break
-              }
-              case "REVERSE_THEM": {
-                this.players
-                  .filter(p => player.id !== p.id)
-                  .forEach(p => p.snake!.reversify(powerup))
-                break
-              }
-              default:
-                never("Picked up unknown powerup", powerup.type)
-            }
-
+            collidedPowerups.push(this.powerupPickup(player, powerup, playersAlive))
             return false
           }
           return true
@@ -449,6 +391,68 @@ export class Server {
     }
 
     setTimeout(() => this.serverTick(), (this.round.lastUpdate + (1000 / tickRate)) - Date.now())
+  }
+
+  private powerupPickup(player: ServerPlayer, powerup: Powerup, playersAlive: ServerPlayer[]) {
+
+    switch (powerup.type) {
+      case "UPSIZE": {
+        playersAlive
+          .filter(p => player.id !== p.id)
+          .forEach(p => p.snake!.fatify(powerup))
+        break
+      }
+      case "GHOST": {
+        player.snake!.ghostify(powerup)
+        break
+      }
+      case "SPEEDDOWN_ME": {
+        player.snake!.speeddown(powerup)
+        break
+      }
+      case "SPEEDDOWN_THEM": {
+        playersAlive
+          .filter(p => player.id !== p.id)
+          .forEach(p => p.snake!.speeddown(powerup))
+        break
+      }
+      case "SPEEDUP_ME": {
+        player.snake!.speedup(powerup)
+        break
+      }
+      case "SPEEDUP_THEM": {
+        playersAlive
+          .filter(p => player.id !== p.id)
+          .forEach(p => p.snake!.speedup(powerup))
+        break
+      }
+      case "SWAP_ME": {
+        const others = playersAlive
+          .filter(p => player.id !== p.id)
+        const swapIndex = Math.floor(Math.random() * others.length)
+        player.snake!.swapWith(others[swapIndex].snake!)
+        break
+      }
+      case "SWAP_THEM": {
+        const others = shuffle(playersAlive
+          .filter(p => player.id !== p.id))
+        if (others.length >= 2) {
+          others[0].snake!.swapWith(others[1].snake!)
+
+        }
+        break
+      }
+      case "REVERSE_THEM": {
+        this.players
+          .filter(p => player.id !== p.id)
+          .forEach(p => p.snake!.reversify(powerup))
+        break
+      }
+      default:
+        never("Picked up unknown powerup", powerup.type)
+    }
+
+    return { snake: player.snake!, powerup }
   }
 
   private start() {
