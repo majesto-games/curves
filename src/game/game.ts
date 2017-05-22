@@ -155,7 +155,6 @@ export class Game {
   }
 
   public roundEnd(winner: ClientPlayer) {
-    // TODO: so so hacky yes yes
     this.setOverlay(`Winner this round: Player ${winner.id}`)
     this.roundState = RoundState.POST
     this.event.send(GameEvent.ROUND_END)
