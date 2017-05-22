@@ -279,7 +279,7 @@ export class Game {
       const r = fatness + (lineWidth * i)
       i += 1.5
       const startAngle = -graphics.rotation - Math.PI / 2
-      const endAngle = -graphics.rotation - Math.PI / 2 + Math.PI * 2 - Math.PI * 2 * progress % (Math.PI * 2)
+      const endAngle = startAngle + Math.PI * 2 - Math.PI * 2 * progress % (Math.PI * 2)
       const startX = Math.cos(startAngle) * r
       const startY = Math.sin(startAngle) * r
 
