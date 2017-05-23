@@ -4,6 +4,8 @@ import { Animation } from "utils/animation"
 import { linear } from "tween-functions"
 import { ConnectionId } from "server/connections"
 import { Signal } from "utils/observable"
+import { Texture } from "pixi.js"
+import { SERVER_WIDTH, SERVER_HEIGHT } from "server/main"
 
 export interface Point {
   x: number
@@ -93,6 +95,7 @@ export class ClientPlayer {
     public name: string,
     public id: number,
     public color: number,
+    public texture: Texture,
     public localIndex: number | undefined,
     public snake?: Snake,
   ) {
@@ -113,7 +116,7 @@ interface AnimationProgress<T> {
 
 export class Snake {
 
-  public graphics: PIXI.Graphics
+  public graphics: PIXI.mesh.Mesh
   public powerupGraphics: PIXI.Graphics
   public fatness: number
   public alive: boolean
@@ -296,6 +299,9 @@ export class Snake {
   }
 
   public tick() {
+    this.x += Math.sin(this.rotation) * this.speed
+    this.y -= Math.cos(this.rotation) * this.speed
+    this.wrapEdge()
     this.fatnessAnimation.tick()
     this.speedAnimation.tick()
     this.ghostAnimation.tick()
@@ -306,6 +312,7 @@ export class Snake {
   public createTailPolygon() {
     const r = Math.random()
     let pol: number[] | undefined
+    let isTailStart = false
 
     if (this.ghost) {
       this.lastEnd = null
@@ -313,6 +320,7 @@ export class Snake {
       if (r > this.holeChance) {
         if (this.lastEnd == null) {
           pol = createPolygon({ x: this.x, y: this.y }, { x: this.lastX, y: this.lastY }, this.fatness, this.lfatness)
+          isTailStart = true
         } else {
           pol = createConnectedPolygon({ x: this.x, y: this.y }, this.fatness, this.lastEnd,
             { x: this.lastX, y: this.lastY })
@@ -331,7 +339,7 @@ export class Snake {
     this.lastY = this.y
     this.lfatness = this.fatness
 
-    return pol && new TailPart(pol, this.id, this.tailId) as (TailPart & NotRemoved)
+    return pol && new TailPart(pol, this.id, this.tailId, isTailStart) as (TailPart & NotRemoved)
   }
 
   private updatePowerupProgress() {
@@ -364,5 +372,31 @@ export class Snake {
     this.lastY = this.y = y
     this.rotation = rotation
     this.createHole()
+  }
+
+  private wrapEdge() {
+    if (this.x > SERVER_WIDTH + this.fatness) {
+      this.x = -this.fatness
+      this.lastX = this.x - 1
+      this.lastEnd = null
+    }
+
+    if (this.y > SERVER_HEIGHT + this.fatness) {
+      this.y = -this.fatness
+      this.lastY = this.y - 1
+      this.lastEnd = null
+    }
+
+    if (this.x < -this.fatness) {
+      this.x = SERVER_WIDTH + this.fatness
+      this.lastX = this.x + 1
+      this.lastEnd = null
+    }
+
+    if (this.y < -this.fatness) {
+      this.y = SERVER_HEIGHT + this.fatness
+      this.lastY = this.y + 1
+      this.lastEnd = null
+    }
   }
 }

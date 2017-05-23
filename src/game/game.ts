@@ -44,6 +44,7 @@ import * as Icons from "icons"
 import { Observable, SimpleEvent } from "utils/observable"
 import { padEqual } from "utils/string"
 import never from "utils/never"
+import { fillSquare } from "game/client"
 
 export enum GameEvent {
   START, END, ROUND_END,
@@ -160,12 +161,19 @@ export class Game {
     this.event.send(GameEvent.ROUND_END)
   }
 
-  public addTail({ graphics }: ClientTail) {
-    this.tailLayer.addChild(graphics)
-  }
+  public addTail(tail: ClientTail) {
+    tail.meshes.value.forEach(mesh => {
+      this.tailLayer.addChild(mesh)
+    })
+    tail.meshes.subscribe((meshes, old) => {
+      old.forEach(mesh => {
+        this.tailLayer.removeChild(mesh)
+      })
 
-  public removeTail({ graphics }: ClientTail) {
-    this.tailLayer.removeChild(graphics)
+      meshes.forEach(mesh => {
+        this.tailLayer.addChild(mesh)
+      })
+    })
   }
 
   public addPowerup({ location, type }: Powerup) {
@@ -264,9 +272,19 @@ export class Game {
     }
   }
 
-  private updateSnakeGraphics({ graphics, x, y, fatness, powerupProgress, powerupGraphics }: Snake) {
+  private updateSnakeGraphics({ graphics, x, y, fatness, powerupProgress, powerupGraphics, rotation }: Snake) {
     graphics.position.set(x, y)
-    graphics.scale.set(fatness, fatness)
+    graphics.vertices.set(fillSquare(fatness * 2, fatness * 2))
+    graphics.uvs.set(fillSquare(fatness * 2 / graphics.texture.width, fatness * 2 / graphics.texture.height))
+    graphics.rotation = rotation
+    graphics.children[0].scale.set(fatness, fatness)
+
+    graphics.dirty++
+    graphics.indexDirty++
+    const meshy = graphics as any
+    meshy.refresh()
+    graphics.updateTransform()
+
     powerupGraphics.clear()
     powerupGraphics.position.set(x, y)
     let i = 1
@@ -277,7 +295,7 @@ export class Game {
 
       const r = fatness + (lineWidth * i)
       i += 1.5
-      const startAngle = -graphics.rotation - Math.PI / 2
+      const startAngle = - Math.PI / 2
       const endAngle = startAngle + Math.PI * 2 - Math.PI * 2 * progress % (Math.PI * 2)
       const startX = Math.cos(startAngle) * r
       const startY = Math.sin(startAngle) * r

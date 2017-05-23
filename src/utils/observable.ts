@@ -13,14 +13,30 @@ export class SimpleEvent<E> {
   }
 }
 
-export class Observable<E> extends SimpleEvent<E> {
+export class Tuple2Event<E, D> {
+  private listeners: ((value1: E, value2: D) => void)[] = []
+
+  public subscribe(f: (value1: E, value2: D) => void) {
+    this.listeners.push(f)
+
+    return () =>
+      this.listeners = this.listeners.filter(g => g !== f)
+  }
+
+  public send(value1: E, value2: D) {
+    this.listeners.forEach(f => f(value1, value2))
+  }
+}
+
+export class Observable<E> extends Tuple2Event<E, E> {
   constructor(public value: E) {
     super()
   }
 
   public send(value: E) {
+    const old = this.value
     this.value = value
-    super.send(value)
+    super.send(value, old)
   }
 
   public set(value: E) {
@@ -33,20 +49,5 @@ export class Signal<E> extends Observable<E> {
     if (value !== this.value) {
       super.send(value)
     }
-  }
-}
-
-export class DataEvent<E, D> {
-  private listeners: ((event: E, data: D) => void)[] = []
-
-  public subscribe(f: (event: E, data: D) => void) {
-    this.listeners.push(f)
-
-    return () =>
-      this.listeners = this.listeners.filter(g => g !== f)
-  }
-
-  public send(event: E, data: D) {
-    this.listeners.forEach(f => f(event, data))
   }
 }

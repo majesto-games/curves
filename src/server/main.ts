@@ -188,37 +188,6 @@ export class Server {
     }
   }
 
-  private moveTick(player: Snake) {
-    player.x += Math.sin(player.rotation) * player.speed
-    player.y -= Math.cos(player.rotation) * player.speed
-  }
-
-  private wrapEdge(player: Snake) {
-    if (player.x > SERVER_WIDTH + player.fatness) {
-      player.x = -player.fatness
-      player.lastX = player.x - 1
-      player.lastEnd = null
-    }
-
-    if (player.y > SERVER_HEIGHT + player.fatness) {
-      player.y = -player.fatness
-      player.lastY = player.y - 1
-      player.lastEnd = null
-    }
-
-    if (player.x < -player.fatness) {
-      player.x = SERVER_WIDTH + player.fatness
-      player.lastX = player.x + 1
-      player.lastEnd = null
-    }
-
-    if (player.y < -player.fatness) {
-      player.y = SERVER_HEIGHT + player.fatness
-      player.lastY = player.y + 1
-      player.lastEnd = null
-    }
-  }
-
   private collides(p: number[], player: Snake) {
     return (collider: Snake) => {
       let tails = this.round.tails.tailsForPlayer(collider)
@@ -334,10 +303,8 @@ export class Server {
 
       for (const player of playersAlive) {
         this.rotateTick(player)
-        this.moveTick(player.snake!)
-        this.wrapEdge(player.snake!)
-
         player.snake!.tick()
+
         // Create tail polygon, this returns undefined if it's supposed to be a hole
         const poly = player.snake!.createTailPolygon()
 

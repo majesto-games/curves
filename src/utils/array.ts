@@ -31,3 +31,19 @@ export function frequency<T>(choices: [number, T][], total?: number): T {
   // just in case (and to please the compiler)
   return choices[0][1]
 }
+
+export function mergeFloat32(a: Float32Array, b: Float32Array): Float32Array {
+  const c = new Float32Array(a.length + b.length)
+  c.set(a)
+  c.set(b, a.length)
+
+  return c
+}
+
+export function mergeUint16(a: Uint16Array, b: Uint16Array): Uint16Array {
+  const c = new Uint16Array(a.length + b.length)
+  c.set(a)
+  c.set(b, a.length)
+
+  return c
+}

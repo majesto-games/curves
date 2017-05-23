@@ -4,6 +4,9 @@ import {
   SERVER_HEIGHT,
 } from "../server/main"
 
+import { mergeFloat32, mergeUint16 } from "utils/array"
+import { Observable } from "utils/observable"
+
 export interface Tail {
   add: (part: TailPart) => void
   clear: () => void
@@ -22,6 +25,7 @@ export class TailPart {
     public readonly vertices: number[],
     public readonly playerId: number,
     public readonly tailId: number,
+    public readonly isTailStart: boolean,
   ) {
     this.centerX = 0
     this.centerY = 0
@@ -174,20 +178,75 @@ export class TailStorage<TailT extends Tail> {
 }
 
 export class ClientTail implements Tail {
-  public readonly graphics = new PIXI.Graphics()
+  public readonly meshes = new Observable<PIXI.mesh.Mesh[]>([])
+  private readonly textureWidth: number
+  private readonly textureHeight: number
+  private texturePosition = 0
 
-  constructor(public color: number) {
-
+  constructor(private readonly texture: PIXI.Texture) {
+    this.textureHeight = texture.height
+    this.textureWidth = texture.width
+    console.log(this.textureWidth, this.textureHeight)
   }
 
   public add(part: TailPart) {
-    this.graphics.beginFill(this.color)
-    this.graphics.drawPolygon(part.vertices)
-    this.graphics.endFill()
+    const textureMid = this.textureHeight / 2
+    // point pair order is 1H, 2H, 2L, 1L
+
+    const [h1x, h1y, h2x, h2y, l2x, l2y, l1x, l1y] = part.vertices
+    const mid1x = (l1x - h1x)
+    const mid1y = (l1y - l1y)
+    const mid2x = (l2x - h2x)
+    const mid2y = (l2y - l2y)
+
+    const angle = Math.atan2(mid2y - mid1y, mid2x - mid1x)
+    const length = Math.sqrt(Math.pow(mid1x - mid2x, 2) + Math.pow(mid1y - mid2y, 2))
+    const width1 = Math.sqrt((Math.pow(h1x - l1x, 2) + Math.pow(h1y - l1y, 2))) / 2
+    const width2 = Math.sqrt((Math.pow(h2x - l2x, 2) + Math.pow(h2y - l2y, 2))) / 2
+
+    if (part.isTailStart) {
+      const initVertices = new Float32Array([
+        l1x, l1y,
+        h1x, h1y,
+      ])
+      const initUvs = new Float32Array([
+        this.texturePosition / this.textureWidth, width1 / this.textureHeight,
+        this.texturePosition / this.textureWidth, -width1 / this.textureHeight,
+      ])
+      const initIndices = new Uint16Array([0, 1])
+      const meshes = this.meshes.value.concat([new PIXI.mesh.Mesh(this.texture, initVertices, initUvs, initIndices)])
+      this.meshes.set(meshes)
+    }
+    const mesh = this.meshes.value[this.meshes.value.length - 1]
+
+    const newVertices = new Float32Array([
+      l2x, l2y,
+      h2x, h2y,
+    ])
+    const newUvs = new Float32Array([
+      width2 / this.textureHeight, (this.texturePosition + length) / this.textureWidth,
+       -width2 / this.textureHeight, (this.texturePosition + length) / this.textureWidth,
+    ])
+    const index = mesh.indices.length
+    const newIndices = new Uint16Array([index, index + 1])
+    mesh.vertices = mergeFloat32(mesh.vertices, newVertices)
+    mesh.uvs = mergeFloat32(mesh.uvs, newUvs)
+    mesh.indices = mergeUint16(mesh.indices, newIndices)
+
+    this.texturePosition += length
+
+    mesh.dirty++
+    mesh.indexDirty++
+    const meshy = mesh as any
+    meshy.refresh()
+    mesh.updateTransform()
+
   }
 
   public clear() {
-    this.graphics.clear()
+    const meshes = this.meshes.value
+    this.meshes.set([])
+    meshes.forEach(mesh => mesh.destroy())
   }
 
 }

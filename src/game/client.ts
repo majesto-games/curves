@@ -34,13 +34,23 @@ import {
   start,
 } from "server/actions"
 
-import { Sprite, Graphics, autoDetectRenderer, Container, CanvasRenderer, WebGLRenderer } from "pixi.js"
+import {
+  Sprite,
+  Graphics,
+  autoDetectRenderer,
+  Container,
+  CanvasRenderer,
+  WebGLRenderer,
+  BaseTexture,
+  Texture,
+} from "pixi.js"
 
 import pressedKeys, { KEYS, registerKeys } from "./keys"
 
 import { Game } from "./game"
 import { Observable } from "utils/observable"
 import never from "utils/never"
+import { hexToString } from "game/util"
 
 const keyCombos: { left: KEYS, right: KEYS }[] = []
 
@@ -60,6 +70,45 @@ export enum ClientState {
   LOBBY,
   GAME,
   CLOSED,
+}
+
+function solidColorTemplate(baseFill: string, canvas: HTMLCanvasElement) {
+  canvas.width = 2
+  canvas.height = 2
+  const context = canvas.getContext("2d")!
+  context.fillStyle = baseFill
+  context.fillRect(0, 0, 2, 2)
+}
+
+function straightStripesTemplate(stripeColor: string, width: number): TextureTemplate {
+  return (baseFill, canvas) => {
+    const size = width * 2
+    canvas.width = size
+    canvas.height = size
+
+    const context = canvas.getContext("2d")!
+
+    context.fillStyle = baseFill
+    context.fillRect(0, 0, size, size)
+    context.fillStyle = stripeColor
+    context.fillRect(width / 2, 0, width, size)
+  }
+}
+
+// should be tileable in all directions
+type TextureTemplate = (baseFill: string, canvas: HTMLCanvasElement) => void
+
+function createTexture(color: number, textureTemplate: TextureTemplate) {
+  const canvas = document.createElement("canvas")
+  document.body.appendChild(canvas)
+  textureTemplate(hexToString(color), canvas)
+  const l = new BaseTexture(canvas)
+  l.wrapMode = PIXI.WRAP_MODES.REPEAT
+  return new Texture(l)
+}
+
+export function fillSquare(width: number, height: number) {
+  return new Float32Array([-width, height, -width, -height, width, height, width, -height])
 }
 
 export class Client {
@@ -162,7 +211,8 @@ export class Client {
       localIndex = this.localIndex++
     }
 
-    const player = new ClientPlayer(name, id, color, localIndex)
+    const texture = createTexture(color, straightStripesTemplate("white", 4))
+    const player = new ClientPlayer(name, id, color, texture, localIndex)
 
     if (isOwner) {
       player.steeringLeft.subscribe(value => {
@@ -215,10 +265,21 @@ export class Client {
       const player = this.playerById(id)!
 
       // TODO: don't draw graphics in here
-      const graphics = new Graphics()
-      graphics.beginFill(player.color)
-      graphics.drawCircle(0, 0, 1)
-      graphics.endFill()
+      const graphics = new PIXI.mesh.Mesh(
+        player.texture,
+        fillSquare(1, 1),
+        fillSquare(1, 1),
+        new Uint16Array([0, 1, 2, 3]))
+      const mask = new Graphics()
+      mask.beginFill(0x000000)
+
+      mask.drawCircle(0, 0, 1)
+      mask.endFill()
+      // adding the mask as child makes it follow the snake position
+      graphics.addChild(mask)
+      // also sets mask.renderable to false :)
+      graphics.mask = mask
+      graphics.rotation = rotation
       snake.graphics = graphics
 
       snake.powerupGraphics = new Graphics()
@@ -274,7 +335,7 @@ export class Client {
   }
 
   private newTail(playerId: number) {
-    const tail = new ClientTail(this.playerById(playerId)!.color)
+    const tail = new ClientTail(this.playerById(playerId)!.texture)
     this.game.addTail(tail)
 
     return tail
