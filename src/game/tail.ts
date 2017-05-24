@@ -193,10 +193,10 @@ export class ClientTail implements Tail {
     // point pair order is 1H, 2H, 2L, 1L
 
     const [h1x, h1y, h2x, h2y, l2x, l2y, l1x, l1y] = part.vertices
-    const mid1x = (l1x - h1x)
-    const mid1y = (l1y - l1y)
-    const mid2x = (l2x - h2x)
-    const mid2y = (l2y - l2y)
+    const mid1x = (l1x + h1x) / 2
+    const mid1y = (l1y + l1y) / 2
+    const mid2x = (l2x + h2x) / 2
+    const mid2y = (l2y + l2y) / 2
 
     const angle = Math.atan2(mid2y - mid1y, mid2x - mid1x)
     const length = Math.sqrt(Math.pow(mid1x - mid2x, 2) + Math.pow(mid1y - mid2y, 2))
