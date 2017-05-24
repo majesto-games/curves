@@ -100,7 +100,6 @@ type TextureTemplate = (baseFill: string, canvas: HTMLCanvasElement) => void
 
 function createTexture(color: number, textureTemplate: TextureTemplate) {
   const canvas = document.createElement("canvas")
-  document.body.appendChild(canvas)
   textureTemplate(hexToString(color), canvas)
   const l = new BaseTexture(canvas)
   l.wrapMode = PIXI.WRAP_MODES.REPEAT

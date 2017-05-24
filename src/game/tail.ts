@@ -186,7 +186,6 @@ export class ClientTail implements Tail {
   constructor(private readonly texture: PIXI.Texture) {
     this.textureHeight = texture.height
     this.textureWidth = texture.width
-    console.log(this.textureWidth, this.textureHeight)
   }
 
   public add(part: TailPart) {
