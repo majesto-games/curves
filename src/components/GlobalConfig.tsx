@@ -29,10 +29,10 @@ type ConfigurableValue<T> = keyof T
 
 const TICK_RATE = 64
 
-const SHAPE_VERSION = 4
+const SHAPE_VERSION = 5
 const SHAPE: Configurable<GlobalConfigValues> = {
   TICK_RATE: [6, 64, 300],
-  SKIP_TAIL_FATNESS_MULTIPLIER: [0.003, 0.03, 0.3],
+  SKIP_TAIL_FATNESS_MULTIPLIER: [0.003, 0.05, 0.3],
   ROTATION_SPEED: [0.64, 64, 640], // rotation speed is divided by fatness so it needs to be high
   MOVE_SPEED_BASE: [10, 100, 300],
   HOLE_CHANCE_BASE: [-0.2, -0.002, 1],
