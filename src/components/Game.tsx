@@ -171,6 +171,7 @@ export default class GameContainer extends React.Component<GameContainerProps, G
   private div: HTMLDivElement | null = null
   private client: Client | undefined
   private localPlayers = 0
+  private subscriptions: (() => void)[] = []
 
   public constructor(props: GameContainerProps) {
     super(props)
@@ -186,6 +187,13 @@ export default class GameContainer extends React.Component<GameContainerProps, G
       this.client.close()
     }
     this.getRoom(nextProps.room)
+  }
+
+  public componentWillUnmount() {
+    this.subscriptions.forEach(f => f())
+    if (this.client) {
+      this.client.close()
+    }
   }
 
   public render() {
@@ -210,7 +218,7 @@ export default class GameContainer extends React.Component<GameContainerProps, G
 
     if (state === ClientState.UNCONNECTED) {
       return (
-        <button onClick={this.readState}>Refresh room state</button>
+        <div />
       )
     }
 
@@ -229,15 +237,6 @@ export default class GameContainer extends React.Component<GameContainerProps, G
     )
   }
 
-  private readState = () => {
-    const client = this.client!
-    this.setState((prevState, props) => ({
-      scores: client.scores.value,
-      colors: client.game.colors,
-      state: client.state,
-    }))
-  }
-
   private onStart = () => {
     this.client!.start()
   }
@@ -251,37 +250,34 @@ export default class GameContainer extends React.Component<GameContainerProps, G
 
   private getRoom = (roomName: string) => {
     const client = connect(roomName)
-    client.game.event.subscribe(e => {
-      switch (e) {
-        case GameEvent.END: {
-          this.client = undefined
-          this.setState({
-            colors: [],
-            state: ClientState.CLOSED,
-          })
-          break
+    this.subscriptions.push(
+      client.game.event.subscribe(e => {
+        switch (e) {
+          case GameEvent.END: {
+            this.client = undefined
+            this.setState({
+              colors: [],
+              state: ClientState.CLOSED,
+            })
+            break
+          }
+          case GameEvent.ROUND_END:
+          case GameEvent.START: {
+            this.setState((prevState, props) => ({
+              colors: client.game.colors,
+              state: client.state,
+            }))
+            break
+          }
+          default:
+            never("GameContainer didn't handle", e)
         }
-        case GameEvent.ROUND_END:
-        case GameEvent.START: {
-          this.setState((prevState, props) => ({
-            colors: client.game.colors,
-            state: client.state,
-          }))
-          break
-        }
-        default:
-          never("GameContainer didn't handle", e)
-      }
-    })
-    client.state.subscribe(state => {
-      this.setState({
-        state,
-      })
-    })
-
-    client.lobby.subscribe(lobby => this.setState({ lobby }))
-    client.game.overlay.subscribe(overlay => this.setState({ overlay }))
-    client.scores.subscribe(scores => this.setState({ scores }))
+      }),
+      client.state.subscribe(state => this.setState({ state })),
+      client.lobby.subscribe(lobby => this.setState({ lobby })),
+      client.game.overlay.subscribe(overlay => this.setState({ overlay })),
+      client.scores.subscribe(scores => this.setState({ scores })),
+    )
 
     this.client = client
     this.localPlayers = 1

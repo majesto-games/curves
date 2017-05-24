@@ -83,6 +83,9 @@ export function connect(room: string): Client {
     } else {
       return resolveConn(connectAsServer(client, rc))
     }
+  }).catch(e => {
+    // TODO: Present an error
+    client.close()
   })
 
   return client

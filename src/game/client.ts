@@ -129,6 +129,8 @@ export class Client {
       this.connection = connection
       this._close = close
       this.state.set(ClientState.LOBBY)
+    }).catch(e => {
+      this.close()
     })
   }
 
