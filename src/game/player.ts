@@ -360,8 +360,8 @@ export class Snake {
     }
   }
 
-  private createHole() {
-    this.skipTailTicker = this.fatness * window.getGlobal("SKIP_TAIL_FATNESS_MULTIPLIER")
+  private createHole(holeTime: number = this.fatness * window.getGlobal("SKIP_TAIL_FATNESS_MULTIPLIER")) {
+    this.skipTailTicker = holeTime
     this.holeChance = window.getGlobal("HOLE_CHANCE_BASE")
     this.stopTail()
   }
@@ -371,7 +371,7 @@ export class Snake {
     this.lastX = this.x = x
     this.lastY = this.y = y
     this.rotation = rotation
-    this.createHole()
+    this.createHole(1 * window.getGlobal("TICK_RATE")) // 1 second
   }
 
   private wrapEdge() {
