@@ -39,12 +39,12 @@ interface PreferencesState {
   showPreferences: boolean
 }
 
-class Preferences extends React.Component<void, PreferencesState> {
+class Preferences extends React.Component<{}, PreferencesState> {
   public state: PreferencesState = {
     showPreferences: false,
   }
 
-  constructor(props: void) {
+  constructor(props: {}) {
     super(props)
 
     window.addEventListener("keydown", (e: KeyboardEvent) => {

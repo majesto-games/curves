@@ -25,9 +25,9 @@ declare global {
 /* tslint:enable: no-namespace */
 window.PhoneControls = { left: false, right: false }
 
-class PhoneControls extends React.Component<void, void> {
+class PhoneControls extends React.Component<{}, {}> {
 
-  public constructor(props: void) {
+  public constructor(props: {}) {
     super(props)
   }
 
@@ -53,7 +53,7 @@ class PhoneControls extends React.Component<void, void> {
   }
 }
 
-class RunningGame extends React.Component<RunningGameProps, void> {
+class RunningGame extends React.Component<RunningGameProps, {}> {
   public render() {
     const {
       scores,

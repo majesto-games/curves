@@ -12,7 +12,7 @@ import Canvas from "components/Canvas"
 const TEXTURE_WIDTH = 32
 const TEXTURE_HEIGHT = 32
 
-export default class PIXIPlayground extends React.Component<void, void> {
+export default class PIXIPlayground extends React.Component<{}, {}> {
   private renderer: WebGLRenderer | CanvasRenderer
   private readonly container = new Container()
   private mesh: PIXI.mesh.Mesh
