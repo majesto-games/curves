@@ -84,6 +84,7 @@ interface LobbyProps {
   room: string
   onStart: () => void
   addPlayer: () => void
+  isServer: boolean
 }
 
 class Lobby extends React.Component<LobbyProps, void> {
@@ -91,6 +92,7 @@ class Lobby extends React.Component<LobbyProps, void> {
     const {
       lobby,
       room,
+      isServer,
     } = this.props
 
     return (
@@ -99,7 +101,7 @@ class Lobby extends React.Component<LobbyProps, void> {
           <div className="header">
             <h1>Lobby: {room}</h1>
             <button className="btn btn-lg btn-success" onClick={this.addPlayer}>Add local player</button>
-            <button className="btn btn-lg btn-primary" onClick={this.onStart}>Start</button>
+            {isServer && <button className="btn btn-lg btn-primary" onClick={this.onStart}>Start</button>}
           </div>
           <table className="table table-striped">
             <thead>
@@ -141,6 +143,7 @@ interface GameContainerState {
   lobby: LobbyI
   overlay: string | undefined
   state: ClientState
+  isServer: boolean
 }
 
 /*
@@ -166,6 +169,7 @@ export default class GameContainer extends React.Component<GameContainerProps, G
     lobby: { players: [] },
     overlay: undefined,
     state: ClientState.UNCONNECTED,
+    isServer: false,
   }
 
   private div: HTMLDivElement | null = null
@@ -203,6 +207,7 @@ export default class GameContainer extends React.Component<GameContainerProps, G
       overlay,
       state,
       lobby,
+      isServer,
     } = this.state
 
     if (state === ClientState.LOBBY) {
@@ -212,6 +217,7 @@ export default class GameContainer extends React.Component<GameContainerProps, G
           onStart={this.onStart}
           addPlayer={this.addPlayer}
           room={this.props.room}
+          isServer={isServer}
         />
       )
     }
@@ -273,7 +279,12 @@ export default class GameContainer extends React.Component<GameContainerProps, G
             never("GameContainer didn't handle", e)
         }
       }),
-      client.state.subscribe(state => this.setState({ state })),
+      client.state.subscribe(state => {
+        this.setState({
+          state,
+          isServer: client.isServer,
+         })
+      }),
       client.lobby.subscribe(lobby => this.setState({ lobby })),
       client.game.overlay.subscribe(overlay => this.setState({ overlay })),
       client.scores.subscribe(scores => this.setState({ scores })),

@@ -72,7 +72,7 @@ export class Server {
   private round: RoundState
   private joinable = true
 
-  constructor() {
+  constructor(private owner: ConnectionId) {
     this.round = new RoundState()
   }
 
@@ -83,7 +83,9 @@ export class Server {
         break
       }
       case START: {
-        this.startGame()
+        if (connectionId === this.owner) {
+          this.startGame()
+        }
         break
       }
       case ROTATE: {

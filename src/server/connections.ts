@@ -32,7 +32,6 @@ export type ConnectionId = string
 
 export interface ServerConnection {
   id: ConnectionId
-  isOwner: boolean
   close(): void
   (action: ServerAction): void
 }

@@ -37,8 +37,8 @@ function connectAsClient(client: Client, rc: quickconnect.connection) {
 function connectAsServer(client: Client, rc: quickconnect.connection): [ServerConnection, () => void] {
   console.log("Server")
 
-  const server = new Server()
   const id = cuid()
+  const server = new Server(id)
 
   const serverConn = localServerConnection(server, id)
 
@@ -47,6 +47,7 @@ function connectAsServer(client: Client, rc: quickconnect.connection): [ServerCo
   serverDataChannel(rc, handleClientConnections(server))
 
   serverConn(addPlayer())
+  client.isServer = true
   return [serverConn, () => rc.close()]
 }
 

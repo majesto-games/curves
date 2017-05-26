@@ -117,6 +117,7 @@ export class Client {
   public lobby = new Observable<Lobby>({ players: [] })
   public scores = new Observable<Score[]>([])
   public state = new Observable<ClientState>(ClientState.UNCONNECTED)
+  public isServer = false
   private currentRound: RoundState
   private localIndex = 0
   private connection: ServerConnection
@@ -191,10 +192,7 @@ export class Client {
   }
 
   public start() {
-    // TODO: add this owner check in server as well
-    // TODO: having isOwner in connection is not the right place
-    console.log(this.state.value !== ClientState.LOBBY, !this.connection.isOwner)
-    if (this.state.value !== ClientState.LOBBY || !this.connection.isOwner) {
+    if (this.state.value !== ClientState.LOBBY || !this.connection) {
       return
     }
 
@@ -332,7 +330,7 @@ export class Client {
     this.game.removePowerup(powerupSprite, snakeId, powerupId)
     this.currentRound.powerupSprites[powerupId] = undefined
 
-    // play cool sound
+    // TODO: play cool sound
   }
 
   private newTail(playerId: number) {
