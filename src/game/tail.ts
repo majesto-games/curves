@@ -251,11 +251,12 @@ export class ClientTail implements Tail {
 }
 
 export class ServerTail implements Tail {
-  public minX: number
-  public maxX: number
-  public minY: number
-  public maxY: number
-  public parts: TailPart[] = []
+  private minX: number
+  private maxX: number
+  private minY: number
+  private maxY: number
+  private parts: TailPart[] = []
+  private vertices: number[][] = []
 
   public isNew() {
     return this.parts.length < 1
@@ -278,6 +279,13 @@ export class ServerTail implements Tail {
     }
 
     this.parts.push(part)
+    const [h1x, h1y, h2x, h2y, l2x, l2y, l1x, l1y] = part.vertices
+
+    if (part.isTailStart) {
+      this.vertices.push([l1x, l1y, h1x, h1y])
+    }
+
+    this.vertices[this.vertices.length - 1].push(h2x, h2y, l2x, l2y)
   }
 
   public clear() {
@@ -287,11 +295,28 @@ export class ServerTail implements Tail {
     this.parts = []
   }
 
+  // special case for colliding with itself
+  public containsPointExcludeLatest(x: number, y: number) {
+    if (x < this.minX || x > this.maxX || y < this.minY || y > this.maxY) {
+      return false
+    }
+
+    const last = this.vertices[this.vertices.length - 1]
+    const rest = this.vertices.slice(0, -1)
+    const mostOfLast = last.slice(0, -4)
+
+    if (mostOfLast.length > 4 && specialContainsPoint(mostOfLast, x, y)) {
+      return true
+    }
+
+    return rest.some(part => containsPoint(part, x, y))
+  }
+
   public containsPoint(x: number, y: number) {
     if (x < this.minX || x > this.maxX || y < this.minY || y > this.maxY) {
       return false
     }
-    return this.parts.some(part => containsPoint(part.vertices, x, y))
+    return this.vertices.some(part => specialContainsPoint(part, x, y))
   }
 
   private ensureBoundsX(x: number) {
@@ -306,22 +331,56 @@ export class ServerTail implements Tail {
 
 }
 
-export function containsPoint(points: number[], x: number, y: number) {
+function lineIntersect(x: number, y: number, arr: number[], i: number, j: number) {
+    const xi = arr[i]
+    const yi = arr[i + 1]
+    const xj = arr[j]
+    const yj = arr[j + 1]
+    return ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)
+}
+
+function containsPoint(points: number[], x: number, y: number) {
   let inside = false
 
   const length = points.length / 2
 
   // j is i - 1 with wrapparound for negative numbers
   for (let i = 0, j = length - 1; i < length; j = i++) {
-    const xi = points[i * 2]
-    const yi = points[i * 2 + 1]
-    const xj = points[j * 2]
-    const yj = points[j * 2 + 1]
-    const intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)
-
-    if (intersect) {
+    if (lineIntersect(x, y, points, i * 2, j * 2)) {
       inside = !inside
     }
+  }
+
+  return inside
+}
+
+// containsPoint using our special indexing
+export function specialContainsPoint(points: number[], x: number, y: number) {
+  let inside = false
+
+  for (let i = 0; i + 7 < points.length ; i += 4) {
+    const iLower = i
+    const jLower = i + 4
+    if (lineIntersect(x, y, points, iLower, jLower)) {
+      inside = !inside
+    }
+    const iUpper = i + 2
+    const jUpper = i + 6
+    if (lineIntersect(x, y, points, iUpper, jUpper)) {
+      inside = !inside
+    }
+  }
+
+  // special case for start and end
+  const iLower = 0
+  const jLower = 0 + 2
+  if (lineIntersect(x, y, points, iLower, jLower)) {
+    inside = !inside
+  }
+  const iUpper = points.length - 2
+  const jUpper = points.length - 4
+  if (lineIntersect(x, y, points, iUpper, jUpper)) {
+    inside = !inside
   }
 
   return inside

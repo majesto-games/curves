@@ -2,7 +2,7 @@ import { getColors } from "game/util"
 import { frequency, shuffle } from "utils/array"
 import never from "utils/never"
 import { Point, ServerPlayer, Snake, Powerup, ActivePowerup, PowerupType } from "game/player"
-import { containsPoint, ServerTail, TailStorage } from "game/tail"
+import { ServerTail, TailStorage } from "game/tail"
 import {
   PlayerUpdate,
   Gap,
@@ -202,10 +202,7 @@ export class Server {
           const x = p[i]
           const y = p[i + 1]
 
-          // Test all but the last tail part
-          const mostOfLast = last.parts.slice(0, -1)
-
-          if (mostOfLast.some(part => containsPoint(part.vertices, x, y))) {
+          if (last.containsPointExcludeLatest(x, y)) {
             return true
           }
         }
