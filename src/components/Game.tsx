@@ -8,6 +8,7 @@ import Overlay from "components/Overlay"
 import { ClientState, Client } from "game/client"
 import { hexToString } from "game/util"
 import never from "utils/never"
+import Spinner from "components/Spinner"
 
 interface RunningGameProps {
   view: HTMLCanvasElement
@@ -224,7 +225,7 @@ export default class GameContainer extends React.Component<GameContainerProps, G
 
     if (state === ClientState.UNCONNECTED) {
       return (
-        <div />
+        <Spinner />
       )
     }
 
