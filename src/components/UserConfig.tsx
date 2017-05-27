@@ -74,6 +74,7 @@ class KeyChange extends React.Component<KeyChangeProps, void> {
   }
 
   private handleKey = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    event.currentTarget.blur()
     this.props.handleChange(this.props.name, this.props.index, event.keyCode)
   }
 }
