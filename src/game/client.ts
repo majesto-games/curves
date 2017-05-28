@@ -50,7 +50,7 @@ import { KEYS } from "./keys"
 import { Game } from "./game"
 import { Observable } from "utils/observable"
 import never from "utils/never"
-import { hexToString } from "game/util"
+import { hexToString, luminosity } from "game/util"
 
 const keyCombos: { left: KEYS, right: KEYS }[] = []
 
@@ -208,7 +208,8 @@ export class Client {
       localIndex = this.localIndex++
     }
 
-    const texture = createTexture(color, straightStripesTemplate("white", 4))
+    const stripeColor = luminosity(color, 0.75)
+    const texture = createTexture(color, straightStripesTemplate(hexToString(stripeColor), 4))
     const player = new ClientPlayer(name, id, color, texture, localIndex)
 
     if (isOwner) {

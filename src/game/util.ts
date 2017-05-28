@@ -22,6 +22,16 @@ export function funColor() {
   return superFunColor((red << 16) | (green << 8) | blue)
 }
 
+export function luminosity(color: number, amount: number) {
+  const mask = 0x0000ff
+  const blue = ((color & mask) * amount) & mask
+  color = color >> 8
+  const green = ((color & mask) * amount) & mask
+  color = color >> 8
+  const red = ((color & mask) * amount) & mask
+  return (red << 16) | (green << 8) | blue
+}
+
 /* tslint: enable */
 
 export function superFunColor(input: number) {
