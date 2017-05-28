@@ -79,30 +79,30 @@ export enum KEYS {
   SUBTRACT = 109,
   DECIMAL = 110,
   DIVIDE = 111,
-  F1 = 112,
-  F2 = 113,
-  F3 = 114,
-  F4 = 115,
-  F5 = 116,
-  F6 = 117,
-  F7 = 118,
-  F8 = 119,
-  F9 = 120,
-  F10 = 121,
-  F11 = 122,
-  F12 = 123,
-  F13 = 124,
-  F14 = 125,
-  F15 = 126,
-  F16 = 127,
-  F17 = 128,
-  F18 = 129,
-  F19 = 130,
-  F20 = 131,
-  F21 = 132,
-  F22 = 133,
-  F23 = 134,
-  F24 = 135,
+  /*F1 = 112,
+    F2 = 113,
+    F3 = 114,
+    F4 = 115,
+    F5 = 116,
+    F6 = 117,
+    F7 = 118,
+    F8 = 119,
+    F9 = 120,
+    F10 = 121,
+    F11 = 122,
+    F12 = 123,
+    F13 = 124,
+    F14 = 125,
+    F15 = 126,
+    F16 = 127,
+    F17 = 128,
+    F18 = 129,
+    F19 = 130,
+    F20 = 131,
+    F21 = 132,
+    F22 = 133,
+    F23 = 134,
+    F24 = 135,*/
   NUM_LOCK = 144,
   SCROLL_LOCK = 145,
   COMMA = 188,
@@ -120,26 +120,31 @@ interface PressedKeys {
   [key: number]: boolean
 }
 
-const keys: PressedKeys = {
+/* tslint:disable: no-namespace */
+declare global {
+  interface Window {
+    Keys: PressedKeys
+    KeysPreventDefault: boolean
+  }
 }
+/* tslint:enable: no-namespace */
 
-export function registerKeys(keysToRegister: KEYS[]) {
-  keysToRegister.forEach(element => {
-    keys[element] = keys[element] || false
-  })
-}
+export default function setup() {
+  window.Keys = []
+  window.KeysPreventDefault = false
 
-export default (() => {
   function setKeysPressed(e: KeyboardEvent, pressed: boolean) {
-    if (e.metaKey || e.ctrlKey || e.altKey || e.target !== document.body) {
+    if (e.metaKey || e.ctrlKey || e.altKey) {
       return
     }
 
-    const key = keys[e.keyCode]
-    if (key != null && key !== pressed) {
-      e.preventDefault()
+    const name = KEYS[e.keyCode]
+    if (name != null) {
+      if (window.KeysPreventDefault) {
+        e.preventDefault()
+      }
 
-      keys[e.keyCode] = pressed
+      window.Keys[e.keyCode] = pressed
     }
   }
 
@@ -150,6 +155,4 @@ export default (() => {
   window.addEventListener("keyup", (e) => {
     setKeysPressed(e, false)
   })
-
-  return keys
-})()
+}

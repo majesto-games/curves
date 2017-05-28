@@ -11,6 +11,8 @@ import { Location, parsePath } from "history"
 
 import "bootstrap/dist/css/bootstrap.css"
 import "style.css"
+import keysSetup from "game/keys"
+keysSetup()
 
 function getComponent(location: Location): JSX.Element {
   const split = location.pathname.substring(1).split("/")

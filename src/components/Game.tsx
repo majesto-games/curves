@@ -284,7 +284,7 @@ export default class GameContainer extends React.Component<GameContainerProps, G
         this.setState({
           state,
           isServer: client.isServer,
-         })
+        })
       }),
       client.lobby.subscribe(lobby => this.setState({ lobby })),
       client.game.overlay.subscribe(overlay => this.setState({ overlay })),

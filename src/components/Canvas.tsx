@@ -9,6 +9,11 @@ export default class Canvas extends React.Component<CanvasProps, void> {
 
   public componentDidMount() {
     this.updateView(this.props)
+    window.KeysPreventDefault = true
+  }
+
+  public componentWillUnmount() {
+    window.KeysPreventDefault = false
   }
 
   public shouldComponentUpdate() {

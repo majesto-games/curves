@@ -45,7 +45,7 @@ import {
   Texture,
 } from "pixi.js"
 
-import pressedKeys, { KEYS, registerKeys } from "./keys"
+import { KEYS } from "./keys"
 
 import { Game } from "./game"
 import { Observable } from "utils/observable"
@@ -53,8 +53,6 @@ import never from "utils/never"
 import { hexToString } from "game/util"
 
 const keyCombos: { left: KEYS, right: KEYS }[] = []
-
-registerKeys([KEYS.RETURN])
 
 class RoundState {
   public powerupSprites: { [id: number]: Sprite | undefined } = {}
@@ -351,8 +349,8 @@ export class Client {
         return
       }
 
-      p.steeringLeft.set(pressedKeys[keys.left] || window.PhoneControls.left)
-      p.steeringRight.set(pressedKeys[keys.right] || window.PhoneControls.right)
+      p.steeringLeft.set(window.Keys[keys.left] || window.PhoneControls.left)
+      p.steeringRight.set(window.Keys[keys.right] || window.PhoneControls.right)
     })
   }
 }

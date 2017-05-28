@@ -224,7 +224,7 @@ export class ClientTail implements Tail {
     ])
     const newUvs = new Float32Array([
       width2 / this.textureHeight, (this.texturePosition + length) / this.textureWidth,
-       -width2 / this.textureHeight, (this.texturePosition + length) / this.textureWidth,
+      -width2 / this.textureHeight, (this.texturePosition + length) / this.textureWidth,
     ])
     const index = mesh.indices.length
     const newIndices = new Uint16Array([index, index + 1])
@@ -332,11 +332,11 @@ export class ServerTail implements Tail {
 }
 
 function lineIntersect(x: number, y: number, arr: number[], i: number, j: number) {
-    const xi = arr[i]
-    const yi = arr[i + 1]
-    const xj = arr[j]
-    const yj = arr[j + 1]
-    return ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)
+  const xi = arr[i]
+  const yi = arr[i + 1]
+  const xj = arr[j]
+  const yj = arr[j + 1]
+  return ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)
 }
 
 function containsPoint(points: number[], x: number, y: number) {
@@ -358,7 +358,7 @@ function containsPoint(points: number[], x: number, y: number) {
 export function specialContainsPoint(points: number[], x: number, y: number) {
   let inside = false
 
-  for (let i = 0; i + 7 < points.length ; i += 4) {
+  for (let i = 0; i + 7 < points.length; i += 4) {
     const iLower = i
     const jLower = i + 4
     if (lineIntersect(x, y, points, iLower, jLower)) {

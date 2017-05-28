@@ -173,7 +173,7 @@ function nextPoints(point: Point, angle: number, thickness: number) {
   const y = point.y - Math.sin(angle)
   const anglePerp = Math.atan2(point.y - y, point.x - x) + Math.PI / 2
 
-  return [{ x, y}, {
+  return [{ x, y }, {
     x: x - Math.cos(anglePerp) * thickness,
     y: y - Math.sin(anglePerp) * thickness,
   }, {

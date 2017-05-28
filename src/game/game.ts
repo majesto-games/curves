@@ -38,7 +38,7 @@ import { hexToString } from "game/util"
 
 import * as quickconnect from "rtc-quickconnect"
 
-import pressedKeys, { KEYS, registerKeys } from "./keys"
+import { KEYS } from "./keys"
 
 import * as Icons from "icons"
 import { Observable, SimpleEvent } from "utils/observable"

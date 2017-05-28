@@ -1,5 +1,5 @@
 import * as React from "react"
-import { KEYS, registerKeys } from "game/keys"
+import { KEYS } from "game/keys"
 import never from "utils/never"
 import { JsonSafeParse } from "utils/misc"
 
@@ -43,7 +43,6 @@ function readState(): UserConfig {
 function writeState(state: UserConfig) {
   localStorage.setItem("userConfig", JSON.stringify(state))
   window.UserConfig = state
-  registerKeys(Array.prototype.concat.apply([], state.playerKeys.map(n => [n.left, n.right])))
 }
 
 export function initUserConfig() {
