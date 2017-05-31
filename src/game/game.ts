@@ -253,6 +253,8 @@ export class Game {
       case "SWAP_ME": return Icons.swapMe
       case "SWAP_THEM": return Icons.swapThem
       case "REVERSE_THEM": return Icons.reverseThem
+      case "HARD_WALLS": return Icons.undefinedIcon
+      case "SUDDEN_DEATH": return Icons.undefinedIcon
       default: return never("Unexpected powerup image", powerupType)
     }
   }

@@ -1,11 +1,10 @@
 import { Tail, TailPart, NotRemoved } from "./tail"
 
-import { Animation } from "utils/animation"
+import { Animation, AnimationProgress } from "utils/animation"
 import { linear } from "tween-functions"
 import { ConnectionId } from "server/connections"
 import { Signal } from "utils/observable"
 import { Texture } from "pixi.js"
-import { SERVER_WIDTH, SERVER_HEIGHT } from "server/main"
 
 export interface Point {
   x: number
@@ -22,6 +21,8 @@ export type PowerupType
   | "SWAP_ME"
   | "SWAP_THEM"
   | "REVERSE_THEM"
+  | "HARD_WALLS"
+  | "SUDDEN_DEATH"
 
 export interface Powerup {
   type: PowerupType
@@ -106,12 +107,6 @@ export class ClientPlayer {
 interface PowerupProgress {
   order: number
   progress: number
-}
-
-interface AnimationProgress<T> {
-  value: T
-  progress: number
-  order: number
 }
 
 export class Snake {
@@ -301,12 +296,45 @@ export class Snake {
   public tick() {
     this.x += Math.sin(this.rotation) * this.speed
     this.y -= Math.cos(this.rotation) * this.speed
-    this.wrapEdge()
     this.fatnessAnimation.tick()
     this.speedAnimation.tick()
     this.ghostAnimation.tick()
     this.reversedAnimation.tick()
     this.updatePowerupProgress()
+  }
+
+  public wrapEdge(width: number, height: number) {
+    if (this.x > width + this.fatness) {
+      this.x = -this.fatness
+      this.lastX = this.x - 1
+      this.lastEnd = null
+    }
+
+    if (this.y > height + this.fatness) {
+      this.y = -this.fatness
+      this.lastY = this.y - 1
+      this.lastEnd = null
+    }
+
+    if (this.x < -this.fatness) {
+      this.x = width + this.fatness
+      this.lastX = this.x + 1
+      this.lastEnd = null
+    }
+
+    if (this.y < -this.fatness) {
+      this.y = height + this.fatness
+      this.lastY = this.y + 1
+      this.lastEnd = null
+    }
+  }
+
+  public outOfBounds(width: number, height: number) {
+    return (
+      this.x > width + this.fatness ||
+      this.y > height + this.fatness ||
+      this.x < -this.fatness ||
+      this.y < -this.fatness)
   }
 
   public createTailPolygon() {
@@ -372,31 +400,5 @@ export class Snake {
     this.lastY = this.y = y
     this.rotation = rotation
     this.createHole(1 * window.getGlobal("TICK_RATE")) // 1 second
-  }
-
-  private wrapEdge() {
-    if (this.x > SERVER_WIDTH + this.fatness) {
-      this.x = -this.fatness
-      this.lastX = this.x - 1
-      this.lastEnd = null
-    }
-
-    if (this.y > SERVER_HEIGHT + this.fatness) {
-      this.y = -this.fatness
-      this.lastY = this.y - 1
-      this.lastEnd = null
-    }
-
-    if (this.x < -this.fatness) {
-      this.x = SERVER_WIDTH + this.fatness
-      this.lastX = this.x + 1
-      this.lastEnd = null
-    }
-
-    if (this.y < -this.fatness) {
-      this.y = SERVER_HEIGHT + this.fatness
-      this.lastY = this.y + 1
-      this.lastEnd = null
-    }
   }
 }

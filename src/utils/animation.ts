@@ -7,6 +7,12 @@ interface Tween<T> {
   readonly f: TweenF<T>
 }
 
+export interface AnimationProgress<T> {
+  value: T
+  progress: number
+  order: number
+}
+
 export class Animation<T> {
   private tweens: Tween<T>[] = []
   private currentTick = 0

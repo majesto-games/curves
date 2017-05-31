@@ -27,6 +27,7 @@ import {
 } from "./actions"
 
 import { ClientConnection, ConnectionId } from "./connections"
+import { Animation, AnimationProgress } from "utils/animation"
 
 export const SERVER_WIDTH = 960
 export const SERVER_HEIGHT = 960
@@ -36,6 +37,11 @@ interface AlmostPlayerInit {
   color: number
   connectionId: ConnectionId
   id: number
+}
+
+interface PowerupProgress {
+  order: number
+  progress: number
 }
 
 function fastDistance(x1: number, y1: number, x2: number, y2: number) {
@@ -56,6 +62,34 @@ class RoundState {
   public powerupChance = window.getGlobal("POWERUP_CHANCE_BASE")
   public lastUpdate: number
   public sentActions: ClientAction[] = []
+  public hardWall = false
+  public hardWallProgress: PowerupProgress[] = []
+  public hardWallAnimation = new Animation<AnimationProgress<undefined>>(values => {
+    if (values.length > 0) {
+      this.hardWall = true
+      this.hardWallProgress = [values[values.length - 1]]
+    } else {
+      this.hardWall = false
+      this.hardWallProgress = []
+    }
+  })
+  public suddenDeath = false
+  public suddenDeathProgress: PowerupProgress[] = []
+  public serverWidth = SERVER_WIDTH
+  public serverHeight = SERVER_HEIGHT
+  public suddenDeathAnimation = new Animation<AnimationProgress<undefined>>(values => {
+    if (values.length > 0) {
+      this.suddenDeath = true
+      this.suddenDeathProgress = [values[values.length - 1]]
+      this.serverWidth = SERVER_WIDTH * (1 - this.suddenDeathProgress[0].progress)
+      this.serverHeight = SERVER_HEIGHT * (1 - this.suddenDeathProgress[0].progress)
+    } else {
+      this.suddenDeath = false
+      this.suddenDeathProgress = []
+      this.serverWidth = SERVER_WIDTH
+      this.serverHeight = SERVER_HEIGHT
+    }
+  })
 }
 
 export class Server {
@@ -240,6 +274,7 @@ export class Server {
       const swapThemChance = alivePlayerCount > 2 ? 0.5 : 0
 
       const powerupType = frequency<PowerupType>([
+        [30, "SUDDEN_DEATH"],
         [1, "SWAP_ME"],
         [swapThemChance, "SWAP_THEM"],
         [2, "GHOST"],
@@ -268,6 +303,17 @@ export class Server {
     return powerups
   }
 
+  private killPlayer(player: ServerPlayer) {
+    player.snake!.alive = false
+    // TODO: randomize order
+    this.round.losers.push(player)
+  }
+
+  private tickAnimations() {
+    this.round.hardWallAnimation.tick()
+    this.round.suddenDeathAnimation.tick()
+  }
+
   private serverTick() {
     if (this.paused) {
       return
@@ -281,6 +327,8 @@ export class Server {
     for (let i = 0; i < ticksNeeded; i++) {
       const playerUpdates: PlayerUpdate[] = []
       const playersAlive = this.players.filter(player => player.snake!.alive)
+
+      this.tickAnimations()
 
       if (playersAlive.length < 2) {
         const playerOrder = this.round.losers.concat(playersAlive)
@@ -303,6 +351,13 @@ export class Server {
       for (const player of playersAlive) {
         this.rotateTick(player)
         player.snake!.tick()
+        if (this.round.hardWall || this.round.suddenDeath) {
+          if (player.snake!.outOfBounds(this.round.serverWidth, this.round.serverHeight)) {
+            this.killPlayer(player)
+          }
+        } else {
+          player.snake!.wrapEdge(this.round.serverWidth, this.round.serverHeight)
+        }
 
         // Create tail polygon, this returns undefined if it's supposed to be a hole
         const poly = player.snake!.createTailPolygon()
@@ -311,9 +366,7 @@ export class Server {
 
         if (poly != null) {
           if (this.players.map(p => p.snake).some(this.collides(poly.vertices, player.snake!))) {
-            player.snake!.alive = false
-            // TODO: randomize order
-            this.round.losers.push(player)
+            this.killPlayer(player)
           }
 
           tailAction = {
@@ -412,6 +465,30 @@ export class Server {
         this.players
           .filter(p => player.id !== p.id)
           .forEach(p => p.snake!.reversify(powerup))
+        break
+      }
+      case "HARD_WALLS": {
+        const duration = window.getGlobal("POWERUP_ACTIVE_DURATION")
+
+        this.round.hardWallAnimation.add(duration, (step, left) => {
+          return {
+            progress: step / duration,
+            order: powerup.id,
+            value: undefined,
+          }
+        })
+        break
+      }
+      case "SUDDEN_DEATH": {
+        const duration = window.getGlobal("POWERUP_ACTIVE_DURATION") * 10
+
+        this.round.suddenDeathAnimation.add(duration, (step, left) => {
+          return {
+            progress: step / duration,
+            order: powerup.id,
+            value: undefined,
+          }
+        })
         break
       }
       default:
