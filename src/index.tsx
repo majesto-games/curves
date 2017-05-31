@@ -93,3 +93,8 @@ initUserConfig()
 history.listen(render)
 
 render(history.location)
+
+const version = new Date(BUILDTIME).toLocaleString("sv", {
+  hour12: false,
+})
+console.log(`%c Curves (${version})`, "font-style: italic; color: #FC0000")

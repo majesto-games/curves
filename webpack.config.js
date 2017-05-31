@@ -41,6 +41,7 @@ module.exports = (env) => {
       }),
       new webpack.DefinePlugin({
         'process.env': JSON.stringify(NODE_ENV),
+        'BUILDTIME': Date.now(),
       })
     ]
   }
