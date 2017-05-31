@@ -9,6 +9,7 @@ import { ClientState, Client } from "game/client"
 import { hexToString } from "game/util"
 import never from "utils/never"
 import Spinner from "components/Spinner"
+import { KEYS } from "game/keys"
 
 interface RunningGameProps {
   view: HTMLCanvasElement
@@ -101,21 +102,25 @@ class Lobby extends React.Component<LobbyProps, void> {
         <div className="col-md-6 col-md-offset-3">
           <div className="header">
             <h1>Lobby: {room}</h1>
-            <button className="btn btn-lg btn-success" onClick={this.addPlayer}>Add local player</button>
-            {isServer && <button className="btn btn-lg btn-primary" onClick={this.onStart}>Start</button>}
+            <button className="btn btn-lg btn-success" onClick={this.addPlayer}
+              disabled={lobby.players.length >= window.UserConfig.playerKeys.length}>Add local player</button>
+            {isServer && <button className="btn btn-lg btn-primary" onClick={this.onStart}
+              disabled={lobby.players.length < 2}>Start</button>}
           </div>
           <table className="table table-striped">
             <thead>
               <tr>
                 <th>Color</th>
                 <th>Name</th>
+                <th>Keys</th>
               </tr>
             </thead>
             <tbody>
-              {lobby.players.map(({ id, color, name }) => (
+              {lobby.players.map(({ id, color, name }, index) => (
                 <tr key={id}>
                   <td><span className="ball" style={{ backgroundColor: hexToString(color) }} /></td>
                   <td>Player {name}</td>
+                  <td>{this.drawKeys(index)}</td>
                 </tr>
               ))}
             </tbody>
@@ -125,7 +130,15 @@ class Lobby extends React.Component<LobbyProps, void> {
     )
   }
 
+  private drawKeys = (index: number) => (
+    <span className="keys">
+      <button className="btn btn-info btn-xs">{KEYS[window.UserConfig.playerKeys[index].left]}</button>{" "}
+      <button className="btn btn-info btn-xs">{KEYS[window.UserConfig.playerKeys[index].right]}</button>
+    </span>
+  )
+
   private onStart = () => {
+    // TODO: Should check number of players...
     this.props.onStart()
   }
 
@@ -249,7 +262,8 @@ export default class GameContainer extends React.Component<GameContainerProps, G
   }
 
   private addPlayer = () => {
-    if (this.localPlayers < 2) {
+    console.log(this.localPlayers, window.UserConfig.playerKeys.length)
+    if (this.localPlayers < window.UserConfig.playerKeys.length) {
       this.localPlayers++
       this.client!.addPlayer()
     }

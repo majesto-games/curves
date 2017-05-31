@@ -194,10 +194,6 @@ export class Client {
       return
     }
 
-    if (this.lobby.value.players.length < 2) {
-      this.connection(addPlayer())
-    }
-
     this.connection(start())
   }
 

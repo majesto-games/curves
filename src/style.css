@@ -124,6 +124,15 @@ body {
   border: 2px solid #333;
 }
 
+.Lobby .table th:nth-child(1) {
+  width: 10%;
+}
+
+.Lobby .table th:nth-child(3), .Lobby .table td:nth-child(3) {
+  width: 20%;
+  text-align: right;
+}
+
 .RoomBrowser h1 {
   margin-bottom: .75em;
 }
