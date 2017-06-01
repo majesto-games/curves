@@ -262,7 +262,6 @@ export default class GameContainer extends React.Component<GameContainerProps, G
   }
 
   private addPlayer = () => {
-    console.log(this.localPlayers, window.UserConfig.playerKeys.length)
     if (this.localPlayers < window.UserConfig.playerKeys.length) {
       this.localPlayers++
       this.client!.addPlayer()
