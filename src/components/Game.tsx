@@ -302,7 +302,10 @@ export default class GameContainer extends React.Component<GameContainerProps, G
       }),
       client.lobby.subscribe(lobby => this.setState({ lobby })),
       client.game.overlay.subscribe(overlay => this.setState({ overlay })),
-      client.scores.subscribe(scores => this.setState({ scores })),
+      client.scores.subscribe(scores => {
+        scores.sort((a, b) => b.score - a.score)
+        this.setState({ scores })
+      }),
     )
 
     this.client = client
