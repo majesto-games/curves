@@ -45,6 +45,9 @@ import { Observable, SimpleEvent } from "utils/observable"
 import { padEqual } from "utils/string"
 import never from "utils/never"
 import { fillSquare } from "game/client"
+import Render, { RenderState, emptyState, KeyText } from "game/render"
+
+import iassign from "immutable-assign"
 
 export enum GameEvent {
   START, END, ROUND_END,
@@ -64,27 +67,29 @@ export class Game {
   public roundState = RoundState.PRE
   private readonly container = new Container()
   private readonly playerLayer = new Graphics()
-  private readonly keysLayer = new Graphics()
+
   private readonly tailLayer = new Graphics()
-  private readonly powerupLayer = new Graphics()
   private closed = false
   private renderer: CanvasRenderer | WebGLRenderer
   private eventListeners: ((e: GameEvent, data?: any) => void)[] = []
   private snakes: Snake[] = []
   private roundStartsAt: number | undefined
 
+  private render: Render
+  private renderState = emptyState()
+
   constructor() {
     this.renderer = autoDetectRenderer(SERVER_WIDTH, SERVER_HEIGHT,
       { antialias: true, backgroundColor: 0x000000 })
+
+    this.render = new Render(this.container)
 
     setTimeout(() => this.resize(), 0)
 
     // The order of these actually matters
     // Order is back to front
     this.container.addChild(this.tailLayer)
-    this.container.addChild(this.powerupLayer)
     this.container.addChild(this.playerLayer)
-    this.container.addChild(this.keysLayer)
 
     window.addEventListener("resize", () => this.resize())
     this.draw()
@@ -114,7 +119,10 @@ export class Game {
     this.removeOverlay()
     this.playerLayer.removeChildren()
     this.tailLayer.removeChildren()
-    this.powerupLayer.removeChildren()
+    this.renderState = iassign(
+      this.renderState,
+      (o) => o.powerups,
+      () => [])
 
     this.snakes = snakes
     this.colors = colors.map(hexToString)
@@ -126,18 +134,21 @@ export class Game {
       if (keysAndColor != null) {
         const [left, right, color] = keysAndColor
         const [leftP, rightP] = padEqual(left, right)
-        const text = new Text(`${leftP} ▲ ${rightP}`, {
-          fontFamily: "Courier New",
-          fill: color,
-          fontSize: 24,
-        })
+        const text = `${leftP} ▲ ${rightP}`
 
-        text.anchor.set(0.5, 1.5)
-        text.x = snake.x
-        text.y = snake.y
-        text.rotation = snake.rotation
-        this.keysLayer.addChild(text)
-
+        this.renderState = iassign(
+          this.renderState,
+          (o) => o.keytexts,
+          (texts) => {
+            texts.push({
+              x: snake.x,
+              y: snake.y,
+              rotation: snake.rotation,
+              text,
+              color,
+            })
+            return texts
+          })
       }
     }
     this.drawPlayers()
@@ -150,7 +161,10 @@ export class Game {
     if (this.roundState !== RoundState.IN) {
       this.roundState = RoundState.IN
       this.removeOverlay()
-      this.keysLayer.removeChildren()
+      this.renderState = iassign(
+        this.renderState,
+        (o) => o.keytexts,
+        () => [])
       this.event.send(GameEvent.START)
     }
   }
@@ -176,20 +190,31 @@ export class Game {
     })
   }
 
-  public addPowerup({ location, type }: Powerup) {
+  public addPowerup({ location, type, id }: Powerup) {
     const powerupSprite = Sprite.fromImage(this.getPowerupImage(type), undefined, undefined)
     powerupSprite.position.set(location.x, location.y)
     powerupSprite.anchor.set(0.5)
 
-    this.powerupLayer.addChild(powerupSprite)
+    this.renderState = iassign(
+      this.renderState,
+      (o) => o.powerups,
+      (texts) => {
+        texts.push({
+          x: location.x,
+          y: location.y,
+          image: this.getPowerupImage(type),
+          id,
+        })
+        return texts
+      })
 
-    return powerupSprite
   }
 
-  public removePowerup(powerupSprite: Sprite, snakeId: number, powerupId: number) {
-    if (powerupSprite != null) {
-      this.powerupLayer.removeChild(powerupSprite)
-    }
+  public removePowerup(snakeId: number, powerupId: number) {
+    this.renderState = iassign(
+      this.renderState,
+      (o) => o.powerups,
+      (texts) => texts.filter(t => t.id !== powerupId))
 
     const snake = this.snakes.find(s => s.id === snakeId)!
 
@@ -312,6 +337,8 @@ export class Game {
       this.close()
       return
     }
+
+    this.render.setState(this.renderState)
 
     switch (this.roundState) {
       case RoundState.PRE: {
