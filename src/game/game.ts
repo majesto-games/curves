@@ -41,7 +41,7 @@ import * as quickconnect from "rtc-quickconnect"
 import { KEYS } from "./keys"
 
 import * as Icons from "icons"
-import { Observable, SimpleEvent } from "utils/observable"
+import { Observable, SimpleEvent, Signal } from "utils/observable"
 import { padEqual } from "utils/string"
 import never from "utils/never"
 import { fillSquare } from "game/client"
@@ -61,7 +61,7 @@ const ratio = SERVER_WIDTH / SERVER_HEIGHT
 
 export class Game {
   public colors: string[] = []
-  public overlay = new Observable<string | undefined>("")
+  public overlay = new Signal<string | undefined>("")
   public onDraw = new SimpleEvent<undefined>()
   public event = new SimpleEvent<GameEvent>()
   public roundState = RoundState.PRE
