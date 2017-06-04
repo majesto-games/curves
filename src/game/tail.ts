@@ -187,7 +187,7 @@ export interface MeshPart {
   vertices: Float32Array
   uvs: Float32Array
   indices: Uint16Array
-  texture: PIXI.Texture
+  textureCacheKey: string
 }
 
 export class ClientTail implements Tail {
@@ -196,7 +196,9 @@ export class ClientTail implements Tail {
   private readonly textureHeight: number
   private texturePosition = 0
 
-  constructor(private readonly texture: PIXI.Texture) {
+  constructor(private readonly textureCacheKey: string) {
+    const texture = PIXI.Texture.from(textureCacheKey)
+
     this.textureHeight = texture.height
     this.textureWidth = texture.width
   }
@@ -233,7 +235,7 @@ export class ClientTail implements Tail {
             vertices: initVertices,
             uvs: initUvs,
             indices: initIndices,
-            texture: this.texture,
+            textureCacheKey: this.textureCacheKey,
           }
           Object.freeze(mesh)
           meshes.push(mesh)

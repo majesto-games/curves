@@ -35,7 +35,7 @@
     "file-loader": "^0.11.1",
     "freeice": "^2.2.0",
     "history": "^4.6.1",
-    "immutable-assign": "^1.0.35",
+    "immutable-assign": "Zalastax/ImmutableAssign#650509df0cf61386f7ab2e1574fe3a2a4f27496d",
     "pixi.js": "^4.5.2",
     "pre-commit": "^1.2.2",
     "react": "^15.5.4",

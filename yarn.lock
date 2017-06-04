@@ -918,9 +918,9 @@ deep-extend@~0.4.0:
   version "0.4.2"
   resolved "https://registry.yarnpkg.com/deep-extend/-/deep-extend-0.4.2.tgz#48b699c27e334bf89f10892be432f6e4c7d34a7f"
 
-deep-freeze-strict@^1.1.1:
+deep-freeze-strict@jsdf/deep-freeze#a698ebb5d46ad07295358b4d2748ac966d759700:
   version "1.1.1"
-  resolved "https://registry.yarnpkg.com/deep-freeze-strict/-/deep-freeze-strict-1.1.1.tgz#77d0583ca24a69be4bbd9ac2fae415d55523e5b0"
+  resolved "https://codeload.github.com/jsdf/deep-freeze/tar.gz/a698ebb5d46ad07295358b4d2748ac966d759700"
 
 defined@^1.0.0:
   version "1.0.0"
@@ -1634,11 +1634,11 @@ ieee754@^1.1.4:
   version "1.1.8"
   resolved "https://registry.yarnpkg.com/ieee754/-/ieee754-1.1.8.tgz#be33d40ac10ef1926701f6f08a2d86fbfd1ad3e4"
 
-immutable-assign@^1.0.35:
+immutable-assign@Zalastax/ImmutableAssign#650509df0cf61386f7ab2e1574fe3a2a4f27496d:
   version "1.0.35"
-  resolved "https://registry.yarnpkg.com/immutable-assign/-/immutable-assign-1.0.35.tgz#d08cf3da660c5f28564ccaedbf9e513aca1d387f"
+  resolved "https://codeload.github.com/Zalastax/ImmutableAssign/tar.gz/650509df0cf61386f7ab2e1574fe3a2a4f27496d"
   optionalDependencies:
-    deep-freeze-strict "^1.1.1"
+    deep-freeze-strict jsdf/deep-freeze#a698ebb5d46ad07295358b4d2748ac966d759700
 
 imports-loader@^0.7.1:
   version "0.7.1"
@@ -2767,11 +2767,11 @@ prop-types@^15.5.7, prop-types@~15.5.7:
     fbjs "^0.8.9"
     loose-envify "^1.3.1"
 
-proto@*, proto@1.0.18, proto@>=1.0.17:
+proto@*, proto@1.0.18:
   version "1.0.18"
   resolved "https://registry.yarnpkg.com/proto/-/proto-1.0.18.tgz#c0edc08d72d63da614274084cb44f46a421d0e9f"
 
-proto@1.0.17:
+proto@1.0.17, proto@>=1.0.17:
   version "1.0.17"
   resolved "https://registry.yarnpkg.com/proto/-/proto-1.0.17.tgz#dbb40bdb45193438979e306378ca2b53efe71bce"
 

@@ -136,7 +136,7 @@ export default class Render {
         case "add": {
           diff.vals.forEach((v, i) => {
             const mesh = new PIXI.mesh.Mesh(
-              v.texture,
+              Texture.from(v.textureCacheKey),
               v.vertices,
               v.uvs,
               v.indices)
@@ -154,7 +154,7 @@ export default class Render {
           const mesh = this.tailLayer.getChildAt(index) as PIXI.mesh.Mesh
           const value = diff.val
 
-          mesh.texture = value.texture
+          mesh.texture = Texture.from(value.textureCacheKey)
           mesh.vertices = value.vertices
           mesh.uvs = value.uvs
           mesh.indices = value.indices

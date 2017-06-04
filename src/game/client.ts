@@ -118,6 +118,7 @@ export class Client {
   public isServer = false
   private currentRound: RoundState
   private localIndex = 0
+  private textureIndex = 0
   private connection: ServerConnection
   private _close: () => void
 
@@ -206,7 +207,12 @@ export class Client {
 
     const stripeColor = luminosity(color, 0.75)
     const texture = createTexture(color, straightStripesTemplate(hexToString(stripeColor), 4))
-    const player = new ClientPlayer(name, id, color, texture, localIndex)
+
+    const textureCacheKey = `client_texture_${this.textureIndex++}`;
+
+    (Texture as any).addToCache(texture, textureCacheKey)
+
+    const player = new ClientPlayer(name, id, color, textureCacheKey, localIndex)
 
     if (isOwner) {
       player.steeringLeft.subscribe(value => {
@@ -260,7 +266,7 @@ export class Client {
 
       // TODO: don't draw graphics in here
       const graphics = new PIXI.mesh.Mesh(
-        player.texture,
+        Texture.from(player.textureCacheKey),
         fillSquare(1, 1),
         fillSquare(1, 1),
         new Uint16Array([0, 1, 2, 3]))
@@ -329,7 +335,7 @@ export class Client {
   }
 
   private newTail(playerId: number) {
-    const tail = new ClientTail(this.playerById(playerId)!.texture)
+    const tail = new ClientTail(this.playerById(playerId)!.textureCacheKey)
 
     return tail
   }

@@ -95,7 +95,7 @@ export class ClientPlayer {
     public name: string,
     public id: number,
     public color: number,
-    public texture: Texture,
+    public textureCacheKey: string,
     public localIndex: number | undefined,
     public snake?: Snake,
   ) {

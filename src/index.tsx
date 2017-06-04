@@ -9,6 +9,15 @@ import PIXIPlayground from "components/PIXIPlayground"
 import history from "components/history"
 import { Location, parsePath } from "history"
 
+import iassign from "immutable-assign"
+
+if (process.env.NODE_ENV !== "production") {
+  iassign.setOption({
+    freeze: true,
+  })
+  console.log("freezer")
+}
+
 import "bootstrap/dist/css/bootstrap.css"
 import "style.css"
 import keysSetup from "game/keys"
