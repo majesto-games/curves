@@ -1,0 +1,182 @@
+import * as React from "react"
+
+import history from "./history"
+
+import { Score, Lobby as LobbyI } from "server/actions"
+
+import { Game, GameEvent } from "game/game"
+import { connect } from "game/room"
+import { ClientState, Client } from "game/client"
+
+import never from "utils/never"
+
+import Spinner from "components/Spinner"
+import PhoneControls from "components/PhoneControls"
+import RunningGame from "components/RunningGame"
+import Lobby from "components/Lobby"
+
+interface GameContainerProps {
+  room: string
+}
+
+interface GameContainerState {
+  scores: Score[]
+  colors: string[]
+  lobby: LobbyI
+  overlay: string | undefined
+  state: ClientState
+  isServer: boolean
+}
+
+/*
+Scenarios:
+
+# Player is first to connect
+  * Becomes server
+  * Can add 1 extra local player
+  * Can start the game
+
+# Player is not first to connect
+## The game is not yet started
+  * Can add 1 extra local player
+## The game is started
+  * Become observer
+
+*/
+
+export default class GameContainer extends React.Component<GameContainerProps, GameContainerState> {
+  public state: GameContainerState = {
+    scores: [],
+    colors: [],
+    lobby: { players: [] },
+    overlay: undefined,
+    state: ClientState.UNCONNECTED,
+    isServer: false,
+  }
+
+  private div: HTMLDivElement | null = null
+  private client: Client | undefined
+  private localPlayers = 0
+  private subscriptions: (() => void)[] = []
+
+  public constructor(props: GameContainerProps) {
+    super(props)
+
+    this.getRoom(props.room)
+  }
+
+  public componentWillReceiveProps(nextProps: GameContainerProps) {
+    if (this.client != null) {
+      if (this.props.room === nextProps.room) {
+        return
+      }
+      this.client.close()
+    }
+    this.getRoom(nextProps.room)
+  }
+
+  public componentWillUnmount() {
+    this.subscriptions.forEach(f => f())
+    if (this.client) {
+      this.client.close()
+    }
+  }
+
+  public render() {
+    const {
+      scores,
+      colors,
+      overlay,
+      state,
+      lobby,
+      isServer,
+    } = this.state
+
+    if (state === ClientState.LOBBY) {
+      return (
+        <Lobby
+          lobby={lobby}
+          onStart={this.onStart}
+          addPlayer={this.addPlayer}
+          room={this.props.room}
+          isServer={isServer}
+        />
+      )
+    }
+
+    if (state === ClientState.UNCONNECTED) {
+      return (
+        <Spinner />
+      )
+    }
+
+    if (state === ClientState.CLOSED) {
+      return (
+        <div />
+      )
+    }
+
+    return (
+      <RunningGame
+        colors={colors}
+        scores={scores}
+        overlay={overlay}
+        view={this.client!.game.getView()} />
+    )
+  }
+
+  private onStart = () => {
+    this.client!.start()
+  }
+
+  private addPlayer = () => {
+    if (this.localPlayers < window.UserConfig.playerKeys.length) {
+      this.localPlayers++
+      this.client!.addPlayer()
+    }
+  }
+
+  private getRoom = (roomName: string) => {
+    const client = connect(roomName)
+    this.subscriptions.push(
+      client.game.event.subscribe(e => {
+        switch (e) {
+          case GameEvent.END: {
+            this.client = undefined
+            this.setState({
+              colors: [],
+              state: ClientState.CLOSED,
+            })
+            break
+          }
+          case GameEvent.ROUND_END:
+          case GameEvent.START: {
+            this.setState((prevState, props) => ({
+              colors: client.game.colors,
+              state: client.state,
+            }))
+            break
+          }
+          default:
+            never("GameContainer didn't handle", e)
+        }
+      }),
+      client.state.subscribe(state => {
+        this.setState({
+          state,
+          isServer: client.isServer,
+        })
+      }),
+      client.lobby.subscribe(lobby => this.setState({ lobby })),
+      client.game.overlay.subscribe(overlay => this.setState({ overlay })),
+      client.scores.subscribe(scores => {
+        scores.sort((a, b) => b.score - a.score)
+        this.setState({ scores })
+      }),
+    )
+
+    this.client = client
+    this.localPlayers = 1
+    return client
+  }
+}

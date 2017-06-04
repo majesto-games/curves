@@ -1,7 +1,7 @@
 import * as React from "react"
 import * as ReactDOM from "react-dom"
 
-import Game from "components/Game"
+import GameContainer from "components/GameContainer"
 import RoomBrowser from "components/RoomBrowser"
 import GlobalConfig, { initGlobalConfig } from "components/GlobalConfig"
 import UserConfig, { initUserConfig } from "components/UserConfig"
@@ -22,7 +22,7 @@ function getComponent(location: Location): JSX.Element {
   }
   if (split[0] === "game") {
     const room = split[1] || "leif"
-    return <Game room={room} />
+    return <GameContainer room={room} />
   }
   if (split[0] === "globalconfig") {
     return <GlobalConfig />
