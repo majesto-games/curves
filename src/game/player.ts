@@ -116,8 +116,7 @@ interface AnimationProgress<T> {
 
 export class Snake {
 
-  public graphics: PIXI.mesh.Mesh
-  public powerupGraphics: PIXI.Graphics
+  public textureCacheKey: string
   public fatness: number
   public alive: boolean
   public lastX: number

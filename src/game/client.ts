@@ -208,6 +208,7 @@ export class Client {
     const stripeColor = luminosity(color, 0.75)
     const texture = createTexture(color, straightStripesTemplate(hexToString(stripeColor), 4))
 
+    // TODO: make this deterministic
     const textureCacheKey = `client_texture_${this.textureIndex++}`;
 
     (Texture as any).addToCache(texture, textureCacheKey)
@@ -263,26 +264,7 @@ export class Client {
     snakeInits.forEach(({ startPoint, rotation, id }) => {
       const snake = new Snake(startPoint, rotation, id)
       const player = this.playerById(id)!
-
-      // TODO: don't draw graphics in here
-      const graphics = new PIXI.mesh.Mesh(
-        Texture.from(player.textureCacheKey),
-        fillSquare(1, 1),
-        fillSquare(1, 1),
-        new Uint16Array([0, 1, 2, 3]))
-      const mask = new Graphics()
-      mask.beginFill(0x000000)
-
-      mask.drawCircle(0, 0, 1)
-      mask.endFill()
-      // adding the mask as child makes it follow the snake position
-      graphics.addChild(mask)
-      // also sets mask.renderable to false :)
-      graphics.mask = mask
-      graphics.rotation = rotation
-      snake.graphics = graphics
-
-      snake.powerupGraphics = new Graphics()
+      snake.textureCacheKey = player.textureCacheKey
 
       player.snake = snake
     })

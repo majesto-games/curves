@@ -45,7 +45,7 @@ import { Observable, SimpleEvent, Signal } from "utils/observable"
 import { padEqual } from "utils/string"
 import never from "utils/never"
 import { fillSquare } from "game/client"
-import Render, { RenderState, emptyState, KeyText } from "game/render"
+import Render, { RenderState, emptyState, KeyText, SnakeGraphics } from "game/render"
 
 import iassign from "immutable-assign"
 import { flatten } from "utils/array"
@@ -67,7 +67,6 @@ export class Game {
   public event = new SimpleEvent<GameEvent>()
   public roundState = RoundState.PRE
   private readonly container = new Container()
-  private readonly playerLayer = new Graphics()
 
   private closed = false
   private renderer: CanvasRenderer | WebGLRenderer
@@ -86,10 +85,6 @@ export class Game {
     this.render = new Render(this.container)
 
     setTimeout(() => this.resize(), 0)
-
-    // The order of these actually matters
-    // Order is back to front
-    this.container.addChild(this.playerLayer)
 
     window.addEventListener("resize", () => this.resize())
     this.draw()
@@ -118,7 +113,10 @@ export class Game {
     tailStorage: TailStorage<ClientTail>,
     getKeyTextAndColor: (snake: Snake) => [string, string, number] | undefined) {
     this.removeOverlay()
-    this.playerLayer.removeChildren()
+    this.renderState = iassign(
+      this.renderState,
+      (o) => o.powerups, // player stuff
+      () => [])
 
     // TODO: this is dirty
     this.tailStorage = tailStorage
@@ -132,8 +130,6 @@ export class Game {
     this.colors = colors.map(hexToString)
 
     for (const snake of snakes) {
-      this.playerLayer.addChild(snake.graphics)
-      this.playerLayer.addChild(snake.powerupGraphics)
       const keysAndColor = getKeyTextAndColor(snake)
       if (keysAndColor != null) {
         const [left, right, color] = keysAndColor
@@ -281,44 +277,19 @@ export class Game {
   }
 
   private drawPlayers() {
-    for (const snake of this.snakes) {
-      this.updateSnakeGraphics(snake)
-    }
-  }
-
-  private updateSnakeGraphics({ graphics, x, y, fatness, powerupProgress, powerupGraphics, rotation }: Snake) {
-    graphics.position.set(x, y)
-    graphics.vertices.set(fillSquare(fatness * 2, fatness * 2))
-    graphics.uvs.set(fillSquare(fatness * 2 / graphics.texture.width, fatness * 2 / graphics.texture.height))
-    graphics.rotation = rotation
-    graphics.children[0].scale.set(fatness, fatness)
-
-    graphics.dirty++
-    graphics.indexDirty++
-    const meshy = graphics as any
-    meshy.refresh()
-    graphics.updateTransform()
-
-    powerupGraphics.clear()
-    powerupGraphics.position.set(x, y)
-    let i = 1
-    for (const progress of powerupProgress) {
-      powerupGraphics.beginFill(0x000000, 0)
-      const lineWidth = 5
-      powerupGraphics.lineStyle(lineWidth, 0xffffff)
-
-      const r = fatness + (lineWidth * i)
-      i += 1.5
-      const startAngle = - Math.PI / 2
-      const endAngle = startAngle + Math.PI * 2 - Math.PI * 2 * progress % (Math.PI * 2)
-      const startX = Math.cos(startAngle) * r
-      const startY = Math.sin(startAngle) * r
-
-      // Perform moveTo so that no line is drawn between arcs
-      powerupGraphics.moveTo(startX, startY)
-      powerupGraphics.arc(0, 0, r, startAngle, endAngle)
-      powerupGraphics.endFill()
-    }
+    this.renderState = iassign<RenderState, SnakeGraphics[], {}>(
+      this.renderState,
+      state => state.snakes,
+      () => this.snakes.map(snake => {
+        return {
+          x: snake.x,
+          y: snake.y,
+          rotation: snake.rotation,
+          fatness: snake.fatness,
+          textureCacheKey: snake.textureCacheKey,
+          powerupProgress: snake.powerupProgress,
+        }
+      }))
   }
 
   private getMeshes() {
@@ -333,13 +304,6 @@ export class Game {
       this.close()
       return
     }
-
-    this.renderState = iassign(
-      this.renderState,
-      (o) => o.tails,
-      () => this.getMeshes())
-
-    this.render.setState(this.renderState)
 
     switch (this.roundState) {
       case RoundState.PRE: {
@@ -360,6 +324,13 @@ export class Game {
       }
       default:
     }
+
+    this.renderState = iassign(
+      this.renderState,
+      (o) => o.tails,
+      () => this.getMeshes())
+
+    this.render.setState(this.renderState)
 
     this.repaint(this.draw)
   }

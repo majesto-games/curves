@@ -3,6 +3,7 @@ import { diffArray } from "utils/diff"
 import never from "utils/never"
 
 import { MeshPart as TailMesh } from "./tail"
+import { fillSquare } from "game/client"
 
 export interface KeyText {
   x: number,
@@ -19,10 +20,20 @@ export interface PowerupSprite {
   id: number
 }
 
+export interface SnakeGraphics {
+  x: number
+  y: number
+  rotation: number
+  fatness: number
+  textureCacheKey: string
+  powerupProgress: number[]
+}
+
 export interface RenderState {
   keytexts: KeyText[]
   powerups: PowerupSprite[]
   tails: TailMesh[]
+  snakes: SnakeGraphics[]
 }
 
 function neverDiff(x: never) {
@@ -34,6 +45,7 @@ export function emptyState(): RenderState {
     keytexts: [],
     powerups: [],
     tails: [],
+    snakes: [],
   }
 }
 
@@ -43,6 +55,7 @@ export default class Render {
   private readonly keysLayer = new Graphics()
   private readonly powerupLayer = new Graphics()
   private readonly tailLayer = new Graphics()
+  private readonly playerLayer = new Graphics()
 
   constructor(private container: Container) {
     // The order of these actually matters
@@ -50,6 +63,7 @@ export default class Render {
     this.container.addChild(this.keysLayer)
     this.container.addChild(this.powerupLayer)
     this.container.addChild(this.tailLayer)
+    this.container.addChild(this.playerLayer)
   }
 
   public setState(state: RenderState) {
@@ -83,11 +97,10 @@ export default class Render {
           break
         }
         case "set": {
-
-          break
+          throw new Error(`unhandled diff ${diff.type}`)
         }
         case "mod": {
-          break
+          throw new Error(`unhandled diff ${diff.type}`)
         }
         default:
           neverDiff(diff)
@@ -122,7 +135,7 @@ export default class Render {
           break
         }
         case "mod": {
-          break
+          throw new Error(`unhandled diff ${diff.type}`)
         }
         default:
           neverDiff(diff)
@@ -167,6 +180,104 @@ export default class Render {
           break
         }
         case "mod": {
+          throw new Error(`unhandled diff ${diff.type}`)
+        }
+        default:
+          neverDiff(diff)
+      }
+    })
+
+    const snakesdiff = diffArray(this.state.snakes, state.snakes)
+
+    function moveSnake(container: Graphics, snake: SnakeGraphics) {
+      const graphics = container.getChildAt(0) as PIXI.mesh.Mesh
+      const powerupGraphics = container.getChildAt(1) as PIXI.Graphics
+      const {
+        x, y,
+        fatness,
+        rotation,
+        powerupProgress,
+        textureCacheKey,
+      } = snake
+
+      container.position.set(x, y)
+      graphics.texture = Texture.from(textureCacheKey)
+      graphics.vertices.set(fillSquare(fatness * 2, fatness * 2))
+      graphics.uvs.set(fillSquare(fatness * 2 / graphics.texture.width, fatness * 2 / graphics.texture.height))
+      graphics.rotation = rotation
+      graphics.children[0].scale.set(fatness, fatness)
+
+      graphics.dirty++
+      graphics.indexDirty++
+      const meshy = graphics as any
+      meshy.refresh()
+      graphics.updateTransform()
+
+      powerupGraphics.clear()
+      let i = 1
+      for (const progress of powerupProgress) {
+        powerupGraphics.beginFill(0x000000, 0)
+        const lineWidth = 5
+        powerupGraphics.lineStyle(lineWidth, 0xffffff)
+
+        const r = fatness + (lineWidth * i)
+        i += 1.5
+        const startAngle = - Math.PI / 2
+        const endAngle = startAngle + Math.PI * 2 - Math.PI * 2 * progress % (Math.PI * 2)
+        const startX = Math.cos(startAngle) * r
+        const startY = Math.sin(startAngle) * r
+
+        // Perform moveTo so that no line is drawn between arcs
+        powerupGraphics.moveTo(startX, startY)
+        powerupGraphics.arc(0, 0, r, startAngle, endAngle)
+        powerupGraphics.endFill()
+      }
+    }
+
+    snakesdiff.forEach(diff => {
+      switch (diff.type) {
+        case "add": {
+          diff.vals.forEach((v, i) => {
+            const container = new Graphics()
+            const graphics = new PIXI.mesh.Mesh(
+              Texture.from(v.textureCacheKey),
+              fillSquare(1, 1),
+              fillSquare(1, 1),
+              new Uint16Array([0, 1, 2, 3]))
+            const mask = new Graphics()
+            mask.beginFill(0x000000)
+
+            mask.drawCircle(0, 0, 1)
+            mask.endFill()
+            // adding the mask as child makes it follow the snake position
+            graphics.addChild(mask)
+            // also sets mask.renderable to false :)
+            graphics.mask = mask
+            graphics.rotation = v.rotation
+
+            container.addChild(graphics)
+            container.addChild(new Graphics())
+
+            this.playerLayer.addChildAt(container, diff.index + i)
+            moveSnake(container, v)
+          })
+          break
+        }
+        case "rm": {
+          this.playerLayer.removeChildren(diff.index, diff.index + diff.num)
+          break
+        }
+        case "set": {
+          const index = diff.path[0] as number
+          const container = this.playerLayer.getChildAt(index) as Graphics
+          moveSnake(container, diff.val)
+
+          break
+        }
+        case "mod": {
+          const index = diff.path[0] as number
+          const container = this.playerLayer.getChildAt(index) as Graphics
+          moveSnake(container, diff.to)
           break
         }
         default:
