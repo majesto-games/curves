@@ -10,7 +10,7 @@ import {
   Text,
 } from "pixi.js"
 import { Point, ClientPlayer, Snake, Powerup, PowerupType } from "./player"
-import { ClientTail, TailStorage } from "./tail"
+import { ClientTail, TailStorage, MeshPart } from "./tail"
 import {
   PlayerUpdate,
   PlayerInit,
@@ -48,6 +48,7 @@ import { fillSquare } from "game/client"
 import Render, { RenderState, emptyState, KeyText } from "game/render"
 
 import iassign from "immutable-assign"
+import { flatten } from "utils/array"
 
 export enum GameEvent {
   START, END, ROUND_END,
@@ -68,13 +69,13 @@ export class Game {
   private readonly container = new Container()
   private readonly playerLayer = new Graphics()
 
-  private readonly tailLayer = new Graphics()
   private closed = false
   private renderer: CanvasRenderer | WebGLRenderer
   private eventListeners: ((e: GameEvent, data?: any) => void)[] = []
   private snakes: Snake[] = []
   private roundStartsAt: number | undefined
 
+  private tailStorage: TailStorage<ClientTail>
   private render: Render
   private renderState = emptyState()
 
@@ -88,7 +89,6 @@ export class Game {
 
     // The order of these actually matters
     // Order is back to front
-    this.container.addChild(this.tailLayer)
     this.container.addChild(this.playerLayer)
 
     window.addEventListener("resize", () => this.resize())
@@ -115,10 +115,14 @@ export class Game {
   }
 
   public newRound(snakes: Snake[], colors: number[], delay: number,
+    tailStorage: TailStorage<ClientTail>,
     getKeyTextAndColor: (snake: Snake) => [string, string, number] | undefined) {
     this.removeOverlay()
     this.playerLayer.removeChildren()
-    this.tailLayer.removeChildren()
+
+    // TODO: this is dirty
+    this.tailStorage = tailStorage
+
     this.renderState = iassign(
       this.renderState,
       (o) => o.powerups,
@@ -173,21 +177,6 @@ export class Game {
     this.setOverlay(`Winner this round: Player ${winner.id}`)
     this.roundState = RoundState.POST
     this.event.send(GameEvent.ROUND_END)
-  }
-
-  public addTail(tail: ClientTail) {
-    tail.meshes.value.forEach(mesh => {
-      this.tailLayer.addChild(mesh)
-    })
-    tail.meshes.subscribe((meshes, old) => {
-      old.forEach(mesh => {
-        this.tailLayer.removeChild(mesh)
-      })
-
-      meshes.forEach(mesh => {
-        this.tailLayer.addChild(mesh)
-      })
-    })
   }
 
   public addPowerup({ location, type, id }: Powerup) {
@@ -332,11 +321,23 @@ export class Game {
     }
   }
 
+  private getMeshes() {
+    if (this.tailStorage != null) {
+      return flatten<MeshPart>(this.tailStorage.allTails().map(v => v.map(x => x.meshes)))
+    }
+    return []
+  }
+
   private draw = () => {
     if (this.closed) {
       this.close()
       return
     }
+
+    this.renderState = iassign(
+      this.renderState,
+      (o) => o.tails,
+      () => this.getMeshes())
 
     this.render.setState(this.renderState)
 

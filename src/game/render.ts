@@ -2,6 +2,8 @@ import { Container, Graphics, Text, Sprite, Texture } from "pixi.js"
 import { diffArray } from "utils/diff"
 import never from "utils/never"
 
+import { MeshPart as TailMesh } from "./tail"
+
 export interface KeyText {
   x: number,
   y: number,
@@ -20,6 +22,7 @@ export interface PowerupSprite {
 export interface RenderState {
   keytexts: KeyText[]
   powerups: PowerupSprite[]
+  tails: TailMesh[]
 }
 
 function neverDiff(x: never) {
@@ -30,6 +33,7 @@ export function emptyState(): RenderState {
   return {
     keytexts: [],
     powerups: [],
+    tails: [],
   }
 }
 
@@ -38,12 +42,14 @@ export default class Render {
 
   private readonly keysLayer = new Graphics()
   private readonly powerupLayer = new Graphics()
+  private readonly tailLayer = new Graphics()
 
   constructor(private container: Container) {
     // The order of these actually matters
     // Order is back to front
     this.container.addChild(this.keysLayer)
     this.container.addChild(this.powerupLayer)
+    this.container.addChild(this.tailLayer)
   }
 
   public setState(state: RenderState) {
@@ -56,7 +62,7 @@ export default class Render {
     keytextsdiff.forEach(diff => {
       switch (diff.type) {
         case "add": {
-          diff.vals.forEach(v => {
+          diff.vals.forEach((v, i) => {
             const text = new Text(v.text, {
               fontFamily: "Courier New",
               fill: v.color,
@@ -67,7 +73,7 @@ export default class Render {
             text.x = v.x
             text.y = v.y
             text.rotation = v.rotation
-            this.keysLayer.addChild(text)
+            this.keysLayer.addChildAt(text, diff.index + i)
 
           })
           break
@@ -93,12 +99,12 @@ export default class Render {
     powerupsdiff.forEach(diff => {
       switch (diff.type) {
         case "add": {
-          diff.vals.forEach(v => {
+          diff.vals.forEach((v, i) => {
             const powerupSprite = Sprite.fromImage(v.image, undefined, undefined)
             powerupSprite.position.set(v.x, v.y)
             powerupSprite.anchor.set(0.5)
 
-            this.powerupLayer.addChild(powerupSprite)
+            this.powerupLayer.addChildAt(powerupSprite, diff.index + i)
           })
           break
         }
@@ -113,6 +119,51 @@ export default class Render {
 
           sprite.position.set(value.x, value.y)
           sprite.texture = Texture.fromImage(value.image)
+          break
+        }
+        case "mod": {
+          break
+        }
+        default:
+          neverDiff(diff)
+      }
+    })
+
+    const tailsdiff = diffArray(this.state.tails, state.tails)
+
+    tailsdiff.forEach(diff => {
+      switch (diff.type) {
+        case "add": {
+          diff.vals.forEach((v, i) => {
+            const mesh = new PIXI.mesh.Mesh(
+              v.texture,
+              v.vertices,
+              v.uvs,
+              v.indices)
+
+            this.tailLayer.addChildAt(mesh, diff.index + i)
+          })
+          break
+        }
+        case "rm": {
+          this.tailLayer.removeChildren(diff.index, diff.index + diff.num)
+          break
+        }
+        case "set": {
+          const index = diff.path[0] as number
+          const mesh = this.tailLayer.getChildAt(index) as PIXI.mesh.Mesh
+          const value = diff.val
+
+          mesh.texture = value.texture
+          mesh.vertices = value.vertices
+          mesh.uvs = value.uvs
+          mesh.indices = value.indices
+
+          mesh.dirty++
+          mesh.indexDirty++
+          const meshy = mesh as any
+          meshy.refresh()
+          mesh.updateTransform()
           break
         }
         case "mod": {

@@ -13,6 +13,12 @@ export function shuffle<T>(array: T[]) {
   return array // same array returned, for convenience
 }
 
+export function flatten<T>(arr: any): T[] {
+  return arr.reduce((flat: any, toFlatten: any) => {
+    return flat.concat(Array.isArray(toFlatten) ? flatten(toFlatten) : toFlatten)
+  }, [])
+}
+
 /* tslint:disable no-bitwise */
 export function chunk<T>(arr: T[], n: number) {
   return arr.slice(0, (arr.length + n - 1) / n | 0).map((_, i) => arr.slice(n * i, n * i + n))

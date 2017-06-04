@@ -287,7 +287,7 @@ export class Client {
       this.currentRound.tails.initPlayer(player.snake!)
     })
 
-    this.game.newRound(players.map(p => p.snake!), players.map(p => p.color), delay,
+    this.game.newRound(players.map(p => p.snake!), players.map(p => p.color), delay, this.currentRound.tails,
       snake => {
         const player = this.playerById(snake.id)!
         if (player.localIndex != null) {
@@ -330,7 +330,6 @@ export class Client {
 
   private newTail(playerId: number) {
     const tail = new ClientTail(this.playerById(playerId)!.texture)
-    this.game.addTail(tail)
 
     return tail
   }

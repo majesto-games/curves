@@ -7,6 +7,8 @@ import {
 import { mergeFloat32, mergeUint16 } from "utils/array"
 import { Observable } from "utils/observable"
 
+import iassign from "immutable-assign"
+
 export interface Tail {
   add: (part: TailPart) => void
   clear: () => void
@@ -144,6 +146,10 @@ export class TailStorage<TailT extends Tail> {
     return this.perTail[id]
   }
 
+  public allTails() {
+    return this.perTail
+  }
+
   public initPlayer(player: Snake) {
     this.perPlayer[player.id] = new TailPartArray()
     this.perTail[player.id] = []
@@ -177,8 +183,15 @@ export class TailStorage<TailT extends Tail> {
   }
 }
 
+export interface MeshPart {
+  vertices: Float32Array
+  uvs: Float32Array
+  indices: Uint16Array
+  texture: PIXI.Texture
+}
+
 export class ClientTail implements Tail {
-  public readonly meshes = new Observable<PIXI.mesh.Mesh[]>([])
+  public meshes: MeshPart[] = []
   private readonly textureWidth: number
   private readonly textureHeight: number
   private texturePosition = 0
@@ -213,39 +226,47 @@ export class ClientTail implements Tail {
         this.texturePosition / this.textureWidth, -width1 / this.textureHeight,
       ])
       const initIndices = new Uint16Array([0, 1])
-      const meshes = this.meshes.value.concat([new PIXI.mesh.Mesh(this.texture, initVertices, initUvs, initIndices)])
-      this.meshes.set(meshes)
+      this.meshes = iassign(
+        this.meshes,
+        meshes => {
+          const mesh = {
+            vertices: initVertices,
+            uvs: initUvs,
+            indices: initIndices,
+            texture: this.texture,
+          }
+          Object.freeze(mesh)
+          meshes.push(mesh)
+          return meshes
+        })
     }
-    const mesh = this.meshes.value[this.meshes.value.length - 1]
 
-    const newVertices = new Float32Array([
-      l2x, l2y,
-      h2x, h2y,
-    ])
-    const newUvs = new Float32Array([
-      width2 / this.textureHeight, (this.texturePosition + length) / this.textureWidth,
-      -width2 / this.textureHeight, (this.texturePosition + length) / this.textureWidth,
-    ])
-    const index = mesh.indices.length
-    const newIndices = new Uint16Array([index, index + 1])
-    mesh.vertices = mergeFloat32(mesh.vertices, newVertices)
-    mesh.uvs = mergeFloat32(mesh.uvs, newUvs)
-    mesh.indices = mergeUint16(mesh.indices, newIndices)
+    this.meshes = iassign(this.meshes,
+      meshes => meshes[meshes.length - 1],
+      mesh => {
+        const newVertices = new Float32Array([
+          l2x, l2y,
+          h2x, h2y,
+        ])
+        const newUvs = new Float32Array([
+          width2 / this.textureHeight, (this.texturePosition + length) / this.textureWidth,
+          -width2 / this.textureHeight, (this.texturePosition + length) / this.textureWidth,
+        ])
+        const index = mesh.indices.length
+        const newIndices = new Uint16Array([index, index + 1])
+        mesh.vertices = mergeFloat32(mesh.vertices, newVertices)
+        mesh.uvs = mergeFloat32(mesh.uvs, newUvs)
+        mesh.indices = mergeUint16(mesh.indices, newIndices)
+
+        return mesh
+      })
 
     this.texturePosition += length
-
-    mesh.dirty++
-    mesh.indexDirty++
-    const meshy = mesh as any
-    meshy.refresh()
-    mesh.updateTransform()
 
   }
 
   public clear() {
-    const meshes = this.meshes.value
-    this.meshes.set([])
-    meshes.forEach(mesh => mesh.destroy())
+    this.meshes = []
   }
 
 }
