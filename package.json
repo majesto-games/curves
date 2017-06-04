@@ -7,8 +7,10 @@
     "build": "webpack -p --env.prod",
     "watch": "webpack-dev-server --host 0.0.0.0 --progress --inline --content-base game/",
     "format": "tsfmt -r",
+    "format-verify": "tsfmt --verify",
     "clean": "rimraf game/"
   },
+  "pre-commit": "format-verify",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/bengt-games/curves.git"
@@ -35,6 +37,7 @@
     "history": "^4.6.1",
     "immutable-assign": "^1.0.35",
     "pixi.js": "^4.5.2",
+    "pre-commit": "^1.2.2",
     "react": "^15.5.4",
     "react-dom": "^15.5.4",
     "rtc-quickconnect": "^5.8.0",
