@@ -183,15 +183,15 @@ export interface RoundEnd extends Action {
   type: "ROUND_END"
   payload: {
     scores: Score[],
-    winner: number,
+    winnerId: number,
   }
 }
-export function roundEnd(scores: Score[], winner: number): RoundEnd {
+export function roundEnd(scores: Score[], winnerId: number): RoundEnd {
   return {
     type: ROUND_END,
     payload: {
       scores,
-      winner,
+      winnerId,
     },
   }
 }

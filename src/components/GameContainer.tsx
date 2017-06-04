@@ -121,7 +121,8 @@ export default class GameContainer extends React.Component<GameContainerProps, G
         colors={colors}
         scores={scores}
         overlay={overlay}
-        view={this.client!.game.getView()} />
+        view={this.client!.game.getView()}
+        players={lobby.players} />
     )
   }
 

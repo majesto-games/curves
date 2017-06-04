@@ -167,7 +167,7 @@ export class Client {
       }
       case ROUND_END: {
         const { payload } = action
-        this.roundEnd(payload.scores, payload.winner)
+        this.roundEnd(payload.scores, payload.winnerId)
         break
       }
       case LOBBY: {
@@ -299,9 +299,9 @@ export class Client {
       })
   }
 
-  private roundEnd = (scores: Score[], winner: number) => {
+  private roundEnd = (scores: Score[], winnerId: number) => {
     this.scores.set(scores)
-    this.game.roundEnd(this.playerById(winner)!)
+    this.game.roundEnd(this.playerById(winnerId)!)
   }
 
   private playerById(id: number): ClientPlayer | undefined {
