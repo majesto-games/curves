@@ -8,6 +8,7 @@ import { mergeFloat32, mergeUint16 } from "utils/array"
 import { Observable } from "utils/observable"
 
 import iassign from "immutable-assign"
+import { AnyDehydratedTexture, getTexture } from "game/texture"
 
 export interface Tail {
   add: (part: TailPart) => void
@@ -187,7 +188,7 @@ export interface MeshPart {
   vertices: Float32Array
   uvs: Float32Array
   indices: Uint16Array
-  textureCacheKey: string
+  texture: AnyDehydratedTexture
 }
 
 export class ClientTail implements Tail {
@@ -196,11 +197,11 @@ export class ClientTail implements Tail {
   private readonly textureHeight: number
   private texturePosition = 0
 
-  constructor(private readonly textureCacheKey: string) {
-    const texture = PIXI.Texture.from(textureCacheKey)
+  constructor(private readonly texture: AnyDehydratedTexture) {
+    const hydrated = getTexture(texture)
 
-    this.textureHeight = texture.height
-    this.textureWidth = texture.width
+    this.textureHeight = hydrated.height
+    this.textureWidth = hydrated.width
   }
 
   public add(part: TailPart) {
@@ -235,7 +236,7 @@ export class ClientTail implements Tail {
             vertices: initVertices,
             uvs: initUvs,
             indices: initIndices,
-            textureCacheKey: this.textureCacheKey,
+            texture: this.texture,
           }
           Object.freeze(mesh)
           meshes.push(mesh)

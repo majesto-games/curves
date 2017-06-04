@@ -6,6 +6,7 @@ import { ConnectionId } from "server/connections"
 import { Signal } from "utils/observable"
 import { Texture } from "pixi.js"
 import { SERVER_WIDTH, SERVER_HEIGHT } from "server/main"
+import { AnyDehydratedTexture } from "game/texture"
 
 export interface Point {
   x: number
@@ -95,7 +96,7 @@ export class ClientPlayer {
     public name: string,
     public id: number,
     public color: number,
-    public textureCacheKey: string,
+    public texture: AnyDehydratedTexture,
     public localIndex: number | undefined,
     public snake?: Snake,
   ) {
@@ -116,7 +117,7 @@ interface AnimationProgress<T> {
 
 export class Snake {
 
-  public textureCacheKey: string
+  public texture: AnyDehydratedTexture
   public fatness: number
   public alive: boolean
   public lastX: number

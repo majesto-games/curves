@@ -51,6 +51,7 @@ import { Game } from "./game"
 import { Observable } from "utils/observable"
 import never from "utils/never"
 import { hexToString, luminosity } from "game/util"
+import { DehydratedTexture, registerTextureProvider, TextureProvider } from "./texture"
 
 const keyCombos: { left: KEYS, right: KEYS }[] = []
 
@@ -69,6 +70,53 @@ export enum ClientState {
   GAME,
   CLOSED,
 }
+
+interface DehydratedStripedColorTexturePayload {
+  color: number
+  stripeColor: number
+}
+
+interface StripeColorTextureProvider extends TextureProvider<"stripecolor", DehydratedStripedColorTexturePayload> {
+  getDehydrated: (color: number, stripeColor: number) =>
+    DehydratedTexture<"stripecolor", DehydratedStripedColorTexturePayload>
+}
+
+export const stripeColorTexture: StripeColorTextureProvider = {
+  type: "stripecolor",
+  getTexture: (dehydrated) => {
+    const { color, stripeColor } = dehydrated.payload
+    return createTexture(color, straightStripesTemplate(hexToString(stripeColor), 4))
+  },
+  getCacheKey: (dehydrated) =>
+    `c${dehydrated.payload.color}_sc${dehydrated.payload.stripeColor}`,
+  getDehydrated(color: number, stripeColor: number) {
+    return {
+      type: "stripecolor",
+      payload: {
+        color,
+        stripeColor,
+      },
+    }
+  },
+}
+registerTextureProvider(stripeColorTexture)
+
+interface SolidColorTextureProvider extends TextureProvider<"solidcolor", number> {
+  getDehydrated: (color: number) => DehydratedTexture<"solidcolor", number>
+}
+
+export const solidColorTexture: SolidColorTextureProvider = {
+  type: "solidcolor",
+  getTexture: (dehydrated) => createTexture(dehydrated.payload, solidColorTemplate),
+  getCacheKey: (dehydrated) => `${dehydrated.payload}`,
+  getDehydrated(color: number) {
+    return {
+      type: "solidcolor",
+      payload: color,
+    }
+  },
+}
+registerTextureProvider(solidColorTexture)
 
 function solidColorTemplate(baseFill: string, canvas: HTMLCanvasElement) {
   canvas.width = 2
@@ -206,14 +254,10 @@ export class Client {
     }
 
     const stripeColor = luminosity(color, 0.75)
-    const texture = createTexture(color, straightStripesTemplate(hexToString(stripeColor), 4))
 
-    // TODO: make this deterministic
-    const textureCacheKey = `client_texture_${this.textureIndex++}`;
+    const texture = stripeColorTexture.getDehydrated(color, stripeColor)
 
-    (Texture as any).addToCache(texture, textureCacheKey)
-
-    const player = new ClientPlayer(name, id, color, textureCacheKey, localIndex)
+    const player = new ClientPlayer(name, id, color, texture, localIndex)
 
     if (isOwner) {
       player.steeringLeft.subscribe(value => {
@@ -264,7 +308,7 @@ export class Client {
     snakeInits.forEach(({ startPoint, rotation, id }) => {
       const snake = new Snake(startPoint, rotation, id)
       const player = this.playerById(id)!
-      snake.textureCacheKey = player.textureCacheKey
+      snake.texture = player.texture
 
       player.snake = snake
     })
@@ -317,7 +361,7 @@ export class Client {
   }
 
   private newTail(playerId: number) {
-    const tail = new ClientTail(this.playerById(playerId)!.textureCacheKey)
+    const tail = new ClientTail(this.playerById(playerId)!.texture)
 
     return tail
   }

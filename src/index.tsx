@@ -15,7 +15,6 @@ if (process.env.NODE_ENV !== "production") {
   iassign.setOption({
     freeze: true,
   })
-  console.log("freezer")
 }
 
 import "bootstrap/dist/css/bootstrap.css"

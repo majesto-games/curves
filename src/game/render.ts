@@ -4,6 +4,7 @@ import never from "utils/never"
 
 import { MeshPart as TailMesh } from "./tail"
 import { fillSquare } from "game/client"
+import { getTexture, AnyDehydratedTexture } from "game/texture"
 
 export interface KeyText {
   x: number,
@@ -16,7 +17,7 @@ export interface KeyText {
 export interface PowerupSprite {
   x: number
   y: number
-  image: string
+  texture: AnyDehydratedTexture
   id: number
 }
 
@@ -25,7 +26,7 @@ export interface SnakeGraphics {
   y: number
   rotation: number
   fatness: number
-  textureCacheKey: string
+  texture: AnyDehydratedTexture
   powerupProgress: number[]
 }
 
@@ -49,6 +50,13 @@ export function emptyState(): RenderState {
   }
 }
 
+interface Dehydrated {
+  keytexts: KeyText[]
+  powerups: PowerupSprite[]
+  tails: TailMesh[]
+  snakes: SnakeGraphics[]
+}
+
 export default class Render {
   private state: RenderState = emptyState()
 
@@ -64,6 +72,45 @@ export default class Render {
     this.container.addChild(this.powerupLayer)
     this.container.addChild(this.tailLayer)
     this.container.addChild(this.playerLayer)
+  }
+
+  public dehydrate() {
+    const {
+      keytexts,
+      powerups,
+      tails,
+      snakes,
+    } = this.state
+
+    const obj = {
+      keytexts,
+      powerups,
+      tails,
+      snakes,
+    }
+
+    return JSON.stringify(obj)
+  }
+
+  public rehydrate(s: string) {
+    const obj: Dehydrated = JSON.parse(s)
+
+    const {
+      keytexts,
+      powerups,
+      tails,
+      snakes,
+    } = obj
+
+    const state: RenderState = {
+      keytexts,
+      powerups,
+      tails,
+      snakes,
+    }
+
+    this.setState(state)
+
   }
 
   public setState(state: RenderState) {
@@ -113,7 +160,7 @@ export default class Render {
       switch (diff.type) {
         case "add": {
           diff.vals.forEach((v, i) => {
-            const powerupSprite = Sprite.fromImage(v.image, undefined, undefined)
+            const powerupSprite = new Sprite(getTexture(v.texture))
             powerupSprite.position.set(v.x, v.y)
             powerupSprite.anchor.set(0.5)
 
@@ -131,7 +178,7 @@ export default class Render {
           const value = diff.val
 
           sprite.position.set(value.x, value.y)
-          sprite.texture = Texture.fromImage(value.image)
+          sprite.texture = getTexture(value.texture)
           break
         }
         case "mod": {
@@ -149,7 +196,7 @@ export default class Render {
         case "add": {
           diff.vals.forEach((v, i) => {
             const mesh = new PIXI.mesh.Mesh(
-              Texture.from(v.textureCacheKey),
+              getTexture(v.texture),
               v.vertices,
               v.uvs,
               v.indices)
@@ -167,7 +214,7 @@ export default class Render {
           const mesh = this.tailLayer.getChildAt(index) as PIXI.mesh.Mesh
           const value = diff.val
 
-          mesh.texture = Texture.from(value.textureCacheKey)
+          mesh.texture = getTexture(value.texture)
           mesh.vertices = value.vertices
           mesh.uvs = value.uvs
           mesh.indices = value.indices
@@ -197,11 +244,11 @@ export default class Render {
         fatness,
         rotation,
         powerupProgress,
-        textureCacheKey,
+        texture,
       } = snake
 
       container.position.set(x, y)
-      graphics.texture = Texture.from(textureCacheKey)
+      graphics.texture = getTexture(texture)
       graphics.vertices.set(fillSquare(fatness * 2, fatness * 2))
       graphics.uvs.set(fillSquare(fatness * 2 / graphics.texture.width, fatness * 2 / graphics.texture.height))
       graphics.rotation = rotation
@@ -240,7 +287,7 @@ export default class Render {
           diff.vals.forEach((v, i) => {
             const container = new Graphics()
             const graphics = new PIXI.mesh.Mesh(
-              Texture.from(v.textureCacheKey),
+              getTexture(v.texture),
               fillSquare(1, 1),
               fillSquare(1, 1),
               new Uint16Array([0, 1, 2, 3]))

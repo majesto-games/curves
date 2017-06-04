@@ -40,7 +40,7 @@ export default class RunningGame extends React.Component<RunningGameProps, {}> {
     )
   }
 
-  private renderScores = (scores: Score[], players: Player[]) => {
+  private renderScores(scores: Score[], players: Player[]) {
     // TODO: This is kinda crappy
     const colorScores = scores.map(({ id, score }) => ({
       id,

@@ -80,6 +80,11 @@ export default class GameContainer extends React.Component<GameContainerProps, G
     if (this.client) {
       this.client.close()
     }
+    window.removeEventListener("keydown", this.logRenderState)
+  }
+
+  public componentDidMount() {
+    window.addEventListener("keydown", this.logRenderState)
   }
 
   public render() {
@@ -124,6 +129,12 @@ export default class GameContainer extends React.Component<GameContainerProps, G
         view={this.client!.game.getView()}
         players={lobby.players} />
     )
+  }
+
+  private logRenderState = (e: KeyboardEvent) => {
+    if (e.keyCode === 83 && e.altKey) { // Alt-S
+      console.log((this.client!.game as any).render.dehydrate())
+    }
   }
 
   private onStart = () => {

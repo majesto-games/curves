@@ -49,6 +49,7 @@ import Render, { RenderState, emptyState, KeyText, SnakeGraphics } from "game/re
 
 import iassign from "immutable-assign"
 import { flatten } from "utils/array"
+import { fromImageTexture } from "game/texture"
 
 export enum GameEvent {
   START, END, ROUND_END,
@@ -187,7 +188,7 @@ export class Game {
         texts.push({
           x: location.x,
           y: location.y,
-          image: this.getPowerupImage(type),
+          texture: fromImageTexture.getDehydrated(this.getPowerupImage(type)),
           id,
         })
         return texts
@@ -286,7 +287,7 @@ export class Game {
           y: snake.y,
           rotation: snake.rotation,
           fatness: snake.fatness,
-          textureCacheKey: snake.textureCacheKey,
+          texture: snake.texture,
           powerupProgress: snake.powerupProgress,
         }
       }))
