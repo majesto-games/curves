@@ -8,7 +8,7 @@ export interface PlayerKeys {
   right: KEYS
 }
 
-const SHAPE_VERSION = 2
+const SHAPE_VERSION = 3
 interface UserConfig {
   playerKeys: PlayerKeys[]
   SHAPE_VERSION: number
@@ -29,7 +29,7 @@ function defaultState(): UserConfig {
     playerKeys: [
       { left: KEYS.LEFT, right: KEYS.RIGHT },
       { left: KEYS.Z, right: KEYS.X },
-      { left: KEYS.PERIOD, right: KEYS.COMMA },
+      { left: KEYS.COMMA, right: KEYS.PERIOD },
       { left: KEYS.O, right: KEYS.P },
       { left: KEYS.Q, right: KEYS.W },
     ],
