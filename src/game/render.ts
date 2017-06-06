@@ -85,7 +85,12 @@ export default class Render {
     const obj = {
       keytexts,
       powerups,
-      tails,
+      tails: tails.map(tail => ({
+        vertices: Array.from(tail.vertices),
+        uvs: Array.from(tail.uvs),
+        indices: Array.from(tail.indices),
+        texture: tail.texture,
+      })),
       snakes,
     }
 
@@ -105,9 +110,16 @@ export default class Render {
     const state: RenderState = {
       keytexts,
       powerups,
-      tails,
+      tails: tails.map(tail => ({
+        vertices: new Float32Array(tail.vertices),
+        uvs: new Float32Array(tail.uvs),
+        indices: new Uint16Array(tail.indices),
+        texture: tail.texture,
+      })),
       snakes,
     }
+
+    console.log(state)
 
     this.setState(state)
 
