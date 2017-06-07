@@ -51,7 +51,7 @@ import { Game } from "./game"
 import { Observable } from "utils/observable"
 import never from "utils/never"
 import { hexToString, luminosity } from "game/util"
-import { DehydratedTexture, registerTextureProvider, TextureProvider } from "./texture"
+import { DehydratedTexture, registerTextureProvider, TextureProvider, stripeColorTexture } from "./texture"
 
 const keyCombos: { left: KEYS, right: KEYS }[] = []
 
@@ -64,92 +64,11 @@ class RoundState {
   }
 }
 
-export enum ClientState {
+export enum ClientConnectionState {
   UNCONNECTED,
   LOBBY,
   GAME,
   CLOSED,
-}
-
-interface DehydratedStripedColorTexturePayload {
-  color: number
-  stripeColor: number
-}
-
-interface StripeColorTextureProvider extends TextureProvider<"stripecolor", DehydratedStripedColorTexturePayload> {
-  getDehydrated: (color: number, stripeColor: number) =>
-    DehydratedTexture<"stripecolor", DehydratedStripedColorTexturePayload>
-}
-
-export const stripeColorTexture: StripeColorTextureProvider = {
-  type: "stripecolor",
-  getTexture: (dehydrated) => {
-    const { color, stripeColor } = dehydrated.payload
-    return createTexture(color, straightStripesTemplate(hexToString(stripeColor), 4))
-  },
-  getCacheKey: (dehydrated) =>
-    `c${dehydrated.payload.color}_sc${dehydrated.payload.stripeColor}`,
-  getDehydrated(color: number, stripeColor: number) {
-    return {
-      type: "stripecolor",
-      payload: {
-        color,
-        stripeColor,
-      },
-    }
-  },
-}
-registerTextureProvider(stripeColorTexture)
-
-interface SolidColorTextureProvider extends TextureProvider<"solidcolor", number> {
-  getDehydrated: (color: number) => DehydratedTexture<"solidcolor", number>
-}
-
-export const solidColorTexture: SolidColorTextureProvider = {
-  type: "solidcolor",
-  getTexture: (dehydrated) => createTexture(dehydrated.payload, solidColorTemplate),
-  getCacheKey: (dehydrated) => `${dehydrated.payload}`,
-  getDehydrated(color: number) {
-    return {
-      type: "solidcolor",
-      payload: color,
-    }
-  },
-}
-registerTextureProvider(solidColorTexture)
-
-function solidColorTemplate(baseFill: string, canvas: HTMLCanvasElement) {
-  canvas.width = 2
-  canvas.height = 2
-  const context = canvas.getContext("2d")!
-  context.fillStyle = baseFill
-  context.fillRect(0, 0, 2, 2)
-}
-
-function straightStripesTemplate(stripeColor: string, width: number): TextureTemplate {
-  return (baseFill, canvas) => {
-    const size = width * 2
-    canvas.width = size
-    canvas.height = size
-
-    const context = canvas.getContext("2d")!
-
-    context.fillStyle = baseFill
-    context.fillRect(0, 0, size, size)
-    context.fillStyle = stripeColor
-    context.fillRect(width / 2, 0, width, size)
-  }
-}
-
-// should be tileable in all directions
-type TextureTemplate = (baseFill: string, canvas: HTMLCanvasElement) => void
-
-function createTexture(color: number, textureTemplate: TextureTemplate) {
-  const canvas = document.createElement("canvas")
-  textureTemplate(hexToString(color), canvas)
-  const l = new BaseTexture(canvas)
-  l.wrapMode = PIXI.WRAP_MODES.REPEAT
-  return new Texture(l)
 }
 
 export function fillSquare(width: number, height: number) {
@@ -162,7 +81,7 @@ export class Client {
   public game = new Game()
   public lobby = new Observable<Lobby>({ players: [] })
   public scores = new Observable<Score[]>([])
-  public state = new Observable<ClientState>(ClientState.UNCONNECTED)
+  public connectionState = new Observable<ClientConnectionState>(ClientConnectionState.UNCONNECTED)
   public isServer = false
   private currentRound: RoundState
   private localIndex = 0
@@ -176,10 +95,11 @@ export class Client {
     serverPromise.then(([connection, close]) => {
       this.connection = connection
       this._close = close
-      this.state.set(ClientState.LOBBY)
+      this.connectionState.set(ClientConnectionState.LOBBY)
     }).catch(e => {
       this.close()
     })
+
   }
 
   public receive(action: ClientAction) {
@@ -231,7 +151,7 @@ export class Client {
 
   public close() {
     this._close()
-    this.state.set(ClientState.CLOSED)
+    this.connectionState.set(ClientConnectionState.CLOSED)
   }
 
   public addPlayer() {
@@ -239,7 +159,7 @@ export class Client {
   }
 
   public start() {
-    if (this.state.value !== ClientState.LOBBY || !this.connection) {
+    if (this.connectionState.value !== ClientConnectionState.LOBBY || !this.connection) {
       return
     }
 
@@ -295,7 +215,7 @@ export class Client {
   }
 
   private started(players: PlayerInit[]) {
-    this.state.set(ClientState.GAME)
+    this.connectionState.set(ClientConnectionState.GAME)
     for (const player of players) {
       const newPlayer = this.createPlayer(player.name, player.color, player.owner === this.connection.id, player.id)
       this.players[player.id] = newPlayer

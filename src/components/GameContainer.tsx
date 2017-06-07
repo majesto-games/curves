@@ -6,7 +6,7 @@ import { Score, Lobby as LobbyI } from "server/actions"
 
 import { Game, GameEvent } from "game/game"
 import { connect } from "game/room"
-import { ClientState, Client } from "game/client"
+import { ClientConnectionState, Client } from "game/client"
 
 import never from "utils/never"
 
@@ -24,7 +24,7 @@ interface GameContainerState {
   colors: string[]
   lobby: LobbyI
   overlay: string | undefined
-  state: ClientState
+  state: ClientConnectionState
   isServer: boolean
 }
 
@@ -50,7 +50,7 @@ export default class GameContainer extends React.Component<GameContainerProps, G
     colors: [],
     lobby: { players: [] },
     overlay: undefined,
-    state: ClientState.UNCONNECTED,
+    state: ClientConnectionState.UNCONNECTED,
     isServer: false,
   }
 
@@ -97,7 +97,7 @@ export default class GameContainer extends React.Component<GameContainerProps, G
       isServer,
     } = this.state
 
-    if (state === ClientState.LOBBY) {
+    if (state === ClientConnectionState.LOBBY) {
       return (
         <Lobby
           lobby={lobby}
@@ -109,13 +109,13 @@ export default class GameContainer extends React.Component<GameContainerProps, G
       )
     }
 
-    if (state === ClientState.UNCONNECTED) {
+    if (state === ClientConnectionState.UNCONNECTED) {
       return (
         <Spinner />
       )
     }
 
-    if (state === ClientState.CLOSED) {
+    if (state === ClientConnectionState.CLOSED) {
       return (
         <div />
       )
@@ -157,7 +157,7 @@ export default class GameContainer extends React.Component<GameContainerProps, G
             this.client = undefined
             this.setState({
               colors: [],
-              state: ClientState.CLOSED,
+              state: ClientConnectionState.CLOSED,
             })
             break
           }
@@ -165,7 +165,7 @@ export default class GameContainer extends React.Component<GameContainerProps, G
           case GameEvent.START: {
             this.setState((prevState, props) => ({
               colors: client.game.colors,
-              state: client.state,
+              state: client.connectionState,
             }))
             break
           }
@@ -173,7 +173,7 @@ export default class GameContainer extends React.Component<GameContainerProps, G
             never("GameContainer didn't handle", e)
         }
       }),
-      client.state.subscribe(state => {
+      client.connectionState.subscribe(state => {
         this.setState({
           state,
           isServer: client.isServer,
