@@ -1,9 +1,7 @@
 {
     "compilerOptions": {
-        "noImplicitAny": true,
-        "noImplicitThis": true,
+        "strict":true,
         "removeComments": true,
-        "strictNullChecks": true,
         "jsx": "react",
         "target": "es5",
         "lib": [
