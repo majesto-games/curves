@@ -56,12 +56,6 @@ body {
   padding: 0;
 }
 
-@media only screen and (max-width: 991px) {
-  .Game {
-    display: block;
-  }
-}
-
 .Game .GameContainer {
   text-align: center;
   padding: 16px;
@@ -72,19 +66,38 @@ body {
   display: inline-block;
 }
 
-.Game .GameContainer .PhoneControls {
+.PhoneControls {
+  display: none;
   position: absolute;
   top: 0;
   right: 0;
   bottom: 0;
   left: 0;
-  display: flex;
+  justify-content: space-between;
   z-index: 11;
+  opacity: 1;
+  user-select: none;
 }
 
-.Game .GameContainer .PhoneControls div {
+.PhoneControls div {
   height: 100%;
-  width: 50%;
+  width: 49%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  background: rgba(96, 96, 96, 0.85);
+  font-size: 2em;
+  border-radius: 16px;
+}
+
+.PhoneControls div .glyphicon {
+  vertical-align: text-top;
+}
+
+.PhoneControls.PhoneControls-invisible {
+  opacity: 0;
+  transition: opacity 1s;
 }
 
 @media only screen and (min-width: 1000px) {
@@ -167,11 +180,35 @@ body {
 
 .Spinner {
   display: flex;
-  justify-content:center;
+  justify-content: center;
   align-items: flex-end;
   width: 100%;
   height: 20%;
   min-height: 100px;
   animation: fadein 0.6s;
   -webkit-animation: fadein 0.6s;
+}
+
+@media only screen and (max-width: 991px) {
+  .Game {
+    display: block;
+  }
+
+  .PhoneControls {
+    display: flex;
+  }
+
+  @media (orientation: landscape) {
+    #scores, #ads {
+      display: none;
+    }
+  }
+
+  @media (orientation: portrait) {
+    #scores h1 {
+      display: inline-block;
+      margin: 1rem;
+      font-size: 1em;
+    }
+  }
 }

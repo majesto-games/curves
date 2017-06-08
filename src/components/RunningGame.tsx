@@ -9,6 +9,8 @@ import Overlay from "components/Overlay"
 import PhoneControls from "components/PhoneControls"
 import { hexToString } from "game/util"
 
+import { requestFullscreen, isMobile } from "utils/misc"
+
 interface RunningGameProps {
   view: HTMLCanvasElement
   scores: Score[]
@@ -18,6 +20,12 @@ interface RunningGameProps {
 }
 
 export default class RunningGame extends React.Component<RunningGameProps, {}> {
+  public componentDidMount() {
+    if (isMobile()) {
+      requestFullscreen()
+    }
+  }
+
   public render() {
     const {
       scores,

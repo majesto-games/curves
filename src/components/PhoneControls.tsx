@@ -1,4 +1,5 @@
 import * as React from "react"
+import * as cx from "classnames"
 
 /* tslint:disable: no-namespace */
 declare global {
@@ -9,21 +10,35 @@ declare global {
 /* tslint:enable: no-namespace */
 window.PhoneControls = { left: false, right: false }
 
-export default class PhoneControls extends React.Component<{}, {}> {
+interface PhoneControlsState {
+  invisible: boolean
+}
 
-  public constructor(props: {}) {
-    super(props)
+export default class PhoneControls extends React.Component<{}, PhoneControlsState> {
+
+  public state: PhoneControlsState = {
+    invisible: false,
+  }
+
+  public componentDidMount() {
+    setTimeout(() => this.setState({ invisible: true }), 3000)
   }
 
   public render() {
     return (
-      <div className="PhoneControls" onContextMenu={(e) => e.preventDefault()}>
+      // tslint:disable-next-line:object-literal-key-quotes
+      <div className={cx("PhoneControls", { "PhoneControls-invisible": this.state.invisible })}
+        onContextMenu={(e) => e.preventDefault()}>
         <div
           onTouchStart={(e) => this.onTouchStart(e, "left")}
-          onTouchEnd={(e) => this.onTouchEnd(e, "left")} />
+          onTouchEnd={(e) => this.onTouchEnd(e, "left")}>
+          <span><span className="glyphicon glyphicon-arrow-left" /> Left</span>
+        </div>
         <div
           onTouchStart={(e) => this.onTouchStart(e, "right")}
-          onTouchEnd={(e) => this.onTouchEnd(e, "right")} />
+          onTouchEnd={(e) => this.onTouchEnd(e, "right")}>
+          <span>Right <span className="glyphicon glyphicon-arrow-right" /></span>
+        </div>
       </div>
     )
   }
