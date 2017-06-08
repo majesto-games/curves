@@ -8,6 +8,9 @@ module.exports = (env) => {
   const NODE_ENV = env.prod ? 'production' : 'development'
 
   return {
+    devServer: {
+      disableHostCheck: true,
+    },
     resolve: {
       extensions: ['.ts', '.tsx', '.webpack.js', '.web.js', '.js'],
       modules: [path.resolve(__dirname, 'src'), 'node_modules'],
