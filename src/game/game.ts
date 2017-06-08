@@ -9,6 +9,7 @@ import {
   ObservablePoint,
   Text,
 } from "pixi.js"
+import { createStore, Store } from "redux"
 import { Point, ClientPlayer, Snake, Powerup, PowerupType } from "./player"
 import { ClientTail, TailStorage, MeshPart } from "./tail"
 import {
@@ -50,6 +51,7 @@ import Render, { RenderState, emptyState, KeyText, SnakeGraphics } from "game/re
 import iassign from "immutable-assign"
 import { flatten } from "utils/array"
 import { fromImageTexture } from "game/texture"
+import createModule, { Action } from "utils/redux"
 
 export enum GameEvent {
   START, END, ROUND_END,
@@ -59,14 +61,27 @@ enum RoundState {
   PRE, IN, POST,
 }
 
+export interface GameState {
+  overlay: string | undefined
+}
+
+const initialGameState: GameState = {
+  overlay: undefined,
+}
+
+const gameModule = createModule(initialGameState, {
+  SET_OVERLAY: (state: GameState, action: Action<string | undefined>) =>
+    iassign(state, s => s.overlay, () => action.payload),
+})
+
 const ratio = SERVER_WIDTH / SERVER_HEIGHT
 
 export class Game {
   public colors: string[] = []
-  public overlay = new Signal<string | undefined>("")
   public onDraw = new SimpleEvent<undefined>()
   public event = new SimpleEvent<GameEvent>()
   public roundState = RoundState.PRE
+  public store: Store<GameState>
   private readonly container = new Container()
 
   private closed = false
@@ -80,6 +95,7 @@ export class Game {
   private renderState = emptyState()
 
   constructor() {
+    this.store = createStore(gameModule.reducer)
     this.renderer = autoDetectRenderer(SERVER_WIDTH, SERVER_HEIGHT,
       { antialias: true, backgroundColor: 0x000000 })
 
@@ -246,11 +262,11 @@ export class Game {
   }
 
   private setOverlay(text: string) {
-    this.overlay.set(text)
+    this.store.dispatch(gameModule.actions.SET_OVERLAY(text))
   }
 
   private removeOverlay() {
-    this.overlay.set(undefined)
+    this.store.dispatch(gameModule.actions.SET_OVERLAY(undefined))
   }
 
   private getPowerupImage(powerupType: PowerupType): string {

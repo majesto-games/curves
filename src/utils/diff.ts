@@ -1,4 +1,6 @@
 
+import { arrayToMap, Key } from "utils/array"
+
 export type Path = (string | number)[]
 
 export interface ChangeAdd<T> {
@@ -75,8 +77,8 @@ type ObjectDiff<T, K extends keyof T> = [K, T[K], T[K]]
 export function diffObject<T>(a: T, b: T) {
   const acc: ObjectDiff<T, keyof T>[] = []
   const keyMap = Object.assign(
-    arrayToMap<T, keyof T>(Object.keys(a) as Keys<T>),
-    arrayToMap<T, keyof T>(Object.keys(b) as Keys<T>))
+    arrayToMap<T>(Object.keys(a) as Key<T>[]),
+    arrayToMap<T>(Object.keys(b) as Key<T>[]))
 
   for (const key in keyMap) {
     // tslint:disable:forin
@@ -335,20 +337,4 @@ export function equal(a: any, b: any) {
   } else {
     return a === b || Number.isNaN(a) && Number.isNaN(b)
   }
-}
-
-type KeysToTrue<T, K extends keyof T> = {
-  [P in K]: true;
-}
-
-type Keys<T> = (keyof T)[]
-
-function arrayToMap<T, K extends keyof T>(array: K[]): KeysToTrue<T, K>
-function arrayToMap(array: string[]): { [key: string]: true }
-function arrayToMap<T, K extends keyof T>(array: K[]) {
-  const result: KeysToTrue<T, K> = {} as any
-  array.forEach((v: K) => {
-    result[v] = true
-  })
-  return result
 }

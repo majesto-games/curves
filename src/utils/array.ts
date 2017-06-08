@@ -53,3 +53,34 @@ export function mergeUint16(a: Uint16Array, b: Uint16Array): Uint16Array {
 
   return c
 }
+
+export type KeysToTrue<T> = {
+  [P in Key<T>]: true;
+}
+
+export type Key<T> = keyof T
+
+export type Mapping<T, S> = {
+  [P in Key<T>]: S
+}
+
+export function arrayToMap<T>(array: Key<T>[]): KeysToTrue<T>
+export function arrayToMap(array: string[]): { [key: string]: true }
+export function arrayToMap<T>(array: Key<T>[]) {
+  const result: KeysToTrue<T> = {} as any
+  array.forEach((v: Key<T>) => {
+    result[v] = true
+  })
+  return result
+}
+
+type Mapper<T, S> = (value: T[Key<T>], key: Key<T>) => S
+
+export function mapObject<T, S>(f: Mapper<T, S>, obj: T): Mapping<T, S> {
+  const result: Mapping<T, S> = {} as any
+  const keys = Object.keys(obj) as Key<T>[]
+  for (const key of keys) {
+    result[key] = f(obj[key], key)
+  }
+  return result
+}

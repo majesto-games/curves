@@ -180,7 +180,12 @@ export default class GameContainer extends React.Component<GameContainerProps, G
         })
       }),
       client.lobby.subscribe(lobby => this.setState({ lobby })),
-      client.game.overlay.subscribe(overlay => this.setState({ overlay })),
+      client.game.store.subscribe(() => {
+        const state = client.game.store.getState()
+        this.setState({
+          overlay: state.overlay,
+        })
+      }),
       client.scores.subscribe(scores => {
         scores.sort((a, b) => b.score - a.score)
         this.setState({ scores })

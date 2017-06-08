@@ -40,6 +40,7 @@
     "pre-commit": "^1.2.2",
     "react": "^15.5.4",
     "react-dom": "^15.5.4",
+    "redux": "^3.6.0",
     "rtc-quickconnect": "^5.8.0",
     "sillyname": "^0.1.0",
     "tween-functions": "^1.2.0"
