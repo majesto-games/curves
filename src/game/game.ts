@@ -61,17 +61,39 @@ enum RoundState {
   PRE, IN, POST,
 }
 
+interface RoundPreState {
+  type: RoundState.PRE,
+  roundStartsAt: number | undefined
+}
+
+interface RoundInState {
+  type: RoundState.IN,
+}
+
+interface RoundPostState {
+  type: RoundState.POST,
+}
+
+type GameRound = RoundPreState | RoundInState | RoundPostState
+
 export interface GameState {
   overlay: string | undefined
+  round: GameRound
 }
 
 const initialGameState: GameState = {
   overlay: undefined,
+  round: {
+    type: RoundState.PRE,
+    roundStartsAt: undefined,
+  },
 }
 
 const gameModule = createModule(initialGameState, {
   SET_OVERLAY: (state: GameState, action: Action<string | undefined>) =>
     iassign(state, s => s.overlay, () => action.payload),
+  SET_ROUND: (state: GameState, action: Action<GameRound>) =>
+    iassign(state, s => s.round, () => action.payload),
 })
 
 const ratio = SERVER_WIDTH / SERVER_HEIGHT
@@ -80,7 +102,6 @@ export class Game {
   public colors: string[] = []
   public onDraw = new SimpleEvent<undefined>()
   public event = new SimpleEvent<GameEvent>()
-  public roundState = RoundState.PRE
   public store: Store<GameState>
   private readonly container = new Container()
 
@@ -88,7 +109,6 @@ export class Game {
   private renderer: CanvasRenderer | WebGLRenderer
   private eventListeners: ((e: GameEvent, data?: any) => void)[] = []
   private snakes: Snake[] = []
-  private roundStartsAt: number | undefined
 
   private tailStorage: TailStorage<ClientTail>
   private render: Render
@@ -170,13 +190,18 @@ export class Game {
     }
     this.drawPlayers()
 
-    this.roundStartsAt = Date.now() + delay
-    this.roundState = RoundState.PRE
+    this.store.dispatch(gameModule.actions.SET_ROUND({
+      type: RoundState.PRE,
+      roundStartsAt: Date.now() + delay,
+    }))
   }
 
   public inRound() {
-    if (this.roundState !== RoundState.IN) {
-      this.roundState = RoundState.IN
+    const state = this.store.getState()
+    if (state.round.type !== RoundState.IN) {
+      this.store.dispatch(gameModule.actions.SET_ROUND({
+        type: RoundState.IN,
+      }))
       this.removeOverlay()
       this.renderState = iassign(
         this.renderState,
@@ -188,7 +213,9 @@ export class Game {
 
   public roundEnd(winner: ClientPlayer) {
     this.setOverlay(`Winner this round: Player ${winner.id}`)
-    this.roundState = RoundState.POST
+    this.store.dispatch(gameModule.actions.SET_ROUND({
+      type: RoundState.POST,
+    }))
     this.event.send(GameEvent.ROUND_END)
   }
 
@@ -322,12 +349,14 @@ export class Game {
       return
     }
 
-    switch (this.roundState) {
+    const state = this.store.getState()
+
+    switch (state.round.type) {
       case RoundState.PRE: {
-        if (this.roundStartsAt == null) {
+        if (state.round.roundStartsAt == null) {
           this.setOverlay("Round starting...")
         } else {
-          this.setOverlay(`Round starting in ${Math.ceil((this.roundStartsAt - Date.now()) / 1000)}s`)
+          this.setOverlay(`Round starting in ${Math.ceil((state.round.roundStartsAt - Date.now()) / 1000)}s`)
         }
         break
       }
