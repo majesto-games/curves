@@ -2984,6 +2984,10 @@ reduce-function-call@^1.0.1:
   dependencies:
     balanced-match "^0.4.2"
 
+redux-typescript-module@^1.0.2:
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/redux-typescript-module/-/redux-typescript-module-1.0.2.tgz#41cf0e081a1465d652f9e5f7663d380cdb84641e"
+
 redux@^3.6.0:
   version "3.6.0"
   resolved "https://registry.yarnpkg.com/redux/-/redux-3.6.0.tgz#887c2b3d0b9bd86eca2be70571c27654c19e188d"

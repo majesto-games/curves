@@ -51,7 +51,7 @@ import Render, { RenderState, emptyState, KeyText, SnakeGraphics } from "game/re
 import iassign from "immutable-assign"
 import { flatten } from "utils/array"
 import { fromImageTexture } from "game/texture"
-import createModule, { Action } from "utils/redux"
+import createModule, { Action } from "redux-typescript-module"
 
 export enum GameEvent {
   START, END, ROUND_END,
