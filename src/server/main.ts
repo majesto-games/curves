@@ -1,8 +1,17 @@
 import { getColors } from "game/util"
 import { frequency, shuffle } from "utils/array"
 import never from "utils/never"
-import { Point, ServerPlayer, Snake, Powerup, ActivePowerup, PowerupType } from "game/player"
-import { ServerTail, TailStorage } from "game/tail"
+import {
+  Point, ServerPlayer, Snake, Powerup, ActivePowerup,
+  PowerupType, tick, rotate, createTailPolygon, fatify,
+  ghostify, speeddown, speedup, swapWith, reversify, newSnake,
+} from "game/player"
+import {
+  ServerTail, TailStorage, newServerTail, addToServerTail,
+  serverTailContainsPoint, containsPointExcludeLatest,
+  tailStorageModule, tailsForPlayer, TailStorageI, TailPart,
+} from "game/tail"
+
 import {
   PlayerUpdate,
   Gap,
@@ -27,6 +36,8 @@ import {
 } from "./actions"
 
 import { ClientConnection, ConnectionId } from "./connections"
+import { createStore } from "redux"
+import { List } from "immutable"
 
 export const SERVER_WIDTH = 960
 export const SERVER_HEIGHT = 960
@@ -48,8 +59,15 @@ function rotationSpeed(fatness: number) {
   return window.getGlobal("ROTATION_SPEED") / (10 + fatness) - (0.02 * 64 / window.getGlobal("TICK_RATE"))
 }
 
+let tailsModule = tailStorageModule<ServerTail>(
+  () => newServerTail(),
+  (tail, part) => {
+    return addToServerTail(tail, part)
+  },
+)
+
 class RoundState {
-  public tails = new TailStorage(() => new ServerTail())
+  public tails = createStore(tailsModule.reducer)
   public placedPowerups: Powerup[] = []
   public losers: ServerPlayer[] = []
   public nextPowerupId = 0
@@ -183,20 +201,20 @@ export class Server {
   private rotateTick(player: ServerPlayer) {
     const rotSpeed = rotationSpeed(player.snake!.fatness)
     if (player.steeringLeft) {
-      player.snake!.rotate(-rotSpeed)
+      player.snake = rotate(player.snake!, -rotSpeed)
     }
     if (player.steeringRight) {
-      player.snake!.rotate(rotSpeed)
+      player.snake = rotate(player.snake!, rotSpeed)
     }
   }
 
   private collides(p: number[], player: Snake) {
     return (collider: Snake) => {
-      let tails = this.round.tails.tailsForPlayer(collider)
+      let tails = tailsForPlayer(this.round.tails.getState(), collider)
 
       // Special case for last tail for this player
-      if (collider === player && tails.length > 0) {
-        const last = tails[tails.length - 1]
+      if (collider === player && tails.size > 0) {
+        const last = tails.get(-1)!
         // Modify tails not not contain last part
         tails = tails.slice(0, -1)
 
@@ -204,7 +222,7 @@ export class Server {
           const x = p[i]
           const y = p[i + 1]
 
-          if (last.containsPointExcludeLatest(x, y)) {
+          if (containsPointExcludeLatest(last, x, y)) {
             return true
           }
         }
@@ -214,7 +232,7 @@ export class Server {
         const x = p[i]
         const y = p[i + 1]
 
-        if (tails.some(tail => tail.containsPoint(x, y))) {
+        if (tails.some(tail => serverTailContainsPoint(tail, x, y))) {
           return true
         }
       }
@@ -302,16 +320,19 @@ export class Server {
 
       for (const player of playersAlive) {
         this.rotateTick(player)
-        player.snake!.tick()
+        let snake = player.snake!
+        const x = snake.x
+        snake = tick(snake)
 
         // Create tail polygon, this returns undefined if it's supposed to be a hole
-        const poly = player.snake!.createTailPolygon()
+        const [snake2, poly] = createTailPolygon(snake)
+        snake = snake2
 
         let tailAction: Tail | Gap = { type: GAP }
 
         if (poly != null) {
-          if (this.players.map(p => p.snake).some(this.collides(poly.vertices, player.snake!))) {
-            player.snake!.alive = false
+          if (this.players.map(p => p.snake).some(this.collides(poly.vertices, snake))) {
+            snake = snake.set("alive", false)
             // TODO: randomize order
             this.round.losers.push(player)
           }
@@ -321,26 +342,28 @@ export class Server {
             payload: poly,
           }
 
-          this.round.tails.add(poly)
+          this.round.tails.dispatch(tailsModule.actions.ADD_TAIL(poly))
         }
 
         this.round.placedPowerups = this.round.placedPowerups.filter(powerup => {
-          if (this.collidesPowerup(player.snake!, powerup)) {
+          if (this.collidesPowerup(snake, powerup)) {
             collidedPowerups.push(this.powerupPickup(player, powerup, playersAlive))
             return false
           }
           return true
         })
 
+        player.snake = snake
+
         playerUpdates.push({
-          alive: player.snake!.alive,
-          rotation: player.snake!.rotation,
+          alive: snake.alive,
+          rotation: snake.rotation,
           tail: tailAction,
-          x: player.snake!.x,
-          y: player.snake!.y,
-          fatness: player.snake!.fatness,
+          x: snake.x,
+          y: snake.y,
+          fatness: snake.fatness,
           id: player.id,
-          powerupProgress: player.snake!.powerupProgress,
+          powerupProgress: snake.powerupProgress.toJS(),
         })
       }
 
@@ -365,53 +388,56 @@ export class Server {
       case "UPSIZE": {
         playersAlive
           .filter(p => player.id !== p.id)
-          .forEach(p => p.snake!.fatify(powerup))
+          .forEach(p => p.snake = fatify(p.snake!, powerup))
         break
       }
       case "GHOST": {
-        player.snake!.ghostify(powerup)
+        player.snake = ghostify(player.snake!, powerup)
         break
       }
       case "SPEEDDOWN_ME": {
-        player.snake!.speeddown(powerup)
+        player.snake = speeddown(player.snake!, powerup)
         break
       }
       case "SPEEDDOWN_THEM": {
         playersAlive
           .filter(p => player.id !== p.id)
-          .forEach(p => p.snake!.speeddown(powerup))
+          .forEach(p => p.snake = speeddown(p.snake!, powerup))
         break
       }
       case "SPEEDUP_ME": {
-        player.snake!.speedup(powerup)
+        player.snake = speedup(player.snake!, powerup)
         break
       }
       case "SPEEDUP_THEM": {
         playersAlive
           .filter(p => player.id !== p.id)
-          .forEach(p => p.snake!.speedup(powerup))
+          .forEach(p => p.snake = speedup(p.snake!, powerup))
         break
       }
       case "SWAP_ME": {
         const others = playersAlive
           .filter(p => player.id !== p.id)
         const swapIndex = Math.floor(Math.random() * others.length)
-        player.snake!.swapWith(others[swapIndex].snake!)
+        const [snake1, snake2] = swapWith(player.snake!, others[swapIndex].snake!)
+        player.snake = snake1
+        others[swapIndex].snake = snake2
         break
       }
       case "SWAP_THEM": {
         const others = shuffle(playersAlive
           .filter(p => player.id !== p.id))
         if (others.length >= 2) {
-          others[0].snake!.swapWith(others[1].snake!)
-
+          const [snake1, snake2] = swapWith(others[0].snake!, others[1].snake!)
+          others[0].snake = snake1
+          others[1].snake = snake2
         }
         break
       }
       case "REVERSE_THEM": {
         this.players
           .filter(p => player.id !== p.id)
-          .forEach(p => p.snake!.reversify(powerup))
+          .forEach(p => p.snake = reversify(p.snake!, powerup))
         break
       }
       default:
@@ -435,6 +461,12 @@ export class Server {
 
   private startRound() {
     this.round = new RoundState()
+    tailsModule = tailStorageModule(
+      () => newServerTail(),
+      (tail: ServerTail, part) => {
+        return addToServerTail(tail, part)
+      },
+    )
     const rx = SERVER_WIDTH * 0.3
     const ry = SERVER_HEIGHT * 0.3
     const player1Radians = Math.random() * 2 * Math.PI
@@ -453,10 +485,9 @@ export class Server {
         y: ry * Math.sin(playerRadian) + (SERVER_HEIGHT / 2),
       }
 
-      const snake = new Snake(startPoint, rotation, p.id)
+      const snake = newSnake(startPoint, rotation, p.id, undefined as any)
       // WARNING: Modifies player even though this is a .map
       p.snake = snake
-      this.round.tails.initPlayer(snake)
 
       return {
         startPoint,

@@ -163,33 +163,27 @@ export default class GameContainer extends React.Component<GameContainerProps, G
             break
           }
           case GameEvent.ROUND_END:
-          case GameEvent.START: {
-            this.setState((prevState, props) => ({
-              colors: client.game.colors,
-              state: client.connectionState,
-            }))
+          case GameEvent.START:
             break
-          }
           default:
             never("GameContainer didn't handle", e)
         }
       }),
-      client.connectionState.subscribe(state => {
+      client.store.subscribe(() => {
+        const state = client.store.getState()
         this.setState({
-          state,
+          lobby: state.lobby,
+          scores: state.scores,
+          state: state.connectionState,
           isServer: client.isServer,
         })
       }),
-      client.lobby.subscribe(lobby => this.setState({ lobby })),
       client.game.store.subscribe(() => {
         const state = client.game.store.getState()
         this.setState({
           overlay: state.overlay,
+          colors: state.colors,
         })
-      }),
-      client.scores.subscribe(scores => {
-        scores.sort((a, b) => b.score - a.score)
-        this.setState({ scores })
       }),
     )
 

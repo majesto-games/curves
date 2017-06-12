@@ -926,10 +926,6 @@ deep-extend@~0.4.0:
   version "0.4.2"
   resolved "https://registry.yarnpkg.com/deep-extend/-/deep-extend-0.4.2.tgz#48b699c27e334bf89f10892be432f6e4c7d34a7f"
 
-deep-freeze-strict@jsdf/deep-freeze#a698ebb5d46ad07295358b4d2748ac966d759700:
-  version "1.1.1"
-  resolved "https://codeload.github.com/jsdf/deep-freeze/tar.gz/a698ebb5d46ad07295358b4d2748ac966d759700"
-
 defined@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/defined/-/defined-1.0.0.tgz#c98d9bcef75674188e110969151199e39b1fa693"
@@ -1642,11 +1638,9 @@ ieee754@^1.1.4:
   version "1.1.8"
   resolved "https://registry.yarnpkg.com/ieee754/-/ieee754-1.1.8.tgz#be33d40ac10ef1926701f6f08a2d86fbfd1ad3e4"
 
-immutable-assign@Zalastax/ImmutableAssign#650509df0cf61386f7ab2e1574fe3a2a4f27496d:
-  version "1.0.35"
-  resolved "https://codeload.github.com/Zalastax/ImmutableAssign/tar.gz/650509df0cf61386f7ab2e1574fe3a2a4f27496d"
-  optionalDependencies:
-    deep-freeze-strict jsdf/deep-freeze#a698ebb5d46ad07295358b4d2748ac966d759700
+immutable@Zalastax/immutable-js#86b6aa458180e3f4afa7637999010dde85d8d654:
+  version "4.0.0-rc.2"
+  resolved "https://codeload.github.com/Zalastax/immutable-js/tar.gz/86b6aa458180e3f4afa7637999010dde85d8d654"
 
 imports-loader@^0.7.1:
   version "0.7.1"
@@ -3661,6 +3655,10 @@ tough-cookie@~2.3.0:
   version "1.0.0"
   resolved "https://github.com/fresheneesz/trimArguments/archive/e69ed3ebdfe6cf055916ba6e3a1e4b28f696da6f.tar.gz#7a813d5579390c48facfbe276fa58a298984aca4"
 
+tsdiff@Zalastax/tsdiff#29609cc8873ccec747b4dc008c4d4ffed941b619:
+  version "0.1.0"
+  resolved "https://codeload.github.com/Zalastax/tsdiff/tar.gz/29609cc8873ccec747b4dc008c4d4ffed941b619"
+
 tslib@^1.7.1:
   version "1.7.1"
   resolved "https://registry.yarnpkg.com/tslib/-/tslib-1.7.1.tgz#bc8004164691923a79fe8378bbeb3da2017538ec"
@@ -3730,9 +3728,9 @@ typescript-formatter@^5.2.0:
     commandpost "^1.0.0"
     editorconfig "^0.13.2"
 
-typescript@^2.3.3:
-  version "2.3.4"
-  resolved "https://registry.yarnpkg.com/typescript/-/typescript-2.3.4.tgz#3d38321828231e434f287514959c37a82b629f42"
+typescript@^2.4.2:
+  version "2.4.2"
+  resolved "https://registry.yarnpkg.com/typescript/-/typescript-2.4.2.tgz#f8395f85d459276067c988aa41837a8f82870844"
 
 ua-parser-js@^0.7.9:
   version "0.7.12"

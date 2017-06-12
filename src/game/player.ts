@@ -1,12 +1,25 @@
-import { Tail, TailPart, NotRemoved } from "./tail"
+import { newTailPart, TailPart } from "./tail"
 
-import { Animation } from "utils/animation"
+import {
+  Animation,
+  TweenResult,
+  newAnimation,
+  add,
+  tick as animationTick,
+  values,
+  numberTweenProviders,
+  undefinedTweenProviders,
+  booleanTrue,
+  linearAttackDecay,
+  LinearInOutParams,
+} from "utils/animation"
 import { linear } from "tween-functions"
 import { ConnectionId } from "server/connections"
 import { Signal } from "utils/observable"
 import { Texture } from "pixi.js"
 import { SERVER_WIDTH, SERVER_HEIGHT } from "server/main"
-import { AnyDehydratedTexture } from "game/texture"
+import { DehydratedTexture } from "game/texture"
+import { Record, List, Map as MapIm } from "immutable"
 
 export interface Point {
   x: number
@@ -88,20 +101,51 @@ export class ServerPlayer {
   }
 }
 
-export class ClientPlayer {
-  public steeringLeft = new Signal<boolean>(false)
-  public steeringRight = new Signal<boolean>(false)
+interface ClientPlayerI {
+  steeringLeft: boolean
+  steeringRight: boolean
+  name: string
+  id: number
+  color: number
+  texture: DehydratedTexture
+  localIndex: number | undefined
+  isOwner: boolean
+  snake: Snake | undefined
+}
 
-  constructor(
-    public name: string,
-    public id: number,
-    public color: number,
-    public texture: AnyDehydratedTexture,
-    public localIndex: number | undefined,
-    public snake?: Snake,
-  ) {
+export type ClientPlayer = Record.Instance<ClientPlayerI>
 
-  }
+// tslint:disable-next-line:variable-name
+export const ClientPlayerClass: Record.Class<ClientPlayerI> = Record({
+  steeringLeft: false,
+  steeringRight: false,
+  name: "",
+  id: 0,
+  color: 0,
+  texture: undefined as any,
+  localIndex: undefined,
+  isOwner: false,
+  snake: undefined,
+})
+
+export function newClientPlayer(
+  name: string,
+  id: number,
+  color: number,
+  texture: DehydratedTexture,
+  localIndex: number | undefined,
+  isOwner: boolean,
+  snake?: Snake,
+) {
+  return new ClientPlayerClass({
+    name,
+    id,
+    color,
+    texture,
+    localIndex,
+    isOwner,
+    snake,
+  })
 }
 
 interface PowerupProgress {
@@ -115,288 +159,322 @@ interface AnimationProgress<T> {
   order: number
 }
 
-export class Snake {
+function fatnessAnimationReducer(snake: Snake, values: TweenResult<number>[]): Snake {
+  const sum = values.reduce((prev, curr) => prev + curr.value, window.getGlobal("FATNESS_BASE"))
+  return snake
+    .set("fatnessProgress", List(values))
+    .set("fatness", sum)
+}
 
-  public texture: AnyDehydratedTexture
-  public fatness: number
-  public alive: boolean
-  public lastX: number
-  public lastY: number
-  public speed: number
-  public lastEnd: any
-  public x: number
-  public y: number
-  public powerupProgress: number[] = []
+function speedAnimationReducer(snake: Snake, values: TweenResult<number>[]): Snake {
+  const sum = values.reduce((prev, curr) => prev + curr.value, 0) * 64 / window.getGlobal("TICK_RATE")
+  return snake
+    .set("speedProgress", List(values))
+    .set("speed", window.getGlobal("MOVE_SPEED_BASE") + Math.max(sum, - 1))
+}
 
-  private lfatness: number
-  private holeChance: number
-  private tailTicker: number
-  private skipTailTicker: number
-  private tailId: number
-  private ghost: boolean
-  private reversed: boolean
+function ghostAnimationReducer(snake: Snake, values: TweenResult<undefined>[]): Snake {
+  if (values.length > 0) {
+    return snake
+      .set("ghost", true)
+      .set("ghostProgress", List([values[values.length - 1]]))
+  } else {
+    return snake
+      .set("ghost", false)
+      .set("ghostProgress", List())
+  }
+}
 
-  private fatnessAnimation: Animation<AnimationProgress<number>>
-  private fatnessProgress: PowerupProgress[] = []
-  private speedAnimation: Animation<AnimationProgress<number>>
-  private speedProgress: PowerupProgress[] = []
-  private ghostAnimation: Animation<AnimationProgress<undefined>>
-  private ghostProgress: PowerupProgress[] = []
-  private reversedAnimation: Animation<AnimationProgress<undefined>>
-  private reversedProgress: PowerupProgress[] = []
+function reversedAnimationReducer(snake: Snake, values: TweenResult<undefined>[]): Snake {
+  if (values.length > 0) {
+    return snake
+      .set("reversed", true)
+      .set("reversedProgress", List([values[values.length - 1]]))
+  } else {
+    return snake
+      .set("reversed", false)
+      .set("reversedProgress", List())
+  }
+}
 
-  constructor(
-    startPoint: Point,
-    public rotation: number,
-    public id: number,
-  ) {
-    this.x = startPoint.x
-    this.y = startPoint.y
-    this.lastX = this.x
-    this.lastY = this.y
-    this.fatness = window.getGlobal("FATNESS_BASE")
-    this.lfatness = window.getGlobal("FATNESS_BASE")
-    this.lastEnd = null
-    this.holeChance = window.getGlobal("HOLE_CHANCE_BASE")
-    this.tailTicker = 0
-    this.speed = window.getGlobal("MOVE_SPEED_BASE")
-    this.tailId = 0
-    this.skipTailTicker = 0
-    this.ghost = false
-    this.reversed = false
-    this.alive = true
+function wrapEdge(snake: Snake): Snake {
+  if (snake.x > SERVER_WIDTH + snake.fatness) {
+    snake = stopTail(snake
+      .set("x", -snake.fatness)
+      .set("lastX", -snake.fatness - 1))
+  }
 
-    this.fatnessAnimation = new Animation<AnimationProgress<number>>(values => {
-      const sum = values.reduce((prev, curr) => prev + curr.value, window.getGlobal("FATNESS_BASE"))
-      this.fatnessProgress = values
-      this.fatness = sum
-    })
+  if (snake.y > SERVER_HEIGHT + snake.fatness) {
+    snake = stopTail(snake
+      .set("y", -snake.fatness)
+      .set("lastY", -snake.fatness - 1))
+  }
 
-    this.speedAnimation = new Animation<AnimationProgress<number>>(values => {
-      const sum = values.reduce((prev, curr) => prev + curr.value, 0) * 64 / window.getGlobal("TICK_RATE")
-      this.speedProgress = values
-      this.speed = window.getGlobal("MOVE_SPEED_BASE") + Math.max(sum, - 1)
-    })
+  if (snake.x < -snake.fatness) {
+    snake = stopTail(snake
+      .set("x", SERVER_WIDTH + snake.fatness)
+      .set("lastX", SERVER_WIDTH + snake.fatness + 1))
+  }
 
-    this.ghostAnimation = new Animation<AnimationProgress<undefined>>(values => {
-      if (values.length > 0) {
-        this.ghost = true
-        this.ghostProgress = [values[values.length - 1]]
+  if (snake.y < -snake.fatness) {
+    snake = stopTail(snake
+      .set("y", SERVER_HEIGHT + snake.fatness)
+      .set("lastY", SERVER_HEIGHT + snake.fatness + 1))
+  }
+
+  return snake
+}
+
+function stopTail(snake: Snake): Snake {
+  if (snake.lastEnd != null) {
+    snake = snake
+      .set("lastEnd", null)
+      .set("tailId", snake.tailId + 1)
+  }
+
+  return snake
+}
+
+function createHole(
+  snake: Snake,
+  holeTime: number = snake.fatness * window.getGlobal("SKIP_TAIL_FATNESS_MULTIPLIER")): Snake {
+  return stopTail(
+    snake
+      .set("skipTailTicker", holeTime)
+      .set("holeChance", window.getGlobal("HOLE_CHANCE_BASE")))
+}
+
+function teleportTo(snake: Snake, x: number, y: number, rotation: number): Snake {
+  snake = stopTail(snake)
+  snake = snake
+    .set("x", x)
+    .set("lastX", x)
+    .set("y", y)
+    .set("lastY", y)
+    .set("rotation", rotation)
+  return createHole(snake, 1 * window.getGlobal("TICK_RATE")) // 1 second
+}
+
+function updatePowerupProgress(snake: Snake): Snake {
+  const progress = List<PowerupProgress>().concat(
+    snake.speedProgress,
+    snake.ghostProgress,
+    snake.fatnessProgress,
+    snake.reversedProgress,
+  )
+  progress.sort((a, b) => a.order - b.order)
+  return snake.set("powerupProgress", progress.map(v => v.progress))
+}
+
+export function tick(snake: Snake): Snake {
+  snake = snake
+    .set("x", snake.x + (Math.sin(snake.rotation) * snake.speed))
+    .set("y", snake.y - (Math.cos(snake.rotation) * snake.speed))
+  snake = wrapEdge(snake)
+  snake = snake.set("fatnessAnimation", animationTick(snake.fatnessAnimation))
+  snake = fatnessAnimationReducer(snake, values(numberTweenProviders, snake.fatnessAnimation))
+  snake = snake.set("speedAnimation", animationTick(snake.speedAnimation))
+  snake = speedAnimationReducer(snake, values(numberTweenProviders, snake.speedAnimation))
+  snake = snake.set("ghostAnimation", animationTick(snake.ghostAnimation))
+  snake = ghostAnimationReducer(snake, values(undefinedTweenProviders, snake.ghostAnimation))
+  snake = snake.set("reversedAnimation", animationTick(snake.reversedAnimation))
+  snake = reversedAnimationReducer(snake, values(undefinedTweenProviders, snake.reversedAnimation))
+  return updatePowerupProgress(snake)
+}
+
+export function rotate(snake: Snake, amount: number): Snake {
+  if (snake.reversed) {
+    amount = -amount
+  }
+
+  return snake.set("rotation", (snake.rotation + amount) % (2 * Math.PI))
+}
+
+export function ghostify(snake: Snake, powerup: Powerup): Snake {
+  const duration = window.getGlobal("POWERUP_ACTIVE_DURATION")
+  stopTail(snake)
+
+  const powerupId = powerup.id
+  const tween = undefinedTweenProviders.dehydrate(booleanTrue, { duration, powerupId })
+  return snake.set("ghostAnimation", add(snake.ghostAnimation, duration, tween))
+}
+
+export function speeddown(snake: Snake, powerup: Powerup): Snake {
+  const duration = window.getGlobal("POWERUP_ACTIVE_DURATION")
+  const halfSecond = Math.floor(window.getGlobal("TICK_RATE") * 0.5)
+
+  const tween = numberTweenProviders.dehydrate<LinearInOutParams>(linearAttackDecay, {
+    duration,
+    powerupId: powerup.id,
+    attackDecayTime: halfSecond,
+    target: -0.5,
+  })
+  return snake.set("speedAnimation", add(snake.speedAnimation, duration, tween))
+}
+
+export function speedup(snake: Snake, powerup: Powerup): Snake {
+  const duration = window.getGlobal("POWERUP_ACTIVE_DURATION")
+  const halfSecond = Math.floor(window.getGlobal("TICK_RATE") * 0.5)
+
+  const tween = numberTweenProviders.dehydrate<LinearInOutParams>(linearAttackDecay, {
+    duration,
+    powerupId: powerup.id,
+    attackDecayTime: halfSecond,
+    target: 0.5,
+  })
+  return snake.set("speedAnimation", add(snake.speedAnimation, duration, tween))
+}
+
+export function fatify(snake: Snake, powerup: Powerup): Snake {
+  const duration = window.getGlobal("POWERUP_ACTIVE_DURATION")
+  const halfSecond = Math.floor(window.getGlobal("TICK_RATE") * 0.5)
+
+  const tween = numberTweenProviders.dehydrate<LinearInOutParams>(linearAttackDecay, {
+    duration,
+    powerupId: powerup.id,
+    attackDecayTime: halfSecond,
+    target: 8,
+  })
+  return snake.set("fatnessAnimation", add(snake.fatnessAnimation, duration, tween))
+}
+
+export function reversify(snake: Snake, powerup: Powerup): Snake {
+  const duration = window.getGlobal("POWERUP_ACTIVE_DURATION")
+
+  const powerupId = powerup.id
+  const tween = undefinedTweenProviders.dehydrate(booleanTrue, { duration, powerupId })
+  return snake.set("reversedAnimation", add(snake.reversedAnimation, duration, tween))
+}
+
+export function swapWith(snake1: Snake, snake2: Snake): [Snake, Snake] {
+  const snakeX = snake2.x
+  const snakeY = snake2.y
+  const snakeRot = snake2.rotation
+  snake2 = teleportTo(snake2, snake1.x, snake1.y, snake1.rotation)
+  snake1 = teleportTo(snake1, snakeX, snakeY, snakeRot)
+
+  return [snake1, snake2]
+}
+
+export function createTailPolygon(snake: Snake): [Snake, TailPart | undefined] {
+  const r = Math.random()
+  let pol: number[] | undefined
+  let isTailStart = false
+
+  if (snake.ghost) {
+    snake = stopTail(snake)
+  } else if (snake.skipTailTicker <= 0) {
+    if (r > snake.holeChance) {
+      if (snake.lastEnd == null) {
+        pol = createPolygon(
+          { x: snake.x, y: snake.y },
+          { x: snake.lastX, y: snake.lastY }, snake.fatness, snake.lfatness)
+        isTailStart = true
       } else {
-        this.ghost = false
-        this.ghostProgress = []
-      }
-    })
-
-    this.reversedAnimation = new Animation<AnimationProgress<undefined>>(values => {
-      if (values.length > 0) {
-        this.reversed = true
-        this.reversedProgress = [values[values.length - 1]]
-      } else {
-        this.reversed = false
-        this.reversedProgress = []
-      }
-    })
-  }
-
-  public rotate = (amount: number) => {
-    if (this.reversed) {
-      amount = -amount
-    }
-
-    this.rotation = (this.rotation + amount) % (2 * Math.PI)
-  }
-
-  public ghostify(powerup: Powerup) {
-    const duration = window.getGlobal("POWERUP_ACTIVE_DURATION")
-    this.stopTail()
-
-    this.ghostAnimation.add(duration, (step, left) => {
-      return {
-        progress: step / duration,
-        order: powerup.id,
-        value: undefined,
-      }
-    })
-  }
-
-  public speeddown(powerup: Powerup) {
-    const duration = window.getGlobal("POWERUP_ACTIVE_DURATION")
-    const halfSecond = Math.floor(window.getGlobal("TICK_RATE") * 0.5)
-
-    this.speedAnimation.add(duration, (step, left) => {
-      let value = -0.5
-
-      if (step <= halfSecond) {
-        value = linear(step, 0, -0.5, halfSecond)
-      } else if (left <= halfSecond) {
-        value = linear(halfSecond - left, -0.5, 0, halfSecond)
+        pol = createConnectedPolygon({ x: snake.x, y: snake.y }, snake.fatness, snake.lastEnd,
+          { x: snake.lastX, y: snake.lastY })
       }
 
-      return {
-        progress: step / duration,
-        order: powerup.id,
-        value,
-      }
-    })
-  }
-
-  public speedup(powerup: Powerup) {
-    const duration = window.getGlobal("POWERUP_ACTIVE_DURATION")
-    const halfSecond = Math.floor(window.getGlobal("TICK_RATE") * 0.5)
-
-    this.speedAnimation.add(duration, (step, left) => {
-      let value = 0.5
-      if (step <= halfSecond) {
-        value = linear(step, 0, 0.5, halfSecond)
-      } else if (left <= halfSecond) {
-        value = linear(halfSecond - left, 0.5, 0, halfSecond)
-      }
-
-      return {
-        progress: step / duration,
-        order: powerup.id,
-        value,
-      }
-    })
-  }
-
-  public fatify(powerup: Powerup) {
-    const duration = window.getGlobal("POWERUP_ACTIVE_DURATION")
-    const halfSecond = Math.floor(window.getGlobal("TICK_RATE") * 0.5)
-
-    this.fatnessAnimation.add(duration, (step, left) => {
-      let value = 8
-      if (step <= halfSecond) {
-        value = linear(step, 0, 8, halfSecond)
-      } else if (left <= halfSecond) {
-        value = linear(halfSecond - left, 8, 0, halfSecond)
-      }
-
-      return {
-        progress: step / duration,
-        order: powerup.id,
-        value,
-      }
-    })
-  }
-
-  public reversify(powerup: Powerup) {
-    const duration = window.getGlobal("POWERUP_ACTIVE_DURATION")
-    this.reversedAnimation.add(duration, (step, left) => ({
-      progress: step / duration,
-      order: powerup.id,
-      value: undefined,
-    }))
-  }
-
-  public swapWith(snake: Snake) {
-    const snakeX = snake.x
-    const snakeY = snake.y
-    const snakeRot = snake.rotation
-    snake.teleportTo(this.x, this.y, this.rotation)
-    this.teleportTo(snakeX, snakeY, snakeRot)
-  }
-
-  public tick() {
-    this.x += Math.sin(this.rotation) * this.speed
-    this.y -= Math.cos(this.rotation) * this.speed
-    this.wrapEdge()
-    this.fatnessAnimation.tick()
-    this.speedAnimation.tick()
-    this.ghostAnimation.tick()
-    this.reversedAnimation.tick()
-    this.updatePowerupProgress()
-  }
-
-  public createTailPolygon() {
-    const r = Math.random()
-    let pol: number[] | undefined
-    let isTailStart = false
-
-    if (this.ghost) {
-      this.lastEnd = null
-    } else if (this.skipTailTicker <= 0) {
-      if (r > this.holeChance) {
-        if (this.lastEnd == null) {
-          pol = createPolygon({ x: this.x, y: this.y }, { x: this.lastX, y: this.lastY }, this.fatness, this.lfatness)
-          isTailStart = true
-        } else {
-          pol = createConnectedPolygon({ x: this.x, y: this.y }, this.fatness, this.lastEnd,
-            { x: this.lastX, y: this.lastY })
-        }
-
-        this.lastEnd = pol.slice(0, 2).concat(pol.slice(-2))
-        this.holeChance += window.getGlobal("HOLE_CHANCE_INCREASE")
-      } else {
-        this.createHole()
-      }
+      snake = snake
+        .set("lastEnd", pol.slice(0, 2).concat(pol.slice(-2)))
+        .set("holeChance", snake.holeChance + window.getGlobal("HOLE_CHANCE_INCREASE"))
     } else {
-      this.skipTailTicker--
+      snake = createHole(snake)
     }
-
-    this.lastX = this.x
-    this.lastY = this.y
-    this.lfatness = this.fatness
-
-    return pol && new TailPart(pol, this.id, this.tailId, isTailStart) as (TailPart & NotRemoved)
+  } else {
+    snake = snake.set("skipTailTicker", snake.skipTailTicker - 1)
   }
 
-  private updatePowerupProgress() {
-    const progress = ([] as PowerupProgress[]).concat(
-      this.speedProgress,
-      this.ghostProgress,
-      this.fatnessProgress,
-      this.reversedProgress,
-    )
-    progress.sort((a, b) => a.order - b.order)
-    this.powerupProgress = progress.map(v => v.progress)
-  }
+  snake = snake
+    .set("lastX", snake.x)
+    .set("lastY", snake.y)
+    .set("lfatness", snake.fatness)
 
-  private stopTail() {
-    if (this.lastEnd != null) {
-      this.lastEnd = null
-      this.tailId++
-    }
-  }
+  return [snake, pol && newTailPart(pol, snake.id, snake.tailId, isTailStart)]
+}
 
-  private createHole(holeTime: number = this.fatness * window.getGlobal("SKIP_TAIL_FATNESS_MULTIPLIER")) {
-    this.skipTailTicker = holeTime
-    this.holeChance = window.getGlobal("HOLE_CHANCE_BASE")
-    this.stopTail()
-  }
+export interface SnakeI {
+  texture: DehydratedTexture
+  fatness: number
+  alive: boolean
+  lastX: number
+  lastY: number
+  speed: number
+  lastEnd: any
+  x: number
+  y: number
+  rotation: number
+  id: number
+  powerupProgress: List<number>
 
-  private teleportTo(x: number, y: number, rotation: number) {
-    this.stopTail()
-    this.lastX = this.x = x
-    this.lastY = this.y = y
-    this.rotation = rotation
-    this.createHole(1 * window.getGlobal("TICK_RATE")) // 1 second
-  }
+  lfatness: number
+  holeChance: number
+  tailTicker: number
+  skipTailTicker: number
+  tailId: number
+  ghost: boolean
+  reversed: boolean
 
-  private wrapEdge() {
-    if (this.x > SERVER_WIDTH + this.fatness) {
-      this.x = -this.fatness
-      this.lastX = this.x - 1
-      this.lastEnd = null
-    }
+  fatnessAnimation: Animation
+  fatnessProgress: List<PowerupProgress>
+  speedAnimation: Animation
+  speedProgress: List<PowerupProgress>
+  ghostAnimation: Animation
+  ghostProgress: List<PowerupProgress>
+  reversedAnimation: Animation
+  reversedProgress: List<PowerupProgress>
+}
 
-    if (this.y > SERVER_HEIGHT + this.fatness) {
-      this.y = -this.fatness
-      this.lastY = this.y - 1
-      this.lastEnd = null
-    }
+export type Snake = Record.Instance<SnakeI>
 
-    if (this.x < -this.fatness) {
-      this.x = SERVER_WIDTH + this.fatness
-      this.lastX = this.x + 1
-      this.lastEnd = null
-    }
+// tslint:disable-next-line:variable-name
+export const SnakeClass: Record.Class<SnakeI> = Record({
+  x: 0,
+  y: 0,
+  fatness: 0,
+  alive: true,
+  lastX: 0,
+  lastY: 0,
+  speed: 0,
+  lastEnd: null,
+  rotation: 0,
+  id: 0,
+  powerupProgress: List(),
+  lfatness: 0,
+  holeChance: 0,
+  tailTicker: 0,
+  skipTailTicker: 0,
+  tailId: 0,
+  ghost: false,
+  reversed: false,
+  fatnessAnimation: newAnimation(),
+  fatnessProgress: List(),
+  speedAnimation: newAnimation(),
+  speedProgress: List(),
+  ghostAnimation: newAnimation(),
+  ghostProgress: List(),
+  reversedAnimation: newAnimation(),
+  reversedProgress: List(),
+  texture: undefined as any,
 
-    if (this.y < -this.fatness) {
-      this.y = SERVER_HEIGHT + this.fatness
-      this.lastY = this.y + 1
-      this.lastEnd = null
-    }
-  }
+})
+
+export function newSnake(
+  startPoint: Point,
+  rotation: number,
+  id: number,
+  texture: DehydratedTexture) {
+  return new SnakeClass({
+    x: startPoint.x,
+    y: startPoint.y,
+    lastX: startPoint.x,
+    lastY: startPoint.y,
+    rotation,
+    id,
+    texture,
+    fatness: window.getGlobal("FATNESS_BASE"),
+    lfatness: window.getGlobal("FATNESS_BASE"),
+    holeChance: window.getGlobal("HOLE_CHANCE_BASE"),
+    speed: window.getGlobal("MOVE_SPEED_BASE"),
+  })
 }

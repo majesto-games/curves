@@ -1,10 +1,12 @@
 import { Container, Graphics, Text, Sprite, Texture } from "pixi.js"
-import { diffArray } from "utils/diff"
+import { diffArray, ChangeType, index } from "tsdiff"
 import never from "utils/never"
 
 import { MeshPart as TailMesh } from "./tail"
 import { fillSquare } from "game/client"
-import { getTexture, AnyDehydratedTexture } from "game/texture"
+import { getTexture, DehydratedTexture } from "game/texture"
+import { List, Record } from "immutable"
+import { Snake } from "game/player";
 
 export interface KeyText {
   x: number,
@@ -17,44 +19,40 @@ export interface KeyText {
 export interface PowerupSprite {
   x: number
   y: number
-  texture: AnyDehydratedTexture
+  texture: DehydratedTexture
   id: number
 }
 
-export interface SnakeGraphics {
-  x: number
-  y: number
-  rotation: number
-  fatness: number
-  texture: AnyDehydratedTexture
-  powerupProgress: number[]
-}
-
-export interface RenderState {
+export interface RenderStateI {
   keytexts: KeyText[]
   powerups: PowerupSprite[]
   tails: TailMesh[]
-  snakes: SnakeGraphics[]
+  snakes: Snake[]
+}
+
+export type RenderState = Record.Instance<RenderStateI>
+
+// tslint:disable-next-line:variable-name
+export const RenderStateClass: Record.Class<RenderStateI> = Record({
+  keytexts: [],
+  powerups: [],
+  tails: [],
+  snakes: [],
+})
+
+export function emptyState(): RenderState {
+  return new RenderStateClass()
 }
 
 function neverDiff(x: never) {
   return never("Unexpected diff type in", x)
 }
 
-export function emptyState(): RenderState {
-  return {
-    keytexts: [],
-    powerups: [],
-    tails: [],
-    snakes: [],
-  }
-}
-
 interface Dehydrated {
   keytexts: KeyText[]
   powerups: PowerupSprite[]
   tails: TailMesh[]
-  snakes: SnakeGraphics[]
+  snakes: Snake[]
 }
 
 export default class Render {
@@ -107,7 +105,7 @@ export default class Render {
       snakes,
     } = obj
 
-    const state: RenderState = {
+    const state: RenderState = new RenderStateClass({
       keytexts,
       powerups,
       tails: tails.map(tail => ({
@@ -117,7 +115,7 @@ export default class Render {
         texture: tail.texture,
       })),
       snakes,
-    }
+    })
 
     console.log(state)
 
@@ -134,7 +132,7 @@ export default class Render {
 
     keytextsdiff.forEach(diff => {
       switch (diff.type) {
-        case "add": {
+        case ChangeType.ADD: {
           diff.vals.forEach((v, i) => {
             const text = new Text(v.text, {
               fontFamily: "Courier New",
@@ -146,19 +144,19 @@ export default class Render {
             text.x = v.x
             text.y = v.y
             text.rotation = v.rotation
-            this.keysLayer.addChildAt(text, diff.index + i)
+            this.keysLayer.addChildAt(text, index(diff) + i)
 
           })
           break
         }
-        case "rm": {
-          this.keysLayer.removeChildren(diff.index, diff.index + diff.num)
+        case ChangeType.REMOVE: {
+          this.keysLayer.removeChildren(index(diff), index(diff) + diff.num)
           break
         }
-        case "set": {
+        case ChangeType.SET: {
           throw new Error(`unhandled diff ${diff.type}`)
         }
-        case "mod": {
+        case ChangeType.MODIFIED: {
           throw new Error(`unhandled diff ${diff.type}`)
         }
         default:
@@ -170,21 +168,21 @@ export default class Render {
 
     powerupsdiff.forEach(diff => {
       switch (diff.type) {
-        case "add": {
+        case ChangeType.ADD: {
           diff.vals.forEach((v, i) => {
             const powerupSprite = new Sprite(getTexture(v.texture))
             powerupSprite.position.set(v.x, v.y)
             powerupSprite.anchor.set(0.5)
 
-            this.powerupLayer.addChildAt(powerupSprite, diff.index + i)
+            this.powerupLayer.addChildAt(powerupSprite, index(diff) + i)
           })
           break
         }
-        case "rm": {
-          this.powerupLayer.removeChildren(diff.index, diff.index + diff.num)
+        case ChangeType.REMOVE: {
+          this.powerupLayer.removeChildren(index(diff), index(diff) + diff.num)
           break
         }
-        case "set": {
+        case ChangeType.SET: {
           const index = diff.path[0] as number
           const sprite = this.powerupLayer.getChildAt(index) as Sprite
           const value = diff.val
@@ -193,7 +191,7 @@ export default class Render {
           sprite.texture = getTexture(value.texture)
           break
         }
-        case "mod": {
+        case ChangeType.MODIFIED: {
           throw new Error(`unhandled diff ${diff.type}`)
         }
         default:
@@ -205,7 +203,7 @@ export default class Render {
 
     tailsdiff.forEach(diff => {
       switch (diff.type) {
-        case "add": {
+        case ChangeType.ADD: {
           diff.vals.forEach((v, i) => {
             const mesh = new PIXI.mesh.Mesh(
               getTexture(v.texture),
@@ -213,15 +211,15 @@ export default class Render {
               v.uvs,
               v.indices)
 
-            this.tailLayer.addChildAt(mesh, diff.index + i)
+            this.tailLayer.addChildAt(mesh, index(diff) + i)
           })
           break
         }
-        case "rm": {
-          this.tailLayer.removeChildren(diff.index, diff.index + diff.num)
+        case ChangeType.REMOVE: {
+          this.tailLayer.removeChildren(index(diff), index(diff) + diff.num)
           break
         }
-        case "set": {
+        case ChangeType.SET: {
           const index = diff.path[0] as number
           const mesh = this.tailLayer.getChildAt(index) as PIXI.mesh.Mesh
           const value = diff.val
@@ -238,7 +236,7 @@ export default class Render {
           mesh.updateTransform()
           break
         }
-        case "mod": {
+        case ChangeType.MODIFIED: {
           throw new Error(`unhandled diff ${diff.type}`)
         }
         default:
@@ -247,8 +245,9 @@ export default class Render {
     })
 
     const snakesdiff = diffArray(this.state.snakes, state.snakes)
+    console.log(state.snakes)
 
-    function moveSnake(container: Graphics, snake: SnakeGraphics) {
+    function moveSnake(container: Graphics, snake: Snake) {
       const graphics = container.getChildAt(0) as PIXI.mesh.Mesh
       const powerupGraphics = container.getChildAt(1) as PIXI.Graphics
       const {
@@ -274,7 +273,7 @@ export default class Render {
 
       powerupGraphics.clear()
       let i = 1
-      for (const progress of powerupProgress) {
+      powerupProgress.forEach(progress => {
         powerupGraphics.beginFill(0x000000, 0)
         const lineWidth = 5
         powerupGraphics.lineStyle(lineWidth, 0xffffff)
@@ -290,12 +289,13 @@ export default class Render {
         powerupGraphics.moveTo(startX, startY)
         powerupGraphics.arc(0, 0, r, startAngle, endAngle)
         powerupGraphics.endFill()
-      }
+
+      })
     }
 
     snakesdiff.forEach(diff => {
       switch (diff.type) {
-        case "add": {
+        case ChangeType.ADD: {
           diff.vals.forEach((v, i) => {
             const container = new Graphics()
             const graphics = new PIXI.mesh.Mesh(
@@ -317,23 +317,23 @@ export default class Render {
             container.addChild(graphics)
             container.addChild(new Graphics())
 
-            this.playerLayer.addChildAt(container, diff.index + i)
+            this.playerLayer.addChildAt(container, index(diff) + i)
             moveSnake(container, v)
           })
           break
         }
-        case "rm": {
-          this.playerLayer.removeChildren(diff.index, diff.index + diff.num)
+        case ChangeType.REMOVE: {
+          this.playerLayer.removeChildren(index(diff), index(diff) + diff.num)
           break
         }
-        case "set": {
+        case ChangeType.SET: {
           const index = diff.path[0] as number
           const container = this.playerLayer.getChildAt(index) as Graphics
           moveSnake(container, diff.val)
 
           break
         }
-        case "mod": {
+        case ChangeType.MODIFIED: {
           const index = diff.path[0] as number
           const container = this.playerLayer.getChildAt(index) as Graphics
           moveSnake(container, diff.to)

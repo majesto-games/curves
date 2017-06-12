@@ -1,5 +1,5 @@
 import { Point, Powerup, Player } from "game/player"
-import { TailPart, NotRemoved } from "game/tail"
+import { TailPart } from "game/tail"
 import { ConnectionId } from "server/connections"
 
 export interface Action {
@@ -69,7 +69,7 @@ export function rotate(direction: number, value: boolean, index: number): Rotate
 export const TAIL: "TAIL" = "TAIL"
 export interface Tail extends Action {
   type: "TAIL"
-  payload: TailPart & NotRemoved
+  payload: TailPart
 }
 
 export const GAP: "GAP" = "GAP"

@@ -1,6 +1,7 @@
 {
     "compilerOptions": {
         "strict":true,
+        "noStrictGenericChecks": true,
         "removeComments": true,
         "jsx": "react",
         "target": "es5",

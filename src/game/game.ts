@@ -1,3 +1,4 @@
+import { Record } from "immutable"
 import {
   Sprite,
   Graphics,
@@ -46,11 +47,10 @@ import { Observable, SimpleEvent, Signal } from "utils/observable"
 import { padEqual } from "utils/string"
 import never from "utils/never"
 import { fillSquare } from "game/client"
-import Render, { RenderState, emptyState, KeyText, SnakeGraphics } from "game/render"
+import Render, { RenderState, emptyState, KeyText } from "game/render"
 
-import iassign from "immutable-assign"
 import { flatten } from "utils/array"
-import { fromImageTexture } from "game/texture"
+import { fromImageTexture, textureProviders } from "game/texture"
 import createModule, { Action } from "redux-typescript-module"
 
 export enum GameEvent {
@@ -62,44 +62,49 @@ enum RoundState {
 }
 
 interface RoundPreState {
-  type: RoundState.PRE,
+  type: RoundState.PRE
   roundStartsAt: number | undefined
 }
 
 interface RoundInState {
-  type: RoundState.IN,
+  type: RoundState.IN
 }
 
 interface RoundPostState {
-  type: RoundState.POST,
+  type: RoundState.POST
 }
 
 type GameRound = RoundPreState | RoundInState | RoundPostState
 
-export interface GameState {
+export interface GameStateI {
+  colors: string[]
   overlay: string | undefined
   round: GameRound
 }
 
-const initialGameState: GameState = {
-  overlay: undefined,
-  round: {
-    type: RoundState.PRE,
-    roundStartsAt: undefined,
-  },
+export type GameState = Record.Instance<GameStateI>
+
+const roundStart: RoundPreState = {
+  type: RoundState.PRE,
+  roundStartsAt: undefined,
 }
 
-const gameModule = createModule(initialGameState, {
-  SET_OVERLAY: (state: GameState, action: Action<string | undefined>) =>
-    iassign(state, s => s.overlay, () => action.payload),
-  SET_ROUND: (state: GameState, action: Action<GameRound>) =>
-    iassign(state, s => s.round, () => action.payload),
+// tslint:disable-next-line:variable-name
+export const GameStateClass: Record.Class<GameStateI> = Record({
+  colors: [],
+  overlay: undefined,
+  round: roundStart,
+})
+
+const gameModule = createModule(new GameStateClass(), {
+  SET_OVERLAY: (state: GameState, action: Action<string | undefined>) => state.set("overlay", action.payload),
+  SET_ROUND: (state: GameState, action: Action<GameRound>) => state.set("round", action.payload),
+  SET_COLORS: (state: GameState, action: Action<string[]>) => state.set("colors", action.payload),
 })
 
 const ratio = SERVER_WIDTH / SERVER_HEIGHT
 
 export class Game {
-  public colors: string[] = []
   public onDraw = new SimpleEvent<undefined>()
   public event = new SimpleEvent<GameEvent>()
   public store: Store<GameState>
@@ -108,9 +113,8 @@ export class Game {
   private closed = false
   private renderer: CanvasRenderer | WebGLRenderer
   private eventListeners: ((e: GameEvent, data?: any) => void)[] = []
-  private snakes: Snake[] = []
 
-  private tailStorage: TailStorage<ClientTail>
+  private tailStorage: Store<TailStorage<ClientTail>>
   private render: Render
   private renderState = emptyState()
 
@@ -147,24 +151,15 @@ export class Game {
   }
 
   public newRound(snakes: Snake[], colors: number[], delay: number,
-    tailStorage: TailStorage<ClientTail>,
+    tailStorage: Store<TailStorage<ClientTail>>,
     getKeyTextAndColor: (snake: Snake) => [string, string, number] | undefined) {
     this.removeOverlay()
-    this.renderState = iassign(
-      this.renderState,
-      (o) => o.powerups, // player stuff
-      () => [])
+    this.renderState = this.renderState.set("powerups", [])
 
     // TODO: this is dirty
     this.tailStorage = tailStorage
 
-    this.renderState = iassign(
-      this.renderState,
-      (o) => o.powerups,
-      () => [])
-
-    this.snakes = snakes
-    this.colors = colors.map(hexToString)
+    this.renderState = this.renderState.set("snakes", snakes)
 
     for (const snake of snakes) {
       const keysAndColor = getKeyTextAndColor(snake)
@@ -173,27 +168,27 @@ export class Game {
         const [leftP, rightP] = padEqual(left, right)
         const text = `${leftP} ▲ ${rightP}`
 
-        this.renderState = iassign(
-          this.renderState,
-          (o) => o.keytexts,
-          (texts) => {
-            texts.push({
-              x: snake.x,
-              y: snake.y,
-              rotation: snake.rotation,
-              text,
-              color,
-            })
-            return texts
-          })
+        this.renderState = this.renderState.set("keytexts",
+          this.renderState.keytexts.concat({
+            x: snake.x,
+            y: snake.y,
+            rotation: snake.rotation,
+            text,
+            color,
+          }))
       }
     }
-    this.drawPlayers()
 
     this.store.dispatch(gameModule.actions.SET_ROUND({
       type: RoundState.PRE,
       roundStartsAt: Date.now() + delay,
     }))
+    this.store.dispatch(gameModule.actions.SET_COLORS(colors.map(hexToString)))
+  }
+
+  public setSnakes(snakes: Snake[]) {
+    // TODO: Very bad
+    this.renderState = this.renderState.set("snakes", snakes)
   }
 
   public inRound() {
@@ -203,10 +198,7 @@ export class Game {
         type: RoundState.IN,
       }))
       this.removeOverlay()
-      this.renderState = iassign(
-        this.renderState,
-        (o) => o.keytexts,
-        () => [])
+      this.renderState = this.renderState.set("keytexts", [])
       this.event.send(GameEvent.START)
     }
   }
@@ -216,6 +208,7 @@ export class Game {
     this.store.dispatch(gameModule.actions.SET_ROUND({
       type: RoundState.POST,
     }))
+    this.store.dispatch(gameModule.actions.SET_COLORS([]))
     this.event.send(GameEvent.ROUND_END)
   }
 
@@ -224,33 +217,20 @@ export class Game {
     powerupSprite.position.set(location.x, location.y)
     powerupSprite.anchor.set(0.5)
 
-    this.renderState = iassign(
-      this.renderState,
-      (o) => o.powerups,
-      (texts) => {
-        texts.push({
-          x: location.x,
-          y: location.y,
-          texture: fromImageTexture.getDehydrated(this.getPowerupImage(type)),
-          id,
-        })
-        return texts
-      })
+    const texture = textureProviders.dehydrate(fromImageTexture, this.getPowerupImage(type))
 
+    this.renderState = this.renderState.set("powerups",
+      this.renderState.powerups.concat({
+        x: location.x,
+        y: location.y,
+        texture,
+        id,
+      }))
   }
 
   public removePowerup(snakeId: number, powerupId: number) {
-    this.renderState = iassign(
-      this.renderState,
-      (o) => o.powerups,
-      (texts) => texts.filter(t => t.id !== powerupId))
-
-    const snake = this.snakes.find(s => s.id === snakeId)!
-
-    // const graphics = new Graphics()
-
-    // snake.graphics.addChild(graphics)
-    // snake.powerupGraphics[powerupId] = graphics
+    this.renderState = this.renderState.set("powerups",
+      this.renderState.powerups.filter(t => t.id !== powerupId))
   }
 
   public close() {
@@ -320,25 +300,13 @@ export class Game {
     requestAnimationFrame(cb)
   }
 
-  private drawPlayers() {
-    this.renderState = iassign<RenderState, SnakeGraphics[], {}>(
-      this.renderState,
-      state => state.snakes,
-      () => this.snakes.map(snake => {
-        return {
-          x: snake.x,
-          y: snake.y,
-          rotation: snake.rotation,
-          fatness: snake.fatness,
-          texture: snake.texture,
-          powerupProgress: snake.powerupProgress,
-        }
-      }))
-  }
-
   private getMeshes() {
     if (this.tailStorage != null) {
-      return flatten<MeshPart>(this.tailStorage.allTails().map(v => v.map(x => x.meshes)))
+      const meshes: MeshPart[] = []
+      const state = this.tailStorage.getState()
+      state.perTail.forEach(v => v.forEach(x => meshes.push(...x.meshes.toJS())))
+
+      return meshes
     }
     return []
   }
@@ -362,7 +330,6 @@ export class Game {
       }
       case RoundState.IN: {
         this.onDraw.send(undefined)
-        this.drawPlayers()
         break
       }
       case RoundState.POST: {
@@ -371,10 +338,7 @@ export class Game {
       default:
     }
 
-    this.renderState = iassign(
-      this.renderState,
-      (o) => o.tails,
-      () => this.getMeshes())
+    this.renderState = this.renderState.set("tails", this.getMeshes())
 
     this.render.setState(this.renderState)
 

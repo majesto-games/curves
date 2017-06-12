@@ -1,5 +1,8 @@
-import { Point, ClientPlayer, Snake, Powerup } from "./player"
-import { ClientTail, TailStorage } from "./tail"
+import { Point, ClientPlayer, Snake, Powerup, newSnake, newClientPlayer } from "./player"
+import {
+  ClientTail, TailStorage, addToServerTail, addToClientTail, newClientTail,
+  tailStorageModule, TailPart,
+} from "./tail"
 import {
   ServerConnection,
   clientDataChannel,
@@ -15,7 +18,7 @@ import {
   Score,
   ClientAction,
   LEFT,
-  Action,
+  Action as CommAction,
   ServerAction,
   ADD_PLAYER,
   ROTATE,
@@ -51,18 +54,10 @@ import { Game } from "./game"
 import { Observable } from "utils/observable"
 import never from "utils/never"
 import { hexToString, luminosity } from "game/util"
-import { DehydratedTexture, registerTextureProvider, TextureProvider, stripeColorTexture } from "./texture"
-
-const keyCombos: { left: KEYS, right: KEYS }[] = []
-
-class RoundState {
-  public powerupSprites: { [id: number]: Sprite | undefined } = {}
-  public tails: TailStorage<ClientTail>
-
-  constructor(createTail: (playerId: number) => ClientTail) {
-    this.tails = new TailStorage(createTail)
-  }
-}
+import { registerTextureProvider, stripeColorTexture, textureProviders } from "./texture"
+import createModule, { Action, Module } from "redux-typescript-module/lib"
+import { createStore, Store } from "redux"
+import { List, Record } from "immutable"
 
 export enum ClientConnectionState {
   UNCONNECTED,
@@ -71,31 +66,64 @@ export enum ClientConnectionState {
   CLOSED,
 }
 
+export interface ClientStateI {
+  lobby: Lobby
+  scores: Score[]
+  connectionState: ClientConnectionState
+}
+
+export type ClientState = Record.Instance<ClientStateI>
+
+// tslint:disable-next-line:variable-name
+export const ClientStateClass: Record.Class<ClientStateI> = Record({
+  lobby: {
+    players: [],
+  },
+  scores: [],
+  connectionState: ClientConnectionState.UNCONNECTED,
+})
+
+const clientModule = createModule(new ClientStateClass(), {
+  SET_LOBBY: (state: ClientState, action: Action<Lobby>) => state.set("lobby", action.payload),
+  SET_SCORES: (state: ClientState, action: Action<Score[]>) => {
+    const scores = action.payload.slice().sort((a, b) => b.score - a.score)
+    return state.set("scores", scores)
+  },
+  SET_CONNECTION_STATE: (state: ClientState, action: Action<ClientConnectionState>) =>
+    state.set("connectionState", action.payload),
+})
+
 export function fillSquare(width: number, height: number) {
   return new Float32Array([-width, height, -width, -height, width, height, width, -height])
 }
 
 export class Client {
   // TODO: Join players, lobby, and game.colors
+  public store: Store<ClientState>
   public players: (ClientPlayer | undefined)[] = []
   public game = new Game()
-  public lobby = new Observable<Lobby>({ players: [] })
-  public scores = new Observable<Score[]>([])
-  public connectionState = new Observable<ClientConnectionState>(ClientConnectionState.UNCONNECTED)
   public isServer = false
-  private currentRound: RoundState
+  private roundPowerupSprites: { [id: number]: Sprite | undefined } = {}
+  private tailStorageMod = tailStorageModule(
+    (id) => this.newTail(id),
+    (tail, part) => {
+      return addToClientTail(tail, part)
+    },
+  )
+  private tailStore: Store<TailStorage<ClientTail>>
   private localIndex = 0
   private textureIndex = 0
   private connection: ServerConnection
   private _close: () => void
 
   constructor(serverPromise: Promise<[ServerConnection, () => void]>) {
-    this.currentRound = new RoundState((id) => this.newTail(id))
+    this.store = createStore(clientModule.reducer)
+    this.tailStore = createStore(this.tailStorageMod.reducer)
     this.game.onDraw.subscribe(() => this.handleKeys())
     serverPromise.then(([connection, close]) => {
       this.connection = connection
       this._close = close
-      this.connectionState.set(ClientConnectionState.LOBBY)
+      this.store.dispatch(clientModule.actions.SET_CONNECTION_STATE(ClientConnectionState.LOBBY))
     }).catch(e => {
       console.error(e)
       this.close()
@@ -142,7 +170,7 @@ export class Client {
       }
       case LOBBY: {
         const { payload } = action
-        this.lobby.set(payload)
+        this.store.dispatch(clientModule.actions.SET_LOBBY(payload))
         break
       }
       default:
@@ -154,7 +182,7 @@ export class Client {
     if (this._close) {
       this._close()
     }
-    this.connectionState.set(ClientConnectionState.CLOSED)
+    this.store.dispatch(clientModule.actions.SET_CONNECTION_STATE(ClientConnectionState.CLOSED))
   }
 
   public addPlayer() {
@@ -162,7 +190,7 @@ export class Client {
   }
 
   public start() {
-    if (this.connectionState.value !== ClientConnectionState.LOBBY || !this.connection) {
+    if (this.store.getState().connectionState !== ClientConnectionState.LOBBY || !this.connection) {
       return
     }
 
@@ -178,71 +206,72 @@ export class Client {
 
     const stripeColor = luminosity(color, 0.75)
 
-    const texture = stripeColorTexture.getDehydrated(color, stripeColor)
+    const texture = textureProviders.dehydrate(stripeColorTexture, { color, stripeColor })
 
-    const player = new ClientPlayer(name, id, color, texture, localIndex)
-
-    if (isOwner) {
-      player.steeringLeft.subscribe(value => {
-        this.connection(rotate(LEFT, value, id))
-      })
-      player.steeringRight.subscribe(value => {
-        this.connection(rotate(RIGHT, value, id))
-      })
-    }
+    const player = newClientPlayer(name, id, color, texture, localIndex, isOwner)
 
     return player
   }
 
   private updatePlayers = (playerUpdates: PlayerUpdate[]) => {
     for (const update of playerUpdates) {
-      const player = this.players[update.id]
+      let player = this.players[update.id]
       if (player == null) {
         continue
       }
 
-      player.snake!.x = update.x
-      player.snake!.y = update.y
-      player.snake!.rotation = update.rotation
-      player.snake!.alive = update.alive
-      player.snake!.fatness = update.fatness
-      player.snake!.powerupProgress = update.powerupProgress
+      const snake = player.snake!
+      player = player.set("snake", player.snake!
+        .set("x", update.x)
+        .set("y", update.y)
+        .set("rotation", update.rotation)
+        .set("alive", update.alive)
+        .set("fatness", update.fatness)
+        .set("powerupProgress", List(update.powerupProgress)))
+
+      this.players[update.id] = player
 
       // TODO: Remove this code smell
       this.game.inRound()
 
       if (update.tail.type === TAIL) {
-        this.currentRound.tails.add(update.tail.payload)
+        this.tailStore.dispatch(this.tailStorageMod.actions.ADD_TAIL(update.tail.payload))
       }
     }
+
+    this.game.setSnakes(
+      this.players.filter(player => player != null).map((player: ClientPlayer) => player.snake!),
+    )
   }
 
   private started(players: PlayerInit[]) {
-    this.connectionState.set(ClientConnectionState.GAME)
+    this.store.dispatch(clientModule.actions.SET_CONNECTION_STATE(ClientConnectionState.GAME))
     for (const player of players) {
       const newPlayer = this.createPlayer(player.name, player.color, player.owner === this.connection.id, player.id)
       this.players[player.id] = newPlayer
     }
 
-    this.scores.set(players.map(({ id }) => ({ id, score: 0 })))
+    this.store.dispatch(clientModule.actions.SET_SCORES(players.map(({ id }) => ({ id, score: 0 }))))
   }
 
   private round = (snakeInits: SnakeInit[], delay: number) => {
+    this.tailStorageMod = tailStorageModule(
+      (id) => this.newTail(id),
+      (tail, part) => {
+        return addToClientTail(tail, part)
+      },
+    )
+    this.tailStore = createStore(this.tailStorageMod.reducer)
     snakeInits.forEach(({ startPoint, rotation, id }) => {
-      const snake = new Snake(startPoint, rotation, id)
       const player = this.playerById(id)!
-      snake.texture = player.texture
+      const snake = newSnake(startPoint, rotation, id, player.texture)
 
-      player.snake = snake
+      this.players[id] = player.set("snake", snake)
     })
 
     const players: ClientPlayer[] = this.players.filter(p => p != null) as ClientPlayer[]
 
-    players.forEach(player => {
-      this.currentRound.tails.initPlayer(player.snake!)
-    })
-
-    this.game.newRound(players.map(p => p.snake!), players.map(p => p.color), delay, this.currentRound.tails,
+    this.game.newRound(players.map(p => p.snake!), players.map(p => p.color), delay, this.tailStore,
       snake => {
         const player = this.playerById(snake.id)!
         if (player.localIndex != null) {
@@ -255,7 +284,7 @@ export class Client {
   }
 
   private roundEnd = (scores: Score[], winnerId: number) => {
-    this.scores.set(scores)
+    this.store.dispatch(clientModule.actions.SET_SCORES(scores))
     this.game.roundEnd(this.playerById(winnerId)!)
   }
 
@@ -276,32 +305,49 @@ export class Client {
   }
 
   private fetchPowerup(snakeId: number, powerupId: number) {
-    const powerupSprite = this.currentRound.powerupSprites[powerupId]!
+    const powerupSprite = this.roundPowerupSprites[powerupId]!
     this.game.removePowerup(snakeId, powerupId)
-    this.currentRound.powerupSprites[powerupId] = undefined
+    this.roundPowerupSprites[powerupId] = undefined
 
     // TODO: play cool sound
   }
 
   private newTail(playerId: number) {
-    const tail = new ClientTail(this.playerById(playerId)!.texture)
+    const tail = newClientTail(this.playerById(playerId)!.texture)
 
     return tail
   }
 
   private handleKeys() {
-    this.players.forEach(p => {
+    this.players = this.players.map(p => {
       if (p == null) {
-        return
+        return p
       }
 
       const keys = window.UserConfig.playerKeys[p.localIndex!]
       if (!keys) {
-        return
+        return p
       }
 
-      p.steeringLeft.set(window.Keys[keys.left] || window.PhoneControls.left)
-      p.steeringRight.set(window.Keys[keys.right] || window.PhoneControls.right)
+      if (p.isOwner) {
+        const alreadyGoingLeft = p.steeringLeft
+        const wantToGoLeft = window.Keys[keys.left] || window.PhoneControls.left
+
+        if (alreadyGoingLeft !== wantToGoLeft) {
+          this.connection(rotate(LEFT, wantToGoLeft, p.id))
+          p = p.set("steeringLeft", wantToGoLeft)
+        }
+
+        const alreadyGoingRight = p.steeringRight
+        const wantToGoRight = window.Keys[keys.right] || window.PhoneControls.right
+
+        if (alreadyGoingRight !== wantToGoRight) {
+          this.connection(rotate(RIGHT, wantToGoRight, p.id))
+          p = p.set("steeringRight", wantToGoRight)
+        }
+      }
+
+      return p
     })
   }
 }

@@ -56,7 +56,7 @@ export function localClientConnection(
   id: ConnectionId,
 ): ClientConnection {
   return Object.assign(
-    (a: ClientAction) => client.receive(a),
+    (a: ClientAction) => client.receive(JSON.parse(JSON.stringify(a))),
     { id },
   )
 }
