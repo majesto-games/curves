@@ -51,6 +51,23 @@ function connectAsServer(client: Client, rc: quickconnect.connection): [ServerCo
   return [serverConn, () => rc.close()]
 }
 
+function connectAsLocal(client: Client): [ServerConnection, () => void] {
+  console.log("Local server")
+
+  const id = cuid()
+  const server = new Server(id)
+
+  const serverConn = localServerConnection(server, id)
+
+  server.addConnection(localClientConnection(client, id))
+
+  serverConn(addPlayer())
+  client.isServer = true
+
+  // tslint:disable-next-line:no-empty
+  return [serverConn, () => console.log("wat")]
+}
+
 function handleClientConnections(server: Server) {
 
   return (dc: DataChannel, id: string) => {
@@ -71,6 +88,7 @@ function handleClientConnections(server: Server) {
 export function connect(room: string): Client {
   // [connection, close]
   let resolveConn: (v: [ServerConnection, () => void]) => void
+
   const serverpromise = new Promise<[ServerConnection, () => void]>((resolve, reject) => {
     resolveConn = resolve
   })
@@ -88,6 +106,23 @@ export function connect(room: string): Client {
     // TODO: Present an error
     client.close()
   })
+
+  return client
+}
+
+export function connectLocal(): Client {
+  let resolveConn: (v: [ServerConnection, () => void]) => void
+
+  const serverpromise = new Promise<[ServerConnection, () => void]>((resolve, reject) => {
+    resolveConn = resolve
+  })
+
+  const client = new Client(serverpromise)
+
+  // TODO: This is fucking weird. We have to wait until the client has been
+  // created and runs the serverpromise to have resolveConn be the resolve
+  // function of the serverpromise.
+  setTimeout(() => resolveConn(connectAsLocal(client)), 0)
 
   return client
 }

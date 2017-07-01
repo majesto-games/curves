@@ -5,7 +5,7 @@ import history from "./history"
 import { Score, Lobby as LobbyI } from "server/actions"
 
 import { Game, GameEvent } from "game/game"
-import { connect } from "game/room"
+import { connect, connectLocal } from "game/room"
 import { ClientConnectionState, Client } from "game/client"
 
 import never from "utils/never"
@@ -149,7 +149,8 @@ export default class GameContainer extends React.Component<GameContainerProps, G
   }
 
   private getRoom = (roomName: string) => {
-    const client = connect(roomName)
+    const client = roomName === "" ? connectLocal() : connect(roomName)
+
     this.subscriptions.push(
       client.game.event.subscribe(e => {
         switch (e) {

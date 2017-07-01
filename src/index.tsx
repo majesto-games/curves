@@ -33,6 +33,9 @@ function getComponent(location: Location): JSX.Element {
     const room = split[1] || "leif"
     return <GameContainer room={room} />
   }
+  if (split[0] === "offline") {
+    return <GameContainer room="" />
+  }
   if (split[0] === "globalconfig") {
     return <GlobalConfig />
   }

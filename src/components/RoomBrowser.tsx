@@ -31,32 +31,40 @@ class NewRoom extends React.Component<NewRoomProps, {}> {
   public render() {
     return (
       <form onSubmit={this.onSubmit} className="NewRoom">
-        <div className="input-group">
-          <input type="text" placeholder="Room name" defaultValue={this.randomRoomName}
-            className="form-control input-lg" ref={n => this.roomInput = n} />
-          <span className="input-group-btn">
-            <button type="submit" className="btn-lg btn btn-primary">Join room</button>
-            <button className="btn-lg btn btn-success" onClick={this.onUpdateClick}>
-              <span className="glyphicon glyphicon-refresh" /> Update
-            </button>
-          </span>
+        <div className="form-group">
+          <div className="input-group">
+            <input type="text" placeholder="Room name" defaultValue={this.randomRoomName}
+              className="form-control input-lg" ref={n => this.roomInput = n} />
+            <span className="input-group-btn">
+              <button type="submit" value="join" className="btn-lg btn btn-success">Host/join game</button>
+              <button type="submit" value="local" className="btn-lg btn btn-warning">Play offline</button>
+            </span>
+          </div>
         </div>
       </form>
     )
   }
 
-  private onUpdateClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault()
+  // private onUpdateClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+  //   e.preventDefault()
 
-    this.props.onUpdateRooms()
-  }
+  //   this.props.onUpdateRooms()
+  // }
 
   private onSubmit = (e: React.FormEvent<any>) => {
     e.preventDefault()
 
-    history.push({
-      pathname: `/game/${this.roomInput.value}`,
-    })
+    const choice = (document.activeElement as HTMLButtonElement).value
+
+    if (choice === "join") {
+      history.push({
+        pathname: `/game/${this.roomInput.value}`,
+      })
+    } else if (choice === "local") {
+      history.push({
+        pathname: "/offline",
+      })
+    }
   }
 }
 

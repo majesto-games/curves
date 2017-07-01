@@ -97,6 +97,7 @@ export class Client {
       this._close = close
       this.connectionState.set(ClientConnectionState.LOBBY)
     }).catch(e => {
+      console.error(e)
       this.close()
     })
 
@@ -150,7 +151,9 @@ export class Client {
   }
 
   public close() {
-    this._close()
+    if (this._close) {
+      this._close()
+    }
     this.connectionState.set(ClientConnectionState.CLOSED)
   }
 

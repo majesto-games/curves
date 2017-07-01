@@ -27,7 +27,7 @@ export default class Lobby extends React.Component<LobbyProps, void> {
       <div className="container-fluid Lobby">
         <div className="col-md-6 col-md-offset-3">
           <div className="header">
-            <h1>Lobby: {room}</h1>
+            <h1>{this.lobbyTitle()}</h1>
             <button className="btn btn-lg btn-success" onClick={this.addPlayer}
               disabled={lobby.players.length >= window.UserConfig.playerKeys.length}>Add local player</button>
             {isServer && <button className="btn btn-lg btn-primary" onClick={this.onStart}
@@ -54,6 +54,10 @@ export default class Lobby extends React.Component<LobbyProps, void> {
         </div>
       </div>
     )
+  }
+
+  private lobbyTitle() {
+    return this.props.room === "" ? "Local game" : `Lobby: ${this.props.room}`
   }
 
   private drawKeys = (index: number) => (
