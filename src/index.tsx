@@ -1,9 +1,11 @@
 import * as React from "react"
 import * as ReactDOM from "react-dom"
 
+import GlobalConfig, { initGlobalConfig } from "components/GlobalConfig"
+initGlobalConfig()
+
 import GameContainer from "components/GameContainer"
 import RoomBrowser from "components/RoomBrowser"
-import GlobalConfig, { initGlobalConfig } from "components/GlobalConfig"
 import UserConfig, { initUserConfig } from "components/UserConfig"
 import PIXIPlayground from "components/PIXIPlayground"
 import Replay from "components/Replay"
@@ -101,7 +103,6 @@ function render(location: Location) {
   )
 }
 
-initGlobalConfig()
 initUserConfig()
 history.listen(render)
 

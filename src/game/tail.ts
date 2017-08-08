@@ -85,6 +85,9 @@ export function tailStorageModule<TailT>(
         mut.set("perTail", state.perTail.set(part.playerId, tailsForThisPlayer2))
       })
     },
+    RESET_TAILS: (state: TailStorage<TailT>, action: Action<undefined>) => {
+      return state.clear()
+    },
   })
 }
 
