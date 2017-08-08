@@ -9,6 +9,12 @@ import PIXIPlayground from "components/PIXIPlayground"
 import Replay from "components/Replay"
 import history from "components/history"
 import { Location, parsePath } from "history"
+import * as immutable from "immutable"
+
+if (process.env.NODE_ENV !== "production") {
+  const installDevTools = require<any>("immutable-devtools")
+  installDevTools(immutable)
+}
 
 import "bootstrap/dist/css/bootstrap.css"
 import "style.css"

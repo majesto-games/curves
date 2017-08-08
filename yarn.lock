@@ -1638,6 +1638,10 @@ ieee754@^1.1.4:
   version "1.1.8"
   resolved "https://registry.yarnpkg.com/ieee754/-/ieee754-1.1.8.tgz#be33d40ac10ef1926701f6f08a2d86fbfd1ad3e4"
 
+immutable-devtools@Zalastax/immutable-devtools#1c09afca9fa94b2a1992b6375995b507dd0e9c39:
+  version "0.0.7"
+  resolved "https://codeload.github.com/Zalastax/immutable-devtools/tar.gz/1c09afca9fa94b2a1992b6375995b507dd0e9c39"
+
 immutable@Zalastax/immutable-js#86b6aa458180e3f4afa7637999010dde85d8d654:
   version "4.0.0-rc.2"
   resolved "https://codeload.github.com/Zalastax/immutable-js/tar.gz/86b6aa458180e3f4afa7637999010dde85d8d654"
