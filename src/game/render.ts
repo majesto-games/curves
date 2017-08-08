@@ -1,12 +1,15 @@
 import { Container, Graphics, Text, Sprite, Texture } from "pixi.js"
-import { diffArray, ChangeType, index } from "tsdiff"
+import { diffArray, diffMap, ChangeType, index } from "tsdiff"
 import never from "utils/never"
 
 import { MeshPart as TailMesh } from "./tail"
 import { fillSquare } from "game/client"
 import { getTexture, DehydratedTexture } from "game/texture"
-import { List, Record } from "immutable"
-import { Snake } from "game/player";
+import { List, Record, Map as IMap } from "immutable"
+import { Snake } from "game/player"
+import createModule, { Action } from "redux-typescript-module"
+import { createStore } from "redux"
+import { padEqual } from "utils/string"
 
 export interface KeyText {
   x: number,
@@ -25,7 +28,7 @@ export interface PowerupSprite {
 
 export interface RenderStateI {
   keytexts: KeyText[]
-  powerups: PowerupSprite[]
+  powerups: IMap<number, PowerupSprite>
   tails: TailMesh[]
   snakes: Snake[]
 }
@@ -35,29 +38,74 @@ export type RenderState = Record.Instance<RenderStateI>
 // tslint:disable-next-line:variable-name
 export const RenderStateClass: Record.Class<RenderStateI> = Record({
   keytexts: [],
-  powerups: [],
+  powerups: IMap<number, PowerupSprite>(),
   tails: [],
   snakes: [],
 })
-
-export function emptyState(): RenderState {
-  return new RenderStateClass()
-}
 
 function neverDiff(x: never) {
   return never("Unexpected diff type in", x)
 }
 
+type Override<Obj, With> = {
+  readonly [P in keyof Obj]: With;
+}
+
+export interface DehydratedTailMesh {
+  vertices: number[]
+  uvs: number[]
+  indices: number[]
+  texture: DehydratedTexture
+}
+
 interface Dehydrated {
   keytexts: KeyText[]
-  powerups: PowerupSprite[]
-  tails: TailMesh[]
+  powerups: [number, PowerupSprite][]
+  tails: DehydratedTailMesh[]
   snakes: Snake[]
 }
 
-export default class Render {
-  private state: RenderState = emptyState()
+export const renderModule = createModule(new RenderStateClass(), {
+  RENDER_NEW_ROUND: (state: RenderState, action: Action<[Snake, [string, string, number] | undefined][]>) => {
+    const snakesWithKeyTextAndColor = action.payload
+    state = state.set("powerups", IMap())
+    state = state.set("snakes", snakesWithKeyTextAndColor.map(snakeAndMore => snakeAndMore[0]))
 
+    for (const [snake, keysAndColor] of snakesWithKeyTextAndColor) {
+      if (keysAndColor != null) {
+        const [left, right, color] = keysAndColor
+        const [leftP, rightP] = padEqual(left, right)
+        const text = `${leftP} ▲ ${rightP}`
+
+        state = state.set("keytexts",
+          state.keytexts.concat({
+            x: snake.x,
+            y: snake.y,
+            rotation: snake.rotation,
+            text,
+            color,
+          }))
+      }
+    }
+    return state
+  },
+  RENDER_SET_SNAKES: (state: RenderState, action: Action<Snake[]>) => state.set("snakes", action.payload),
+  RENDER_CLEAR_KEYTEXTS: (state: RenderState, action: Action<undefined>) => state.delete("keytexts"),
+  RENDER_ADD_POWERUP: (state: RenderState, action: Action<PowerupSprite>) => {
+    const ps = action.payload
+    return state.set("powerups", state.powerups.set(ps.id, ps))
+  },
+  RENDER_REMOVE_POWERUP: (state: RenderState, action: Action<number>) =>
+    state.set("powerups", state.powerups.filter(t => t.id !== action.payload)),
+  RENDER_SET_MESHES: (state: RenderState, action: Action<TailMesh[]>) =>
+    state.set("tails", action.payload),
+})
+
+export default class Render {
+  public store = createStore(renderModule.reducer)
+  private state: RenderState
+
+  private powerupSprites = new Map<number, Sprite>()
   private readonly keysLayer = new Graphics()
   private readonly powerupLayer = new Graphics()
   private readonly tailLayer = new Graphics()
@@ -70,6 +118,7 @@ export default class Render {
     this.container.addChild(this.powerupLayer)
     this.container.addChild(this.tailLayer)
     this.container.addChild(this.playerLayer)
+    this.state = this.store.getState()
   }
 
   public dehydrate() {
@@ -80,9 +129,9 @@ export default class Render {
       snakes,
     } = this.state
 
-    const obj = {
+    const obj: Dehydrated = {
       keytexts,
-      powerups,
+      powerups: powerups.entrySeq().toArray(),
       tails: tails.map(tail => ({
         vertices: Array.from(tail.vertices),
         uvs: Array.from(tail.uvs),
@@ -107,7 +156,7 @@ export default class Render {
 
     const state: RenderState = new RenderStateClass({
       keytexts,
-      powerups,
+      powerups: IMap(powerups),
       tails: tails.map(tail => ({
         vertices: new Float32Array(tail.vertices),
         uvs: new Float32Array(tail.uvs),
@@ -123,7 +172,11 @@ export default class Render {
 
   }
 
-  public setState(state: RenderState) {
+  public render() {
+    this.setState(this.store.getState())
+  }
+
+  private setState(state: RenderState) {
     if (state === this.state) {
       return
     }
@@ -164,7 +217,7 @@ export default class Render {
       }
     })
 
-    const powerupsdiff = diffArray(this.state.powerups, state.powerups)
+    const powerupsdiff = diffMap(this.state.powerups, state.powerups)
 
     powerupsdiff.forEach(diff => {
       switch (diff.type) {
@@ -174,25 +227,27 @@ export default class Render {
             powerupSprite.position.set(v.x, v.y)
             powerupSprite.anchor.set(0.5)
 
-            this.powerupLayer.addChildAt(powerupSprite, index(diff) + i)
+            this.powerupSprites.set(index(diff) + i, this.powerupLayer.addChild(powerupSprite))
           })
           break
         }
         case ChangeType.REMOVE: {
-          this.powerupLayer.removeChildren(index(diff), index(diff) + diff.num)
+          for (let i = index(diff); i < index(diff) + diff.num; i++) {
+            const sprite = this.powerupSprites.get(i)
+            if (sprite) {
+              this.powerupLayer.removeChild(sprite)
+              this.powerupSprites.delete(i)
+            }
+          }
           break
         }
         case ChangeType.SET: {
-          const index = diff.path[0] as number
-          const sprite = this.powerupLayer.getChildAt(index) as Sprite
+          const sprite = this.powerupSprites.get(index(diff))
           const value = diff.val
 
-          sprite.position.set(value.x, value.y)
-          sprite.texture = getTexture(value.texture)
+          sprite!.position.set(value.x, value.y)
+          sprite!.texture = getTexture(value.texture)
           break
-        }
-        case ChangeType.MODIFIED: {
-          throw new Error(`unhandled diff ${diff.type}`)
         }
         default:
           neverDiff(diff)

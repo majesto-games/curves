@@ -47,7 +47,7 @@ import { Observable, SimpleEvent, Signal } from "utils/observable"
 import { padEqual } from "utils/string"
 import never from "utils/never"
 import { fillSquare } from "game/client"
-import Render, { RenderState, emptyState, KeyText } from "game/render"
+import Render, { RenderState, KeyText, renderModule } from "game/render"
 
 import { flatten } from "utils/array"
 import { fromImageTexture, textureProviders } from "game/texture"
@@ -116,7 +116,6 @@ export class Game {
 
   private tailStorage: Store<TailStorage<ClientTail>>
   private render: Render
-  private renderState = emptyState()
 
   constructor() {
     this.store = createStore(gameModule.reducer)
@@ -154,30 +153,14 @@ export class Game {
     tailStorage: Store<TailStorage<ClientTail>>,
     getKeyTextAndColor: (snake: Snake) => [string, string, number] | undefined) {
     this.removeOverlay()
-    this.renderState = this.renderState.set("powerups", [])
-
     // TODO: this is dirty
     this.tailStorage = tailStorage
 
-    this.renderState = this.renderState.set("snakes", snakes)
+    const snakesWithKeyTextAndColor = snakes.map(snake => {
+      return [snake, getKeyTextAndColor(snake)] as [Snake, [string, string, number] | undefined]
+    })
 
-    for (const snake of snakes) {
-      const keysAndColor = getKeyTextAndColor(snake)
-      if (keysAndColor != null) {
-        const [left, right, color] = keysAndColor
-        const [leftP, rightP] = padEqual(left, right)
-        const text = `${leftP} ▲ ${rightP}`
-
-        this.renderState = this.renderState.set("keytexts",
-          this.renderState.keytexts.concat({
-            x: snake.x,
-            y: snake.y,
-            rotation: snake.rotation,
-            text,
-            color,
-          }))
-      }
-    }
+    this.render.store.dispatch(renderModule.actions.RENDER_NEW_ROUND(snakesWithKeyTextAndColor))
 
     this.store.dispatch(gameModule.actions.SET_ROUND({
       type: RoundState.PRE,
@@ -188,7 +171,7 @@ export class Game {
 
   public setSnakes(snakes: Snake[]) {
     // TODO: Very bad
-    this.renderState = this.renderState.set("snakes", snakes)
+    this.render.store.dispatch(renderModule.actions.RENDER_SET_SNAKES(snakes))
   }
 
   public inRound() {
@@ -198,7 +181,7 @@ export class Game {
         type: RoundState.IN,
       }))
       this.removeOverlay()
-      this.renderState = this.renderState.set("keytexts", [])
+      this.render.store.dispatch(renderModule.actions.RENDER_CLEAR_KEYTEXTS(undefined))
       this.event.send(GameEvent.START)
     }
   }
@@ -219,18 +202,16 @@ export class Game {
 
     const texture = textureProviders.dehydrate(fromImageTexture, this.getPowerupImage(type))
 
-    this.renderState = this.renderState.set("powerups",
-      this.renderState.powerups.concat({
-        x: location.x,
-        y: location.y,
-        texture,
-        id,
-      }))
+    this.render.store.dispatch(renderModule.actions.RENDER_ADD_POWERUP({
+      x: location.x,
+      y: location.y,
+      texture,
+      id,
+    }))
   }
 
-  public removePowerup(snakeId: number, powerupId: number) {
-    this.renderState = this.renderState.set("powerups",
-      this.renderState.powerups.filter(t => t.id !== powerupId))
+  public removePowerup(powerupId: number) {
+    this.render.store.dispatch(renderModule.actions.RENDER_REMOVE_POWERUP(powerupId))
   }
 
   public close() {
@@ -338,9 +319,8 @@ export class Game {
       default:
     }
 
-    this.renderState = this.renderState.set("tails", this.getMeshes())
-
-    this.render.setState(this.renderState)
+    this.render.store.dispatch(renderModule.actions.RENDER_SET_MESHES(this.getMeshes()))
+    this.render.render()
 
     this.repaint(this.draw)
   }

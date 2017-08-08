@@ -306,7 +306,7 @@ export class Client {
 
   private fetchPowerup(snakeId: number, powerupId: number) {
     const powerupSprite = this.roundPowerupSprites[powerupId]!
-    this.game.removePowerup(snakeId, powerupId)
+    this.game.removePowerup(powerupId)
     this.roundPowerupSprites[powerupId] = undefined
 
     // TODO: play cool sound
