@@ -297,7 +297,6 @@ export class Server {
     this.round.lastUpdate += ticksNeeded * 1000 / tickRate
 
     for (let i = 0; i < ticksNeeded; i++) {
-      const playerUpdates: PlayerUpdate[] = []
       const playersAlive = this.players.filter(player => player.snake!.alive)
 
       if (playersAlive.length < 2) {
@@ -317,11 +316,10 @@ export class Server {
       }
 
       const collidedPowerups: { snake: Snake, powerup: Powerup }[] = []
-
+      const playersWithTail: [ServerPlayer, Tail | Gap][] = []
       for (const player of playersAlive) {
         this.rotateTick(player)
         let snake = player.snake!
-        const x = snake.x
         snake = tick(snake)
 
         // Create tail polygon, this returns undefined if it's supposed to be a hole
@@ -345,6 +343,9 @@ export class Server {
           this.round.tails.dispatch(tailsModule.actions.ADD_TAIL(poly))
         }
 
+        // TODO: remove order bug (e.g. by first pickingup all power ups, then applying them)
+        player.snake = snake
+
         this.round.placedPowerups = this.round.placedPowerups.filter(powerup => {
           if (this.collidesPowerup(snake, powerup)) {
             collidedPowerups.push(this.powerupPickup(player, powerup, playersAlive))
@@ -353,19 +354,24 @@ export class Server {
           return true
         })
 
-        player.snake = snake
+        playersWithTail.push([player, tailAction])
+      }
 
-        playerUpdates.push({
+      // collect player updates after all actions are performed
+      const playerUpdates: PlayerUpdate[] = [] = playersWithTail.map(([p, t]) => {
+        const snake = p.snake!
+
+        return {
           alive: snake.alive,
           rotation: snake.rotation,
-          tail: tailAction,
+          tail: t,
           x: snake.x,
           y: snake.y,
           fatness: snake.fatness,
-          id: player.id,
+          id: p.id,
           powerupProgress: snake.powerupProgress.toJS(),
-        })
-      }
+        }
+      })
 
       const newPowerups = this.spawnPowerups()
       this.round.placedPowerups = this.round.placedPowerups.concat(newPowerups)
