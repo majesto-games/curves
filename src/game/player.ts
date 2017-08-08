@@ -87,18 +87,43 @@ export interface Player {
   color: number
 }
 
-export class ServerPlayer {
-  public steeringLeft = false
-  public steeringRight = false
-  constructor(
-    public name: string,
-    public id: number,
-    public color: number,
-    public owner: ConnectionId,
-    public snake?: Snake,
-  ) {
+interface ServerPlayerI {
+  steeringLeft: boolean
+  steeringRight: boolean
+  name: string
+  id: number
+  color: number
+  owner: ConnectionId
+  snake: Snake | undefined
+}
 
-  }
+export type ServerPlayer = Record.Instance<ServerPlayerI>
+
+// tslint:disable-next-line:variable-name
+export const ServerPlayerClass: Record.Class<ServerPlayerI> = Record({
+  steeringLeft: false,
+  steeringRight: false,
+  name: "",
+  id: 0,
+  color: 0,
+  owner: "",
+  snake: undefined,
+})
+
+export function newServerPlayer(
+  name: string,
+  id: number,
+  color: number,
+  owner: ConnectionId,
+  snake?: Snake,
+) {
+  return new ServerPlayerClass({
+    name,
+    id,
+    color,
+    owner,
+    snake,
+  })
 }
 
 interface ClientPlayerI {
