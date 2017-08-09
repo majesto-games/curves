@@ -71,8 +71,10 @@ export interface RoundStateI {
   losers: ServerPlayer[]
   nextPowerupId: number
   powerupChance: number
-  lastUpdate: number
   sentActions: ClientAction[]
+  paused: boolean
+  pauseDelta: number
+  lastUpdate: number
 }
 
 export type RoundState = Record.Instance<RoundStateI>
@@ -83,13 +85,14 @@ export const RoundStateClass: Record.Class<RoundStateI> = Record({
   losers: [],
   nextPowerupId: 0,
   powerupChance: window.getGlobal("POWERUP_CHANCE_BASE"),
-  lastUpdate: 0,
   sentActions: [],
+  paused: true,
+  pauseDelta: 0,
+  lastUpdate: 0,
 })
 
 const roundModule = createModule(new RoundStateClass(), {
-  SERVER_RESET_SENT_ACTIONS: (state: RoundState, action: Action<undefined>) => state.remove("sentActions"),
-  SERVER_ADD_SENT_ACTIONS: (state: RoundState, action: Action<ClientAction[]>) =>
+  ROUND_ADD_SENT_ACTIONS: (state: RoundState, action: Action<ClientAction[]>) =>
     state.set("sentActions", state.get("sentActions").concat(action.payload)),
   SERVER_RESET_POWERUP_CHANCE: (state: RoundState, action: Action<undefined>) => state.remove("powerupChance"),
   SERVER_INCREASE_POWERUP_CHANCE: (state: RoundState, action: Action<undefined>) =>
@@ -100,7 +103,21 @@ const roundModule = createModule(new RoundStateClass(), {
     const tickRate = window.getGlobal("TICK_RATE")
 
     const ticksNeeded = action.payload
-    return state.set("lastUpdate", state.get("lastUpdate") + ticksNeeded * 1000 / tickRate)
+    return state.set("lastUpdate", state.lastUpdate + ticksNeeded * 1000 / tickRate)
+  },
+  SERVER_PAUSE: (state: RoundState, action: Action<number>) => {
+    const date = action.payload
+
+    return state
+      .set("pauseDelta", date - state.lastUpdate)
+      .set("paused", true)
+  },
+  SERVER_START: (state: RoundState, action: Action<number>) => {
+    const date = action.payload
+
+    return state
+      .set("lastUpdate", date - state.pauseDelta)
+      .set("paused", false)
   },
   SERVER_SET_LAST_UPDATED: (state: RoundState, action: Action<number>) => state.set("lastUpdate", action.payload),
   SERVER_ADD_LOSER: (state: RoundState, action: Action<ServerPlayer>) =>
@@ -120,6 +137,9 @@ interface RoundAndTailState {
 export interface ServerStateI {
   scores: IMap<number, Score>,
   players: IMap<number, ServerPlayer>,
+  colors: List<number>,
+  joinable: boolean,
+  sentActions: ClientAction[],
 }
 
 export type ServerState = Record.Instance<ServerStateI>
@@ -128,6 +148,9 @@ export type ServerState = Record.Instance<ServerStateI>
 export const ServerStateClass: Record.Class<ServerStateI> = Record({
   scores: IMap<number, Score>(),
   players: IMap<number, ServerPlayer>(),
+  colors: List(getColors(7)),
+  joinable: true,
+  sentActions: [],
 })
 
 const serverModule = createModule(new ServerStateClass(), {
@@ -166,6 +189,11 @@ const serverModule = createModule(new ServerStateClass(), {
 
     return state.set("scores", scores.set(points.id, nextScore))
   },
+  SERVER_COLOR_POP: (state: ServerState, action: Action<undefined>) => state.set("colors", state.colors.pop()),
+  SERVER_ADD_SENT_ACTIONS: (state: ServerState, action: Action<ClientAction[]>) =>
+    state.set("sentActions", state.get("sentActions").concat(action.payload)),
+  SERVER_GAME_START: (state: ServerState, action: Action<undefined>) =>
+    state.set("joinable", false),
 })
 
 interface ServerReducerState {
@@ -184,16 +212,11 @@ const reducers = {
 const reducer = combineReducers<ServerReducerState>(reducers)
 
 export class Server {
-  private playerInits: AlmostPlayerInit[] = []
   // TODO: playerInits and these sentActions should not be like this
-  private sentActions: ClientAction[] = []
+  private playerInits: AlmostPlayerInit[] = []
 
   private clientConnections: ClientConnection[] = []
-  private pauseDelta: number = 0
-  private paused: boolean = true
-  private colors: number[] = getColors(7)
   private store: Store<ServerReducerState>
-  private joinable = true
 
   constructor(private owner: ConnectionId) {
     this.store = createStore(reducer)
@@ -236,9 +259,13 @@ export class Server {
     this.clientConnections = this.clientConnections.concat(conn)
     console.log("connection added to: ", conn.id, " total: ", this.clientConnections.length)
 
-    this.sentActions.forEach(conn)
-    console.log(`resending ${this.store.getState().round.rest.sentActions.length} actions`)
-    this.store.getState().round.rest.sentActions.forEach(conn)
+    const gameActions = this.store.getState().rest.sentActions
+    console.log(`resending ${gameActions.length} game actions`)
+    gameActions.forEach(conn)
+
+    const roundActions = this.store.getState().round.rest.sentActions
+    console.log(`resending ${roundActions.length} round actions`)
+    roundActions.forEach(conn)
   }
 
   public removeConnection(conn: ClientConnection) {
@@ -247,12 +274,13 @@ export class Server {
   }
 
   private addPlayer(connectionId: ConnectionId) {
-    if (!this.joinable) {
+    if (!this.store.getState().rest.joinable) {
       return
     }
 
     const id = this.store.getState().rest.players.size
-    const color = this.colors.pop() as number
+    const color = this.store.getState().rest.colors.last()!
+    this.store.dispatch(serverModule.actions.SERVER_COLOR_POP(undefined))
 
     const playerInit: AlmostPlayerInit = { name, color, connectionId, id }
 
@@ -260,11 +288,10 @@ export class Server {
 
     this.store.dispatch(serverModule.actions.SERVER_ADD_PLAYER(playerInit))
 
-    this.send([lobby(this.store.getState().rest.players.toArray())])
+    this.sendForGame([lobby(this.store.getState().rest.players.toArray())])
   }
 
   private startGame() {
-    this.joinable = false
 
     const playerInits = this.playerInits.map(v => {
       return {
@@ -274,25 +301,30 @@ export class Server {
         id: v.id,
       }
     })
-    this.send([started(playerInits)])
-    // TODO: Remove this hack by figuring out a better way of doing playerInits
-    this.sentActions = this.store.getState().round.rest.sentActions
-    this.store.dispatch(roundModule.actions.SERVER_RESET_SENT_ACTIONS(undefined))
+    this.store.dispatch(serverModule.actions.SERVER_GAME_START(undefined))
+    this.sendForGame([started(playerInits)])
 
     console.log("starting server")
     this.startRound()
   }
 
+  private sendForGame(actions: ClientAction[]) {
+    this.send(actions)
+  }
+
+  private sendForRound(actions: ClientAction[]) {
+    this.store.dispatch(roundModule.actions.ROUND_ADD_SENT_ACTIONS(actions))
+    this.send(actions)
+  }
+
   private send(actions: ClientAction[]) {
-    this.store.dispatch(roundModule.actions.SERVER_ADD_SENT_ACTIONS(actions))
     this.clientConnections.forEach(c => {
       actions.forEach(a => c(a))
     })
   }
 
   private pause() {
-    this.pauseDelta = Date.now() - this.store.getState().round.rest.lastUpdate
-    this.paused = true
+    this.store.dispatch(roundModule.actions.SERVER_PAUSE(Date.now()))
   }
 
   private playerById(id: number): ServerPlayer | undefined {
@@ -395,7 +427,7 @@ export class Server {
   }
 
   private serverTick() {
-    if (this.paused) {
+    if (this.store.getState().round.rest.paused) {
       return
     }
     const tickRate = window.getGlobal("TICK_RATE")
@@ -417,7 +449,7 @@ export class Server {
             score: j,
           }))
         }
-        this.send([roundEnd(this.store.getState().rest.scores.toArray(), playerOrder[playerOrder.length - 1])])
+        this.sendForGame([roundEnd(this.store.getState().rest.scores.toArray(), playerOrder[playerOrder.length - 1])])
 
         this.pause()
         setTimeout(() => {
@@ -427,17 +459,18 @@ export class Server {
       }
 
       const collidedPowerups: { snake: Snake, powerup: Powerup }[] = []
-      const playersWithTail: [ServerPlayer, Tail | Gap][] = []
+      const playersWithTail: [number, Tail | Gap][] = []
       for (const playerId of playersAlive) {
-        let player = this.playerById(playerId)!
-        this.rotateTick(player)
-        player = this.playerById(playerId)!
-        let snake = player.snake!
+        this.rotateTick(this.playerById(playerId)!)
+        let snake = this.playerById(playerId)!.snake!
         snake = tick(snake)
 
         // Create tail polygon, this returns undefined if it's supposed to be a hole
         const [snake2, poly] = createTailPolygon(snake)
         snake = snake2
+        this.store.dispatch(
+          serverModule.actions.SERVER_SET_PLAYER(this.playerById(playerId)!.set("snake", snake)),
+        )
 
         let tailAction: Tail | Gap = { type: GAP }
 
@@ -446,7 +479,10 @@ export class Server {
             .map(p => p.snake).some(this.collides(poly.vertices, snake))) {
             snake = snake.set("alive", false)
             // TODO: randomize order
-            this.store.dispatch(roundModule.actions.SERVER_ADD_LOSER(player))
+            this.store.dispatch(roundModule.actions.SERVER_ADD_LOSER(this.playerById(playerId)!))
+            // TODO: SERVER_ADD_LOSER should set the snake to dead automatically
+            // TODO: snake should live in round
+            this.store.dispatch(serverModule.actions.SERVER_SET_PLAYER(this.playerById(playerId)!.set("snake", snake)))
           }
 
           tailAction = {
@@ -458,13 +494,10 @@ export class Server {
         }
 
         // TODO: remove order bug (e.g. by first pickingup all power ups, then applying them)
-        player = player.set("snake", snake)
-        this.store.dispatch(serverModule.actions.SERVER_SET_PLAYER(player))
 
         const filteredPlacedPowerups = this.store.getState().round.rest.placedPowerups.filter(powerup => {
           if (this.collidesPowerup(snake, powerup)) {
-            collidedPowerups.push(this.powerupPickup(player, powerup, playersAlive))
-            player = this.playerById(playerId)!
+            collidedPowerups.push(this.powerupPickup(this.playerById(playerId)!, powerup, playersAlive))
             return false
           }
           return true
@@ -472,12 +505,13 @@ export class Server {
 
         this.store.dispatch(roundModule.actions.SERVER_SET_PLACED_POWERUPS(filteredPlacedPowerups))
 
-        playersWithTail.push([player, tailAction])
+        playersWithTail.push([playerId, tailAction])
       }
 
       // collect player updates after all actions are performed
-      const playerUpdates: PlayerUpdate[] = [] = playersWithTail.map(([p, t]) => {
-        const snake = p.snake!
+      const playerUpdates: PlayerUpdate[] = playersWithTail.map(([pid, t]) => {
+        const player = this.playerById(pid)!
+        const snake = player.snake!
 
         return {
           alive: snake.alive,
@@ -486,7 +520,7 @@ export class Server {
           x: snake.x,
           y: snake.y,
           fatness: snake.fatness,
-          id: p.id,
+          id: pid,
           powerupProgress: snake.powerupProgress.toJS(),
         }
       })
@@ -500,7 +534,7 @@ export class Server {
         ...collidedPowerups.map(({ snake, powerup }) => fetchPowerup(snake.id, powerup.id)),
       ]
 
-      this.send(actions)
+      this.sendForRound(actions)
     }
 
     setTimeout(() => this.serverTick(), (this.store.getState().round.rest.lastUpdate + (1000 / tickRate)) - Date.now())
@@ -567,13 +601,14 @@ export class Server {
         const other = this.playerById(others[swapIndex])!
         const [snake1, snake2] = swapWith(player.snake!, other.snake!)
         const playerNew = player.set("snake", snake1)
-        const otherNew = player.set("snake", snake2)
+        const otherNew = other.set("snake", snake2)
         this.store.dispatch(
           serverModule.actions.SERVER_SET_PLAYER(playerNew),
         )
         this.store.dispatch(
           serverModule.actions.SERVER_SET_PLAYER(otherNew),
         )
+
         break
       }
       case "SWAP_THEM": {
@@ -613,15 +648,8 @@ export class Server {
   }
 
   private start() {
-    if (this.paused) {
-      if (this.pauseDelta) {
-        this.store.dispatch(roundModule.actions.SERVER_SET_LAST_UPDATED(Date.now() - this.pauseDelta))
-      } else {
-        this.store.dispatch(
-          roundModule.actions.SERVER_SET_LAST_UPDATED(Date.now() - (1000 / window.getGlobal("TICK_RATE"))),
-        )
-      }
-      this.paused = false
+    if (this.store.getState().round.rest.paused) {
+      this.store.dispatch(roundModule.actions.SERVER_START(Date.now()))
       this.serverTick()
     }
   }
@@ -660,7 +688,7 @@ export class Server {
 
     const startDelay = window.getGlobal("ROUND_START_DELAY")
 
-    this.send([round(snakeInits, startDelay)])
+    this.sendForRound([round(snakeInits, startDelay)])
 
     setTimeout(() => {
       this.start()

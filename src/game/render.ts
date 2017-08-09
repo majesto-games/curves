@@ -300,7 +300,6 @@ export default class Render {
     })
 
     const snakesdiff = diffArray(this.state.snakes, state.snakes)
-    console.log(state.snakes)
 
     function moveSnake(container: Graphics, snake: Snake) {
       const graphics = container.getChildAt(0) as PIXI.mesh.Mesh
