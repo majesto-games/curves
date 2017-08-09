@@ -219,7 +219,7 @@ export class Server {
   private store: Store<ServerReducerState>
 
   constructor(private owner: ConnectionId) {
-    this.store = createStore(reducer)
+    this.store = createStore(reducer, window.__REDUX_DEVTOOLS_EXTENSION__ && window.__REDUX_DEVTOOLS_EXTENSION__())
   }
 
   public receive(action: ServerAction, connectionId: ConnectionId) {
