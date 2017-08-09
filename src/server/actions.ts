@@ -211,5 +211,7 @@ export function end(winnerId?: number): End {
 export const LEFT = -1
 export const RIGHT = 1
 
-export type ServerAction = AddPlayer | Rotate | Start
+export type ServerGameAction = AddPlayer | Start
+export type ServerRoundAction = Rotate
+export type ServerAction = ServerGameAction | ServerRoundAction
 export type ClientAction = UpdatePlayers | Started | End | PowerupSpawn | PowerupFetch | Round | RoundEnd | LobbyAction

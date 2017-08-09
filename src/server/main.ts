@@ -26,6 +26,8 @@ import {
   fetchPowerup,
   round,
   ServerAction,
+  ServerGameAction,
+  ServerRoundAction,
   ADD_PLAYER,
   ROTATE,
   LEFT,
@@ -71,7 +73,9 @@ export interface RoundStateI {
   losers: ServerPlayer[]
   nextPowerupId: number
   powerupChance: number
-  sentActions: ClientAction[]
+  sent: List<ClientAction>
+  incoming: List<[ServerRoundAction, ConnectionId]>,
+  outgoing: List<ClientAction>,
   paused: boolean
   pauseDelta: number
   lastUpdate: number
@@ -85,15 +89,15 @@ export const RoundStateClass: Record.Class<RoundStateI> = Record({
   losers: [],
   nextPowerupId: 0,
   powerupChance: window.getGlobal("POWERUP_CHANCE_BASE"),
-  sentActions: [],
+  sent: List(),
+  incoming: List(),
+  outgoing: List(),
   paused: true,
   pauseDelta: 0,
   lastUpdate: 0,
 })
 
 const roundModule = createModule(new RoundStateClass(), {
-  ROUND_ADD_SENT_ACTIONS: (state: RoundState, action: Action<ClientAction[]>) =>
-    state.set("sentActions", state.get("sentActions").concat(action.payload)),
   SERVER_RESET_POWERUP_CHANCE: (state: RoundState, action: Action<undefined>) => state.remove("powerupChance"),
   SERVER_INCREASE_POWERUP_CHANCE: (state: RoundState, action: Action<undefined>) =>
     state.set("powerupChance", state.get("powerupChance") + window.getGlobal("POWERUP_CHANCE_INCREASE")),
@@ -127,6 +131,15 @@ const roundModule = createModule(new RoundStateClass(), {
   SERVER_ADD_POWERUPS: (state: RoundState, action: Action<Powerup[]>) =>
     state.set("placedPowerups", state.get("placedPowerups").concat(action.payload)),
   SERVER_RESET_ROUND: (state: RoundState, action: Action<undefined>) => state.clear(),
+  ROUND_ADD_INCOMING: (state: RoundState, action: Action<[ServerRoundAction, ConnectionId]>) =>
+    state.set("incoming", state.incoming.push(action.payload)),
+  ROUND_PROCESSED_INCOMING: (state: RoundState, action: Action<undefined>) => state.delete("incoming"),
+  ROUND_ADD_OUTGOING: (state: RoundState, action: Action<ClientAction[]>) =>
+    state.set("outgoing", state.outgoing.concat(action.payload)),
+  ROUND_PROCESSED_OUTGOING: (state: RoundState, action: Action<undefined>) =>
+    state
+      .set("sent", state.sent.concat(state.outgoing))
+      .delete("outgoing"),
 })
 
 interface RoundAndTailState {
@@ -139,7 +152,9 @@ export interface ServerStateI {
   players: IMap<number, ServerPlayer>,
   colors: List<number>,
   joinable: boolean,
-  sentActions: ClientAction[],
+  sent: List<ClientAction>,
+  incoming: List<[ServerGameAction, ConnectionId]>,
+  outgoing: List<ClientAction>,
 }
 
 export type ServerState = Record.Instance<ServerStateI>
@@ -150,7 +165,9 @@ export const ServerStateClass: Record.Class<ServerStateI> = Record({
   players: IMap<number, ServerPlayer>(),
   colors: List(getColors(7)),
   joinable: true,
-  sentActions: [],
+  sent: List(),
+  incoming: List(),
+  outgoing: List(),
 })
 
 const serverModule = createModule(new ServerStateClass(), {
@@ -190,10 +207,17 @@ const serverModule = createModule(new ServerStateClass(), {
     return state.set("scores", scores.set(points.id, nextScore))
   },
   SERVER_COLOR_POP: (state: ServerState, action: Action<undefined>) => state.set("colors", state.colors.pop()),
-  SERVER_ADD_SENT_ACTIONS: (state: ServerState, action: Action<ClientAction[]>) =>
-    state.set("sentActions", state.get("sentActions").concat(action.payload)),
   SERVER_GAME_START: (state: ServerState, action: Action<undefined>) =>
     state.set("joinable", false),
+  SERVER_ADD_INCOMING: (state: ServerState, action: Action<[ServerGameAction, ConnectionId]>) =>
+    state.set("incoming", state.incoming.push(action.payload)),
+  SERVER_PROCESSED_INCOMING: (state: ServerState, action: Action<undefined>) => state.delete("incoming"),
+  SERVER_ADD_OUTGOING: (state: ServerState, action: Action<ClientAction[]>) =>
+    state.set("outgoing", state.outgoing.concat(action.payload)),
+  SERVER_PROCESSED_OUTGOING: (state: ServerState, action: Action<undefined>) =>
+    state
+      .set("sent", state.sent.concat(state.outgoing))
+      .delete("outgoing"),
 })
 
 interface ServerReducerState {
@@ -224,32 +248,14 @@ export class Server {
 
   public receive(action: ServerAction, connectionId: ConnectionId) {
     switch (action.type) {
-      case ADD_PLAYER: {
-        this.addPlayer(connectionId)
+      case ADD_PLAYER:
+      case START:
+        this.store.dispatch(serverModule.actions.SERVER_ADD_INCOMING([action, connectionId]))
+        setImmediate(() => this.processIncoming(), 0)
         break
-      }
-      case START: {
-        if (connectionId === this.owner) {
-          this.startGame()
-        }
+      case ROTATE:
+        this.store.dispatch(roundModule.actions.ROUND_ADD_INCOMING([action, connectionId]))
         break
-      }
-      case ROTATE: {
-        const { payload } = action
-        const player = this.playerById(payload.index)
-        if (player != null && player.owner === connectionId) {
-          let direction: "steeringRight" | "steeringLeft" = "steeringRight"
-          if (payload.direction === LEFT) {
-            direction = "steeringLeft"
-          }
-          this.store.dispatch(serverModule.actions.SERVER_SET_PLAYER(
-            player.set(direction, payload.value),
-          ))
-
-        }
-
-        break
-      }
       default:
         never("Server didn't handle", action)
     }
@@ -259,18 +265,38 @@ export class Server {
     this.clientConnections = this.clientConnections.concat(conn)
     console.log("connection added to: ", conn.id, " total: ", this.clientConnections.length)
 
-    const gameActions = this.store.getState().rest.sentActions
-    console.log(`resending ${gameActions.length} game actions`)
+    const gameActions = this.store.getState().rest.sent
+    console.log(`resending ${gameActions.size} game actions`)
     gameActions.forEach(conn)
 
-    const roundActions = this.store.getState().round.rest.sentActions
-    console.log(`resending ${roundActions.length} round actions`)
+    const roundActions = this.store.getState().round.rest.sent
+    console.log(`resending ${roundActions.size} round actions`)
     roundActions.forEach(conn)
   }
 
   public removeConnection(conn: ClientConnection) {
     console.log("removing connection", conn)
     this.clientConnections = this.clientConnections.filter(v => v.id !== conn.id)
+  }
+
+  private processIncoming() {
+    // TODO: migrate to reducer
+    this.store.getState().rest.incoming.forEach(([action, connectionId]) => {
+      switch (action.type) {
+        case ADD_PLAYER: {
+          this.addPlayer(connectionId)
+          break
+        }
+        case START:
+          if (connectionId === this.owner) {
+            this.startGame()
+          }
+          break
+        default:
+          never("Server didn't handle", action)
+      }
+    })
+    this.store.dispatch(serverModule.actions.SERVER_PROCESSED_INCOMING(undefined))
   }
 
   private addPlayer(connectionId: ConnectionId) {
@@ -309,18 +335,25 @@ export class Server {
   }
 
   private sendForGame(actions: ClientAction[]) {
-    this.send(actions)
+    this.store.dispatch(serverModule.actions.SERVER_ADD_OUTGOING(actions))
+    setImmediate(() => this.send(), 0)
   }
 
   private sendForRound(actions: ClientAction[]) {
-    this.store.dispatch(roundModule.actions.ROUND_ADD_SENT_ACTIONS(actions))
-    this.send(actions)
+    this.store.dispatch(roundModule.actions.ROUND_ADD_OUTGOING(actions))
+    setImmediate(() => this.send(), 0)
   }
 
-  private send(actions: ClientAction[]) {
+  private send() {
+    const state = this.store.getState()
+    const outgoingForGame = state.rest.outgoing
+    const outgoingForRound = state.round.rest.outgoing
     this.clientConnections.forEach(c => {
-      actions.forEach(a => c(a))
+      outgoingForGame.forEach(a => c(a))
+      outgoingForRound.forEach(a => c(a))
     })
+    this.store.dispatch(serverModule.actions.SERVER_PROCESSED_OUTGOING(undefined))
+    this.store.dispatch(roundModule.actions.ROUND_PROCESSED_OUTGOING(undefined))
   }
 
   private pause() {
@@ -433,6 +466,30 @@ export class Server {
     const tickRate = window.getGlobal("TICK_RATE")
 
     const ticksNeeded = Math.floor((Date.now() - this.store.getState().round.rest.lastUpdate) * tickRate / 1000)
+
+    // TODO: migrate to reducer
+    this.store.getState().round.rest.incoming.forEach(([action, connectionId]) => {
+      switch (action.type) {
+        case ROTATE:
+          const { payload } = action
+          const player = this.playerById(payload.index)
+          if (player != null && player.owner === connectionId) {
+            let direction: "steeringRight" | "steeringLeft" = "steeringRight"
+            if (payload.direction === LEFT) {
+              direction = "steeringLeft"
+            }
+            this.store.dispatch(serverModule.actions.SERVER_SET_PLAYER(
+              player.set(direction, payload.value),
+            ))
+
+          }
+          break
+        default:
+        // https://github.com/Microsoft/TypeScript/issues/16976
+        // never("Server didn't handle", action)
+      }
+    })
+    this.store.dispatch(roundModule.actions.ROUND_PROCESSED_INCOMING(undefined))
 
     this.store.dispatch(roundModule.actions.SERVER_TICK(ticksNeeded))
 
