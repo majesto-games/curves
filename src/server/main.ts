@@ -301,18 +301,19 @@ export class Server {
 
   private rotateTick(player: ServerPlayer) {
     const rotSpeed = rotationSpeed(player.snake!.fatness)
-    let direction = 0
 
     if (player.steeringLeft) {
-      direction -= 1
-    }
-    if (player.steeringRight) {
-      direction += 1
+      this.store.dispatch(serverModule.actions.SERVER_SET_PLAYER(
+        player.set("snake", rotate(player.snake!, -rotSpeed)),
+      ))
     }
 
-    this.store.dispatch(serverModule.actions.SERVER_SET_PLAYER(
-      player.set("snake", rotate(player.snake!, direction * rotSpeed)),
-    ))
+    if (player.steeringRight) {
+      this.store.dispatch(serverModule.actions.SERVER_SET_PLAYER(
+        player.set("snake", rotate(player.snake!, rotSpeed)),
+      ))
+    }
+
   }
 
   private collides(p: number[], player: Snake) {
