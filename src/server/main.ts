@@ -36,6 +36,9 @@ import {
   lobby,
 } from "./actions"
 
+import configureStore from "configureStore"
+import showDevtools from "showDevtools"
+
 import { ClientConnection, ConnectionId } from "./connections"
 import { createStore, combineReducers, Store } from "redux"
 import { List, Record, Map as IMap } from "immutable"
@@ -243,7 +246,8 @@ export class Server {
   private store: Store<ServerReducerState>
 
   constructor(private owner: ConnectionId) {
-    this.store = createStore(reducer, window.__REDUX_DEVTOOLS_EXTENSION__ && window.__REDUX_DEVTOOLS_EXTENSION__())
+    this.store = configureStore(reducer, undefined)
+    showDevtools(this.store)
   }
 
   public receive(action: ServerAction, connectionId: ConnectionId) {

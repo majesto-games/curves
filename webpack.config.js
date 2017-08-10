@@ -7,6 +7,13 @@ module.exports = (env) => {
 
   const NODE_ENV = env.prod ? 'production' : 'development'
 
+  const alias = {}
+
+  if (!env.devtools) {
+    alias["configureStore$"] = "configureStore.prod"
+    alias["showDevtools$"] = "showDevtools.prod"
+  }
+
   return {
     devServer: {
       disableHostCheck: true,
@@ -14,6 +21,7 @@ module.exports = (env) => {
     resolve: {
       extensions: ['.ts', '.tsx', '.webpack.js', '.web.js', '.js'],
       modules: [path.resolve(__dirname, 'src'), 'node_modules'],
+      alias,
     },
     devtool: 'source-map',
     entry: './src/index.tsx',
@@ -45,6 +53,11 @@ module.exports = (env) => {
       new webpack.DefinePlugin({
         'process.env': JSON.stringify(NODE_ENV),
         'BUILDTIME': Date.now(),
+      }),
+      new webpack.ContextReplacementPlugin(/.*/, path.resolve(__dirname, 'node_modules', 'jsondiffpatch'), {
+        '../package.json': './package.json',
+        './formatters': './src/formatters/index.js',
+        './console': './src/formatters/console.js'
       })
     ]
   }

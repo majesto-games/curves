@@ -282,17 +282,18 @@ export interface ServerTailI {
 
 export type ServerTail = Record.Instance<ServerTailI>
 
-export function newServerTail() {
-  const clss = Record({
-    minX: 0, // 0 is fine since it will be overwritten later as in addToServerTail
-    maxX: 0,
-    minY: 0,
-    maxY: 0,
-    parts: List<TailPart>(),
-    vertices: List<number[]>(),
-  })
+// tslint:disable-next-line:variable-name
+export const ServerTailClass: Record.Class<ServerTailI> = Record({
+  minX: 0, // 0 is fine since it will be overwritten later as in addToServerTail
+  maxX: 0,
+  minY: 0,
+  maxY: 0,
+  parts: List<TailPart>(),
+  vertices: List<number[]>(),
+})
 
-  return new clss()
+export function newServerTail() {
+  return new ServerTailClass()
 }
 
 function lineIntersect(x: number, y: number, arr: number[], i: number, j: number) {
