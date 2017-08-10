@@ -40,7 +40,7 @@ export interface TailStorageI<TailT> {
 
 export type TailStorage<TailT> = Record.Instance<TailStorageI<TailT>>
 
-function getDefaultTailStorage<TailT>(): Record.Instance<TailStorageI<TailT>> {
+export function getDefaultTailStorage<TailT>(): Record.Instance<TailStorageI<TailT>> {
   const clss = Record({
     all: List<TailPart>(),
     perPlayer: MapIm<number, List<TailPart>>(),
