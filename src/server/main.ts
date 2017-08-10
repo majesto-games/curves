@@ -136,7 +136,6 @@ const roundModule = createModule(new RoundStateClass(), {
   SERVER_RESET_ROUND: (state: RoundState, action: Action<undefined>) => state.clear(),
   ROUND_ADD_INCOMING: (state: RoundState, action: Action<[ServerRoundAction, ConnectionId]>) =>
     state.set("incoming", state.incoming.push(action.payload)),
-  ROUND_PROCESSED_INCOMING: (state: RoundState, action: Action<undefined>) => state.delete("incoming"),
   ROUND_ADD_OUTGOING: (state: RoundState, action: Action<ClientAction[]>) =>
     state.set("outgoing", state.outgoing.concat(action.payload)),
   ROUND_PROCESSED_OUTGOING: (state: RoundState, action: Action<undefined>) =>
@@ -220,6 +219,32 @@ const serverModule = createModule(new ServerStateClass(), {
     state
       .set("sent", state.sent.concat(state.outgoing))
       .delete("outgoing"),
+  ROUND_PROCESS_INCOMING: (state: ServerState, _action: Action<undefined>) => {
+    state.round.incoming.forEach(([action, connectionId]) => {
+      switch (action.type) {
+        case ROTATE:
+          const { payload } = action
+          const player = state.players.get(payload.index)
+          if (player != null && player.owner === connectionId) {
+            let direction: "steeringRight" | "steeringLeft" = "steeringRight"
+            if (payload.direction === LEFT) {
+              direction = "steeringLeft"
+            }
+            state = state
+              .set("players", state.players.set(player.id, player.set(direction, payload.value)))
+
+          }
+          break
+        default:
+        // https://github.com/Microsoft/TypeScript/issues/16976
+        // never("Server didn't handle", action)
+      }
+    })
+
+    let round = state.round
+    round = round.delete("incoming")
+    return state.set("round", round)
+  },
 })
 
 function serverReducer(state: ServerState | undefined, action: Action<AlmostPlayerInit>): ServerState {
@@ -472,29 +497,7 @@ export class Server {
 
     const ticksNeeded = Math.floor((Date.now() - this.store.getState().round.lastUpdate) * tickRate / 1000)
 
-    // TODO: migrate to reducer
-    this.store.getState().round.incoming.forEach(([action, connectionId]) => {
-      switch (action.type) {
-        case ROTATE:
-          const { payload } = action
-          const player = this.playerById(payload.index)
-          if (player != null && player.owner === connectionId) {
-            let direction: "steeringRight" | "steeringLeft" = "steeringRight"
-            if (payload.direction === LEFT) {
-              direction = "steeringLeft"
-            }
-            this.store.dispatch(serverModule.actions.SERVER_SET_PLAYER(
-              player.set(direction, payload.value),
-            ))
-
-          }
-          break
-        default:
-        // https://github.com/Microsoft/TypeScript/issues/16976
-        // never("Server didn't handle", action)
-      }
-    })
-    this.store.dispatch(roundModule.actions.ROUND_PROCESSED_INCOMING(undefined))
+    this.store.dispatch(serverModule.actions.ROUND_PROCESS_INCOMING(undefined))
 
     this.store.dispatch(roundModule.actions.SERVER_TICK(ticksNeeded))
 
