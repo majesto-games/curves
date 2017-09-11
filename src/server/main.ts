@@ -131,8 +131,14 @@ const roundModule = createModule(new RoundStateClass(), {
     state.set("losers", state.get("losers").concat(action.payload)),
   SERVER_SET_PLACED_POWERUPS: (state: RoundState, action: Action<Powerup[]>) =>
     state.set("placedPowerups", action.payload),
-  SERVER_ADD_POWERUPS: (state: RoundState, action: Action<Powerup[]>) =>
-    state.set("placedPowerups", state.get("placedPowerups").concat(action.payload)),
+  SERVER_ADD_POWERUPS: (state: RoundState, action: Action<Powerup[]>): RoundState => {
+    const newPowerups = action.payload
+    const s2 = state.set("placedPowerups", state.get("placedPowerups").concat(newPowerups))
+
+    const actions = newPowerups.map(spawnPowerup)
+    // TODO: Nicer way of composing this?
+    return roundModule.reducer(s2, roundModule.actions.ROUND_ADD_OUTGOING(actions))
+  },
   SERVER_RESET_ROUND: (state: RoundState, action: Action<undefined>) => state.clear(),
   ROUND_ADD_INCOMING: (state: RoundState, action: Action<[ServerRoundAction, ConnectionId]>) =>
     state.set("incoming", state.incoming.push(action.payload)),
@@ -170,6 +176,12 @@ export const ServerStateClass: Record.Class<ServerStateI> = Record({
   round: new RoundStateClass(),
   tails: getDefaultTailStorage<ServerTail>(),
 })
+
+interface PowerupPickup {
+  player: ServerPlayer
+  powerup: Powerup
+  playersAlive: number[]
+}
 
 const serverModule = createModule(new ServerStateClass(), {
   SERVER_ADD_PLAYER: (state: ServerState, action: Action<AlmostPlayerInit>) => {
@@ -244,6 +256,128 @@ const serverModule = createModule(new ServerStateClass(), {
     let round = state.round
     round = round.delete("incoming")
     return state.set("round", round)
+  },
+  ROUND_POWERUP_PICKUP: (state: ServerState, action: Action<PowerupPickup>) => {
+    const { player, powerup, playersAlive } = action.payload
+
+    switch (powerup.type) {
+      case "UPSIZE": {
+        playersAlive
+          .filter(pid => player.id !== pid)
+          .forEach(pid => {
+            const p = state.players.get(pid)!
+            state = serverModule.reducer(
+              state,
+              serverModule.actions.SERVER_SET_PLAYER(p.set("snake", fatify(p.snake!, powerup))),
+            )
+          })
+        break
+      }
+      case "GHOST": {
+        state = serverModule.reducer(
+          state,
+          serverModule.actions.SERVER_SET_PLAYER(player.set("snake", ghostify(player.snake!, powerup))),
+        )
+        break
+      }
+      case "SPEEDDOWN_ME": {
+        state = serverModule.reducer(
+          state,
+          serverModule.actions.SERVER_SET_PLAYER(player.set("snake", speeddown(player.snake!, powerup))),
+        )
+        break
+      }
+      case "SPEEDDOWN_THEM": {
+        playersAlive
+          .filter(pid => player.id !== pid)
+          .forEach(pid => {
+            const p = state.players.get(pid)!
+            state = serverModule.reducer(
+              state,
+              serverModule.actions.SERVER_SET_PLAYER(p.set("snake", speeddown(p.snake!, powerup))),
+            )
+          })
+        break
+      }
+      case "SPEEDUP_ME": {
+        state = serverModule.reducer(
+          state,
+          serverModule.actions.SERVER_SET_PLAYER(player.set("snake", speedup(player.snake!, powerup))),
+        )
+        break
+      }
+      case "SPEEDUP_THEM": {
+        playersAlive
+          .filter(pid => player.id !== pid)
+          .forEach(pid => {
+            const p = state.players.get(pid)!
+            state = serverModule.reducer(
+              state,
+              serverModule.actions.SERVER_SET_PLAYER(p.set("snake", speedup(p.snake!, powerup))),
+            )
+          })
+        break
+      }
+      case "SWAP_ME": {
+        const others = playersAlive
+          .filter(pid => player.id !== pid)
+        const swapIndex = Math.floor(Math.random() * others.length)
+        const other = state.players.get(others[swapIndex])!
+        const [snake1, snake2] = swapWith(player.snake!, other.snake!)
+        const playerNew = player.set("snake", snake1)
+        const otherNew = other.set("snake", snake2)
+        state = serverModule.reducer(
+          state,
+          serverModule.actions.SERVER_SET_PLAYER(playerNew),
+        )
+        state = serverModule.reducer(
+          state,
+          serverModule.actions.SERVER_SET_PLAYER(otherNew),
+        )
+
+        break
+      }
+      case "SWAP_THEM": {
+        const others = shuffle(playersAlive
+          .filter(pid => player.id !== pid))
+        if (others.length >= 2) {
+          const other1 = state.players.get(others[0])!
+          const other2 = state.players.get(others[1])!
+          const [snake1, snake2] = swapWith(other1.snake!, other2.snake!)
+          const other1New = player.set("snake", snake1)
+          const other2New = player.set("snake", snake2)
+          state = serverModule.reducer(
+            state,
+            serverModule.actions.SERVER_SET_PLAYER(other1New),
+          )
+          state = serverModule.reducer(
+            state,
+            serverModule.actions.SERVER_SET_PLAYER(other2New),
+          )
+        }
+        break
+      }
+      case "REVERSE_THEM": {
+        playersAlive
+          .filter(pid => player.id !== pid)
+          .forEach(pid => {
+            const p = state.players.get(pid)!
+            state = serverModule.reducer(
+              state,
+              serverModule.actions.SERVER_SET_PLAYER(p.set("snake", reversify(p.snake!, powerup))),
+            )
+          })
+        break
+      }
+      default:
+        never("Picked up unknown powerup", powerup.type)
+    }
+
+    const fetchAction = fetchPowerup(player.snake!.id, powerup.id)
+
+    state = state.set("round", roundModule.reducer(state.round, roundModule.actions.ROUND_ADD_OUTGOING([fetchAction])))
+
+    return state
   },
 })
 
@@ -523,7 +657,6 @@ export class Server {
         return
       }
 
-      const collidedPowerups: { snake: Snake, powerup: Powerup }[] = []
       const playersWithTail: [number, Tail | Gap][] = []
       for (const playerId of playersAlive) {
         this.rotateTick(this.playerById(playerId)!)
@@ -562,7 +695,9 @@ export class Server {
 
         const filteredPlacedPowerups = this.store.getState().round.placedPowerups.filter(powerup => {
           if (this.collidesPowerup(snake, powerup)) {
-            collidedPowerups.push(this.powerupPickup(this.playerById(playerId)!, powerup, playersAlive))
+            this.store.dispatch(
+              serverModule.actions.ROUND_POWERUP_PICKUP({ player: this.playerById(playerId)!, powerup, playersAlive }),
+            )
             return false
           }
           return true
@@ -590,126 +725,16 @@ export class Server {
         }
       })
 
-      const newPowerups = this.spawnPowerups()
-      this.store.dispatch(roundModule.actions.SERVER_ADD_POWERUPS(newPowerups))
+      this.store.dispatch(roundModule.actions.SERVER_ADD_POWERUPS(this.spawnPowerups()))
 
       const actions = [
         updatePlayers(playerUpdates),
-        ...newPowerups.map(spawnPowerup),
-        ...collidedPowerups.map(({ snake, powerup }) => fetchPowerup(snake.id, powerup.id)),
       ]
 
       this.sendForRound(actions)
     }
 
     setTimeout(() => this.serverTick(), (this.store.getState().round.lastUpdate + (1000 / tickRate)) - Date.now())
-  }
-
-  private powerupPickup(player: ServerPlayer, powerup: Powerup, playersAlive: number[]) {
-
-    switch (powerup.type) {
-      case "UPSIZE": {
-        playersAlive
-          .filter(pid => player.id !== pid)
-          .forEach(pid => {
-            const p = this.playerById(pid)!
-            this.store.dispatch(
-              serverModule.actions.SERVER_SET_PLAYER(p.set("snake", fatify(p.snake!, powerup))),
-            )
-          })
-        break
-      }
-      case "GHOST": {
-        this.store.dispatch(
-          serverModule.actions.SERVER_SET_PLAYER(player.set("snake", ghostify(player.snake!, powerup))),
-        )
-        break
-      }
-      case "SPEEDDOWN_ME": {
-        this.store.dispatch(
-          serverModule.actions.SERVER_SET_PLAYER(player.set("snake", speeddown(player.snake!, powerup))),
-        )
-        break
-      }
-      case "SPEEDDOWN_THEM": {
-        playersAlive
-          .filter(pid => player.id !== pid)
-          .forEach(pid => {
-            const p = this.playerById(pid)!
-            this.store.dispatch(
-              serverModule.actions.SERVER_SET_PLAYER(p.set("snake", speeddown(p.snake!, powerup))),
-            )
-          })
-        break
-      }
-      case "SPEEDUP_ME": {
-        this.store.dispatch(
-          serverModule.actions.SERVER_SET_PLAYER(player.set("snake", speedup(player.snake!, powerup))),
-        )
-        break
-      }
-      case "SPEEDUP_THEM": {
-        playersAlive
-          .filter(pid => player.id !== pid)
-          .forEach(pid => {
-            const p = this.playerById(pid)!
-            this.store.dispatch(
-              serverModule.actions.SERVER_SET_PLAYER(p.set("snake", speedup(p.snake!, powerup))),
-            )
-          })
-        break
-      }
-      case "SWAP_ME": {
-        const others = playersAlive
-          .filter(pid => player.id !== pid)
-        const swapIndex = Math.floor(Math.random() * others.length)
-        const other = this.playerById(others[swapIndex])!
-        const [snake1, snake2] = swapWith(player.snake!, other.snake!)
-        const playerNew = player.set("snake", snake1)
-        const otherNew = other.set("snake", snake2)
-        this.store.dispatch(
-          serverModule.actions.SERVER_SET_PLAYER(playerNew),
-        )
-        this.store.dispatch(
-          serverModule.actions.SERVER_SET_PLAYER(otherNew),
-        )
-
-        break
-      }
-      case "SWAP_THEM": {
-        const others = shuffle(playersAlive
-          .filter(pid => player.id !== pid))
-        if (others.length >= 2) {
-          const other1 = this.playerById(others[0])!
-          const other2 = this.playerById(others[1])!
-          const [snake1, snake2] = swapWith(other1.snake!, other2.snake!)
-          const other1New = player.set("snake", snake1)
-          const other2New = player.set("snake", snake2)
-          this.store.dispatch(
-            serverModule.actions.SERVER_SET_PLAYER(other1New),
-          )
-          this.store.dispatch(
-            serverModule.actions.SERVER_SET_PLAYER(other2New),
-          )
-        }
-        break
-      }
-      case "REVERSE_THEM": {
-        playersAlive
-          .filter(pid => player.id !== pid)
-          .forEach(pid => {
-            const p = this.playerById(pid)!
-            this.store.dispatch(
-              serverModule.actions.SERVER_SET_PLAYER(p.set("snake", reversify(p.snake!, powerup))),
-            )
-          })
-        break
-      }
-      default:
-        never("Picked up unknown powerup", powerup.type)
-    }
-
-    return { snake: player.snake!, powerup }
   }
 
   private start() {
