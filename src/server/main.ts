@@ -183,6 +183,11 @@ interface PowerupPickup {
   playersAlive: number[]
 }
 
+interface PolygonAdd {
+  poly: TailPart,
+  playerId: number,
+}
+
 const serverModule = createModule(new ServerStateClass(), {
   SERVER_ADD_PLAYER: (state: ServerState, action: Action<AlmostPlayerInit>) => {
     const {
@@ -379,6 +384,31 @@ const serverModule = createModule(new ServerStateClass(), {
 
     return state
   },
+  ROUND_ADD_POLY: (state: ServerState, action: Action<PolygonAdd>) => {
+
+    const { poly, playerId } = action.payload
+    const player = state.players.get(playerId)!
+    const snake = player.snake!
+
+    if (state.players.toArray()
+      .map(p => p.snake).some(collides(state.tails, poly.vertices, snake))) {
+      const deadSnake = snake.set("alive", false)
+      // TODO: randomize order
+      // TODO: SERVER_ADD_LOSER should set the snake to dead automatically
+      state = state.set("round", roundModule.reducer(
+        state.round,
+        roundModule.actions.SERVER_ADD_LOSER(player),
+      ))
+      // TODO: snake should live in round
+      state = serverModule.reducer(
+        state,
+        serverModule.actions.SERVER_SET_PLAYER(player.set("snake", deadSnake)))
+    }
+
+    state = state.set("tails", tailsModule.reducer(state.tails, tailsModule.actions.ADD_TAIL(poly)))
+
+    return state
+  },
 })
 
 function serverReducer(state: ServerState | undefined, action: Action<AlmostPlayerInit>): ServerState {
@@ -396,6 +426,38 @@ function serverReducer(state: ServerState | undefined, action: Action<AlmostPlay
   }
 
   return nextGameState
+}
+
+function collides(tailsState: TailStorage<ServerTail>, p: number[], player: Snake) {
+  return (collider: Snake) => {
+    let tails = tailsForPlayer(tailsState, collider)
+
+    // Special case for last tail for this player
+    if (collider === player && tails.size > 0) {
+      const last = tails.get(-1)!
+      // Modify tails not not contain last part
+      tails = tails.slice(0, -1)
+
+      for (let i = 0; i < p.length; i += 2) {
+        const x = p[i]
+        const y = p[i + 1]
+
+        if (containsPointExcludeLatest(last, x, y)) {
+          return true
+        }
+      }
+    }
+
+    for (let i = 0; i < p.length; i += 2) {
+      const x = p[i]
+      const y = p[i + 1]
+
+      if (tails.some(tail => serverTailContainsPoint(tail, x, y))) {
+        return true
+      }
+    }
+    return false
+  }
 }
 
 export class Server {
@@ -545,38 +607,6 @@ export class Server {
 
   }
 
-  private collides(p: number[], player: Snake) {
-    return (collider: Snake) => {
-      let tails = tailsForPlayer(this.store.getState().tails, collider)
-
-      // Special case for last tail for this player
-      if (collider === player && tails.size > 0) {
-        const last = tails.get(-1)!
-        // Modify tails not not contain last part
-        tails = tails.slice(0, -1)
-
-        for (let i = 0; i < p.length; i += 2) {
-          const x = p[i]
-          const y = p[i + 1]
-
-          if (containsPointExcludeLatest(last, x, y)) {
-            return true
-          }
-        }
-      }
-
-      for (let i = 0; i < p.length; i += 2) {
-        const x = p[i]
-        const y = p[i + 1]
-
-        if (tails.some(tail => serverTailContainsPoint(tail, x, y))) {
-          return true
-        }
-      }
-      return false
-    }
-  }
-
   private collidesPowerup(player: Snake, powerup: Powerup) {
     const { x, y, fatness } = player
     const { location } = powerup
@@ -673,22 +703,15 @@ export class Server {
         let tailAction: Tail | Gap = { type: GAP }
 
         if (poly != null) {
-          if (this.store.getState().players.toArray()
-            .map(p => p.snake).some(this.collides(poly.vertices, snake))) {
-            snake = snake.set("alive", false)
-            // TODO: randomize order
-            this.store.dispatch(roundModule.actions.SERVER_ADD_LOSER(this.playerById(playerId)!))
-            // TODO: SERVER_ADD_LOSER should set the snake to dead automatically
-            // TODO: snake should live in round
-            this.store.dispatch(serverModule.actions.SERVER_SET_PLAYER(this.playerById(playerId)!.set("snake", snake)))
-          }
 
           tailAction = {
             type: TAIL,
             payload: poly,
           }
 
-          this.store.dispatch(tailsModule.actions.ADD_TAIL(poly))
+          this.store.dispatch(
+            serverModule.actions.ROUND_ADD_POLY({ poly, playerId }),
+          )
         }
 
         // TODO: remove order bug (e.g. by first pickingup all power ups, then applying them)
