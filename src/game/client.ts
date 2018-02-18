@@ -116,11 +116,11 @@ export class Client {
   private connection?: ServerConnection
   private _close?: () => void
 
-  constructor(serverPromise: Promise<[ServerConnection, () => void]>) {
+  constructor(serverPromise: Promise<{ connection: ServerConnection, close: () => void }>) {
     this.store = createStore(clientModule.reducer)
     this.tailStore = createStore(this.tailStorageMod.reducer)
     this.game.onDraw.subscribe(() => this.handleKeys())
-    serverPromise.then(([connection, close]) => {
+    serverPromise.then(({ connection, close }) => {
       this.connection = connection
       this._close = close
       this.store.dispatch(clientModule.actions.SET_CONNECTION_STATE(ClientConnectionState.LOBBY))

@@ -30,11 +30,12 @@ function connectAsClient(client: Client, rc: quickconnect.connection) {
     }
 
     serverConn(addPlayer())
-    return [serverConn, () => rc.close()]
+    return { connection: serverConn, close: () => rc.close() }
   })
 }
 
-function connectAsServer(client: Client, rc: quickconnect.connection): [ServerConnection, () => void] {
+function connectAsServer(client: Client,
+  rc: quickconnect.connection): { connection: ServerConnection, close: () => void } {
   console.log("Server")
 
   const id = cuid()
@@ -48,10 +49,10 @@ function connectAsServer(client: Client, rc: quickconnect.connection): [ServerCo
 
   serverConn(addPlayer())
   client.isServer = true
-  return [serverConn, () => rc.close()]
+  return { connection: serverConn, close: () => rc.close() }
 }
 
-function connectAsLocal(client: Client): [ServerConnection, () => void] {
+function connectAsLocal(client: Client): { connection: ServerConnection, close: () => void } {
   console.log("Local server")
 
   const id = cuid()
@@ -65,7 +66,7 @@ function connectAsLocal(client: Client): [ServerConnection, () => void] {
   client.isServer = true
 
   // tslint:disable-next-line:no-empty
-  return [serverConn, () => console.log("wat")]
+  return { connection: serverConn, close: () => console.log("wat") }
 }
 
 function handleClientConnections(server: Server) {
@@ -87,9 +88,9 @@ function handleClientConnections(server: Server) {
 
 export function connect(room: string): Client {
   // [connection, close]
-  let resolveConn: (v: [ServerConnection, () => void]) => void
+  let resolveConn: (value: { connection: ServerConnection, close: () => void }) => void
 
-  const serverpromise = new Promise<[ServerConnection, () => void]>((resolve, reject) => {
+  const serverpromise = new Promise<{ connection: ServerConnection, close: () => void }>((resolve, reject) => {
     resolveConn = resolve
   })
 
@@ -111,9 +112,9 @@ export function connect(room: string): Client {
 }
 
 export function connectLocal(): Client {
-  let resolveConn: (v: [ServerConnection, () => void]) => void
+  let resolveConn: (value: { connection: ServerConnection, close: () => void }) => void
 
-  const serverpromise = new Promise<[ServerConnection, () => void]>((resolve, reject) => {
+  const serverpromise = new Promise<{ connection: ServerConnection, close: () => void }>((resolve, reject) => {
     resolveConn = resolve
   })
 
