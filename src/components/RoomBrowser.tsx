@@ -57,9 +57,12 @@ class NewRoom extends React.Component<NewRoomProps, {}> {
     const choice = (document.activeElement as HTMLButtonElement).value
 
     if (choice === "join") {
+      if (!this.roomInput) {
+        return
+      }
+
       history.push({
-        // TODO: Dunno if this explicit non-null thing is good
-        pathname: `/game/${this.roomInput!.value}`,
+        pathname: `/game/${this.roomInput.value}`,
       })
     } else if (choice === "local") {
       history.push({

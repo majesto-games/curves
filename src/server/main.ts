@@ -430,8 +430,11 @@ function serverReducer(state: ServerState | undefined, action: Action<AlmostPlay
 
 function collides(tailsState: TailStorage<ServerTail>, p: number[], player: Snake) {
   return (collider?: Snake) => {
-    // TODO: Dunno if this explicit non-null thing is good
-    let tails = tailsForPlayer(tailsState, collider!)
+    if (!collider) {
+      return false
+    }
+
+    let tails = tailsForPlayer(tailsState, collider)
 
     // Special case for last tail for this player
     if (collider === player && tails.size > 0) {

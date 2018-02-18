@@ -5,14 +5,18 @@ import DevTools from "components/Devtools"
 export function showDevToolsPopup(store: any) {
   const popup = window.open(undefined, "Redux DevTools", "menubar=no,location=no,resizable=yes,scrollbars=no,status=no")
   // Reload in case it already exists
-  // TODO: Dunno if this explicit non-null thing is good
-  popup!.location.reload()
+
+  if (!popup) {
+    return
+  }
+
+  popup.location.reload()
 
   setTimeout(() => {
-    popup!.document.write('<div id="react-devtools-root"></div>')
+    popup.document.write('<div id="react-devtools-root"></div>')
     render(
       <DevTools store={store} />,
-      popup!.document.getElementById("react-devtools-root"),
+      popup.document.getElementById("react-devtools-root"),
     )
   }, 10)
 }

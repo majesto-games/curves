@@ -60,11 +60,14 @@ export default class Replay extends React.Component<{}, ReplayState> {
     )
   }
 
-  private onSubmit = (e: React.FormEvent<any>) => {
+  private onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
 
-    // TODO: Dunno if this explicit non-null thing is good
-    const dehydrated = this.dehydratedInput!.value
+    if (!this.dehydratedInput) {
+      return
+    }
+
+    const dehydrated = this.dehydratedInput.value
     this.gameRender.rehydrate(dehydrated)
     this.renderer.render(this.container)
   }

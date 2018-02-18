@@ -113,7 +113,7 @@ export class Client {
   private tailStore: Store<TailStorage<ClientTail>>
   private localIndex = 0
   private textureIndex = 0
-  private connection?: ServerConnection
+  private connection!: ServerConnection
   private _close?: () => void
 
   constructor(serverPromise: Promise<{ connection: ServerConnection, close: () => void }>) {
@@ -186,7 +186,7 @@ export class Client {
   }
 
   public addPlayer() {
-    this.connection!(addPlayer())
+    this.connection(addPlayer())
   }
 
   public start() {
@@ -247,7 +247,7 @@ export class Client {
   private started(players: PlayerInit[]) {
     this.store.dispatch(clientModule.actions.SET_CONNECTION_STATE(ClientConnectionState.GAME))
     for (const player of players) {
-      const newPlayer = this.createPlayer(player.name, player.color, player.owner === this.connection!.id, player.id)
+      const newPlayer = this.createPlayer(player.name, player.color, player.owner === this.connection.id, player.id)
       this.players[player.id] = newPlayer
     }
 
@@ -334,7 +334,7 @@ export class Client {
         const wantToGoLeft = window.Keys[keys.left] || window.PhoneControls.left
 
         if (alreadyGoingLeft !== wantToGoLeft) {
-          this.connection!(rotate(LEFT, wantToGoLeft, p.id))
+          this.connection(rotate(LEFT, wantToGoLeft, p.id))
           p = p.set("steeringLeft", wantToGoLeft)
         }
 
@@ -342,7 +342,7 @@ export class Client {
         const wantToGoRight = window.Keys[keys.right] || window.PhoneControls.right
 
         if (alreadyGoingRight !== wantToGoRight) {
-          this.connection!(rotate(RIGHT, wantToGoRight, p.id))
+          this.connection(rotate(RIGHT, wantToGoRight, p.id))
           p = p.set("steeringRight", wantToGoRight)
         }
       }
