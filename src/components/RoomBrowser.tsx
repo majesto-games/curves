@@ -24,7 +24,7 @@ interface NewRoomProps {
 }
 
 class NewRoom extends React.Component<NewRoomProps, {}> {
-  private roomInput: HTMLInputElement
+  private roomInput: HTMLInputElement | null = null
 
   private randomRoomName = (`${randomAdjective()}${randomNoun()}-${randomNoun()}`).toLowerCase()
 
@@ -34,7 +34,7 @@ class NewRoom extends React.Component<NewRoomProps, {}> {
         <div className="form-group">
           <div className="input-group">
             <input type="text" placeholder="Room name" defaultValue={this.randomRoomName}
-              className="form-control input-lg" ref={n => this.roomInput = n} />
+              className="form-control input-lg" ref={(n) => this.roomInput = n} />
             <span className="input-group-btn">
               <button type="submit" value="join" className="btn-lg btn btn-success">Host/join game</button>
               <button type="submit" value="local" className="btn-lg btn btn-warning">Play offline</button>
@@ -58,7 +58,8 @@ class NewRoom extends React.Component<NewRoomProps, {}> {
 
     if (choice === "join") {
       history.push({
-        pathname: `/game/${this.roomInput.value}`,
+        // TODO: Dunno if this explicit non-null thing is good
+        pathname: `/game/${this.roomInput!.value}`,
       })
     } else if (choice === "local") {
       history.push({

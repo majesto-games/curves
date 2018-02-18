@@ -4,7 +4,7 @@ interface CanvasProps {
   view: HTMLCanvasElement,
 }
 
-export default class Canvas extends React.Component<CanvasProps, void> {
+export default class Canvas extends React.Component<CanvasProps> {
   private div: HTMLDivElement | null = null
 
   public componentDidMount() {

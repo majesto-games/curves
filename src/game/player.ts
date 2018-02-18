@@ -6,7 +6,7 @@ import {
   newAnimation,
   add,
   tick as animationTick,
-  values,
+  values as animationValues,
   numberTweenProviders,
   undefinedTweenProviders,
   booleanTrue,
@@ -100,7 +100,7 @@ interface ServerPlayerI {
 export type ServerPlayer = Record.Instance<ServerPlayerI>
 
 // tslint:disable-next-line:variable-name
-export const ServerPlayerClass: Record.Class<ServerPlayerI> = Record({
+export const ServerPlayerClass: Record.Class<ServerPlayerI> = Record<ServerPlayerI>({
   steeringLeft: false,
   steeringRight: false,
   name: "",
@@ -141,7 +141,7 @@ interface ClientPlayerI {
 export type ClientPlayer = Record.Instance<ClientPlayerI>
 
 // tslint:disable-next-line:variable-name
-export const ClientPlayerClass: Record.Class<ClientPlayerI> = Record({
+export const ClientPlayerClass: Record.Class<ClientPlayerI> = Record<ClientPlayerI>({
   steeringLeft: false,
   steeringRight: false,
   name: "",
@@ -297,13 +297,13 @@ export function tick(snake: Snake): Snake {
     .set("y", snake.y - (Math.cos(snake.rotation) * snake.speed))
   snake = wrapEdge(snake)
   snake = snake.set("fatnessAnimation", animationTick(snake.fatnessAnimation))
-  snake = fatnessAnimationReducer(snake, values(numberTweenProviders, snake.fatnessAnimation))
+  snake = fatnessAnimationReducer(snake, animationValues(numberTweenProviders, snake.fatnessAnimation))
   snake = snake.set("speedAnimation", animationTick(snake.speedAnimation))
-  snake = speedAnimationReducer(snake, values(numberTweenProviders, snake.speedAnimation))
+  snake = speedAnimationReducer(snake, animationValues(numberTweenProviders, snake.speedAnimation))
   snake = snake.set("ghostAnimation", animationTick(snake.ghostAnimation))
-  snake = ghostAnimationReducer(snake, values(undefinedTweenProviders, snake.ghostAnimation))
+  snake = ghostAnimationReducer(snake, animationValues(undefinedTweenProviders, snake.ghostAnimation))
   snake = snake.set("reversedAnimation", animationTick(snake.reversedAnimation))
-  snake = reversedAnimationReducer(snake, values(undefinedTweenProviders, snake.reversedAnimation))
+  snake = reversedAnimationReducer(snake, animationValues(undefinedTweenProviders, snake.reversedAnimation))
   return updatePowerupProgress(snake)
 }
 

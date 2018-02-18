@@ -90,7 +90,7 @@ const roundStart: RoundPreState = {
 }
 
 // tslint:disable-next-line:variable-name
-export const GameStateClass: Record.Class<GameStateI> = Record({
+export const GameStateClass: Record.Class<GameStateI> = Record<GameStateI>({
   colors: [],
   overlay: undefined,
   round: roundStart,
@@ -114,7 +114,7 @@ export class Game {
   private renderer: CanvasRenderer | WebGLRenderer
   private eventListeners: ((e: GameEvent, data?: any) => void)[] = []
 
-  private tailStorage: Store<TailStorage<ClientTail>>
+  private tailStorage?: Store<TailStorage<ClientTail>>
   private render: Render
 
   constructor() {

@@ -19,7 +19,7 @@ interface ReplayState {
 export default class Replay extends React.Component<{}, ReplayState> {
   public state: ReplayState
 
-  private dehydratedInput: HTMLInputElement
+  private dehydratedInput: HTMLInputElement | null = null
 
   private gameRender: Render
   private readonly container = new Container()
@@ -50,7 +50,7 @@ export default class Replay extends React.Component<{}, ReplayState> {
       <form onSubmit={this.onSubmit} className="container-fluid Game">
         <div className="GameContainer" id="GameContainer">
           <input type="text" placeholder="Dehydrated game state"
-            className="form-control input-lg" ref={n => this.dehydratedInput = n} />
+            className="form-control input-lg" ref={(n) => this.dehydratedInput = n} />
           <span className="input-group-btn">
             <button type="submit" className="btn-lg btn btn-primary">Rehydrate game state</button>
           </span>
@@ -63,7 +63,8 @@ export default class Replay extends React.Component<{}, ReplayState> {
   private onSubmit = (e: React.FormEvent<any>) => {
     e.preventDefault()
 
-    const dehydrated = this.dehydratedInput.value
+    // TODO: Dunno if this explicit non-null thing is good
+    const dehydrated = this.dehydratedInput!.value
     this.gameRender.rehydrate(dehydrated)
     this.renderer.render(this.container)
   }

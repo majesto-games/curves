@@ -60,10 +60,10 @@ interface KeyChangeProps {
   value: number
   index: number
   name: "left" | "right"
-  handleChange: (name: string, index: number, value: number) => void
+  handleChange: <E extends string>(name: E, index: number, value: number) => void
 }
 
-class KeyChange extends React.Component<KeyChangeProps, void> {
+class KeyChange extends React.Component<KeyChangeProps> {
   public render() {
     return (
       <label>

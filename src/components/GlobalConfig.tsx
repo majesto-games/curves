@@ -112,10 +112,10 @@ interface SliderProps {
   max: number
   value: number
   name: string
-  handleChange: (name: string, value: number) => void
+  handleChange: <E extends string>(name: E, value: number) => void
 }
 
-class Slider extends React.Component<SliderProps, void> {
+class Slider extends React.Component<SliderProps> {
   public render() {
     const stepsize = (this.props.max - this.props.min) / 100
     return (

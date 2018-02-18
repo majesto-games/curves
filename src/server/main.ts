@@ -87,7 +87,7 @@ export interface RoundStateI {
 export type RoundState = Record.Instance<RoundStateI>
 
 // tslint:disable-next-line:variable-name
-export const RoundStateClass: Record.Class<RoundStateI> = Record({
+export const RoundStateClass: Record.Class<RoundStateI> = Record<RoundStateI>({
   placedPowerups: [],
   losers: [],
   nextPowerupId: 0,
@@ -258,9 +258,9 @@ const serverModule = createModule(new ServerStateClass(), {
       }
     })
 
-    let round = state.round
-    round = round.delete("incoming")
-    return state.set("round", round)
+    let r = state.round
+    r = r.delete("incoming")
+    return state.set("round", r)
   },
   ROUND_POWERUP_PICKUP: (state: ServerState, action: Action<PowerupPickup>) => {
     const { player, powerup, playersAlive } = action.payload
@@ -429,8 +429,9 @@ function serverReducer(state: ServerState | undefined, action: Action<AlmostPlay
 }
 
 function collides(tailsState: TailStorage<ServerTail>, p: number[], player: Snake) {
-  return (collider: Snake) => {
-    let tails = tailsForPlayer(tailsState, collider)
+  return (collider?: Snake) => {
+    // TODO: Dunno if this explicit non-null thing is good
+    let tails = tailsForPlayer(tailsState, collider!)
 
     // Special case for last tail for this player
     if (collider === player && tails.size > 0) {

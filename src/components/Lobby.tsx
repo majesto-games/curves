@@ -15,7 +15,7 @@ interface LobbyProps {
   isServer: boolean
 }
 
-export default class Lobby extends React.Component<LobbyProps, void> {
+export default class Lobby extends React.Component<LobbyProps> {
   public render() {
     const {
       lobby,

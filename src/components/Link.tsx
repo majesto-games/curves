@@ -9,7 +9,7 @@ export interface LinkProps {
   to: Path | LocationDescriptorObject
 }
 
-class Link extends React.Component<LinkProps, void> {
+class Link extends React.Component<LinkProps> {
   public handleClick = (event: any) => {
     if (this.props.onClick) {
       this.props.onClick(event)

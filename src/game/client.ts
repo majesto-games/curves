@@ -75,7 +75,7 @@ export interface ClientStateI {
 export type ClientState = Record.Instance<ClientStateI>
 
 // tslint:disable-next-line:variable-name
-export const ClientStateClass: Record.Class<ClientStateI> = Record({
+export const ClientStateClass: Record.Class<ClientStateI> = Record<ClientStateI>({
   lobby: {
     players: [],
   },
@@ -113,8 +113,8 @@ export class Client {
   private tailStore: Store<TailStorage<ClientTail>>
   private localIndex = 0
   private textureIndex = 0
-  private connection: ServerConnection
-  private _close: () => void
+  private connection?: ServerConnection
+  private _close?: () => void
 
   constructor(serverPromise: Promise<[ServerConnection, () => void]>) {
     this.store = createStore(clientModule.reducer)
@@ -186,7 +186,7 @@ export class Client {
   }
 
   public addPlayer() {
-    this.connection(addPlayer())
+    this.connection!(addPlayer())
   }
 
   public start() {
@@ -240,14 +240,14 @@ export class Client {
     }
 
     this.game.setSnakes(
-      this.players.filter(player => player != null).map((player: ClientPlayer) => player.snake!),
+      this.players.filter(player => player != null).map((player?: ClientPlayer) => player!.snake!),
     )
   }
 
   private started(players: PlayerInit[]) {
     this.store.dispatch(clientModule.actions.SET_CONNECTION_STATE(ClientConnectionState.GAME))
     for (const player of players) {
-      const newPlayer = this.createPlayer(player.name, player.color, player.owner === this.connection.id, player.id)
+      const newPlayer = this.createPlayer(player.name, player.color, player.owner === this.connection!.id, player.id)
       this.players[player.id] = newPlayer
     }
 
@@ -334,7 +334,7 @@ export class Client {
         const wantToGoLeft = window.Keys[keys.left] || window.PhoneControls.left
 
         if (alreadyGoingLeft !== wantToGoLeft) {
-          this.connection(rotate(LEFT, wantToGoLeft, p.id))
+          this.connection!(rotate(LEFT, wantToGoLeft, p.id))
           p = p.set("steeringLeft", wantToGoLeft)
         }
 
@@ -342,7 +342,7 @@ export class Client {
         const wantToGoRight = window.Keys[keys.right] || window.PhoneControls.right
 
         if (alreadyGoingRight !== wantToGoRight) {
-          this.connection(rotate(RIGHT, wantToGoRight, p.id))
+          this.connection!(rotate(RIGHT, wantToGoRight, p.id))
           p = p.set("steeringRight", wantToGoRight)
         }
       }

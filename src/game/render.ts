@@ -36,7 +36,7 @@ export interface RenderStateI {
 export type RenderState = Record.Instance<RenderStateI>
 
 // tslint:disable-next-line:variable-name
-export const RenderStateClass: Record.Class<RenderStateI> = Record({
+export const RenderStateClass: Record.Class<RenderStateI> = Record<RenderStateI>({
   keytexts: [],
   powerups: IMap<number, PowerupSprite>(),
   tails: [],
@@ -275,8 +275,8 @@ export default class Render {
           break
         }
         case ChangeType.SET: {
-          const index = diff.path[0] as number
-          const mesh = this.tailLayer.getChildAt(index) as PIXI.mesh.Mesh
+          const i = diff.path[0] as number
+          const mesh = this.tailLayer.getChildAt(i) as PIXI.mesh.Mesh
           const value = diff.val
 
           mesh.texture = getTexture(value.texture)
@@ -381,15 +381,15 @@ export default class Render {
           break
         }
         case ChangeType.SET: {
-          const index = diff.path[0] as number
-          const container = this.playerLayer.getChildAt(index) as Graphics
+          const i = diff.path[0] as number
+          const container = this.playerLayer.getChildAt(i) as Graphics
           moveSnake(container, diff.val)
 
           break
         }
         case ChangeType.MODIFIED: {
-          const index = diff.path[0] as number
-          const container = this.playerLayer.getChildAt(index) as Graphics
+          const i = diff.path[0] as number
+          const container = this.playerLayer.getChildAt(i) as Graphics
           moveSnake(container, diff.to)
           break
         }
