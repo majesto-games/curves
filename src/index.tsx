@@ -17,8 +17,8 @@ if (process.env.NODE_ENV !== "production") {
   const installDevTools = require<any>("immutable-devtools")
   installDevTools(immutable)
 }
-
-import "bootstrap/dist/css/bootstrap.css"
+import "@blueprintjs/core/lib/css/blueprint.css"
+import "@blueprintjs/icons/lib/css/blueprint-icons.css"
 import "style.css"
 import keysSetup from "game/keys"
 keysSetup()

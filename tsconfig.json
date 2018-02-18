@@ -1,19 +1,19 @@
 {
-    "compilerOptions": {
-        "strict":true,
-        "noStrictGenericChecks": true,
-        "removeComments": true,
-        "jsx": "react",
-        "target": "es5",
-        "lib": [
-          "es2016",
-          "dom"
-        ],
-        "baseUrl": "./src"
-    },
-    "exclude": [
-        "node_modules",
-        "bower_components"
+  "compilerOptions": {
+    "strict": true,
+    "noStrictGenericChecks": true,
+    "removeComments": true,
+    "jsx": "react",
+    "target": "es5",
+    "lib": [
+      "es2016",
+      "dom"
     ],
-    "awesomeTypescriptLoaderOptions": {}
+    "baseUrl": "./src"
+  },
+  "exclude": [
+    "node_modules",
+    "bower_components"
+  ],
+  "awesomeTypescriptLoaderOptions": {}
 }

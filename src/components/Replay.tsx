@@ -25,8 +25,8 @@ export default class Replay extends React.Component<{}, ReplayState> {
   private readonly container = new Container()
   private renderer: CanvasRenderer | WebGLRenderer
 
-  public constructor() {
-    super()
+  public constructor(props: {}) {
+    super(props)
     this.renderer = autoDetectRenderer(SERVER_WIDTH, SERVER_HEIGHT,
       { antialias: true, backgroundColor: 0x000000 })
 

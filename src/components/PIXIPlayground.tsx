@@ -23,8 +23,8 @@ export default class PIXIPlayground extends React.Component<{}, {}> {
     y: 16,
   }
 
-  constructor() {
-    super()
+  constructor(props: {}) {
+    super(props)
     this.renderer = autoDetectRenderer(1200, 800, { antialias: true, backgroundColor: 0x000000 })
     const vertices = new Float32Array([
       0, 32,

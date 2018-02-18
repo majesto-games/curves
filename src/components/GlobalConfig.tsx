@@ -144,8 +144,8 @@ export default class GlobalConfigC extends React.Component<{}, GlobalConfig> {
 
   public state: GlobalConfig
 
-  constructor() {
-    super()
+  constructor(props: {}) {
+    super(props)
     this.state = window.Globals
   }
 

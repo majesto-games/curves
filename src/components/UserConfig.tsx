@@ -88,8 +88,8 @@ export default class UserConfigC extends React.Component<{}, UserConfig> {
 
   public state: UserConfig
 
-  constructor() {
-    super()
+  constructor(props: {}) {
+    super(props)
     this.state = window.UserConfig
   }
 
