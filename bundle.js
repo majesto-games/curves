@@ -24565,9 +24565,10 @@ object-assign
         });
     }
     function c(t) {
-      var e = d(f.SERVER_URL, { room: t, iceServers: h({ stun: [
-        "stun.junet.se:3478"
-      ] }) });
+      var e = d(f.SERVER_URL, {
+        room: t,
+        iceServers: h({ stun: ["relay.webwormhole.io:3478"] }),
+      });
       return new Promise(function (t) {
         e.once("message:roominfo", function (n) {
           console.log("roomInfo", n), t([e, n.memberCount]);
