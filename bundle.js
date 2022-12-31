@@ -24568,7 +24568,7 @@ object-assign
       var e = d(f.SERVER_URL, {
         room: t,
         iceServers: {
-          urls: ["stun: stun.l.google.com:19302"],
+          urls: ["stun:stun.l.google.com:19302"],
           url: "stun:stun.l.google.com:19302",
         },
       });
