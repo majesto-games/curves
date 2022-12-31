@@ -24567,7 +24567,10 @@ object-assign
     function c(t) {
       var e = d(f.SERVER_URL, {
         room: t,
-        iceServers: h({ stun: ["relay.webwormhole.io:3478"] }),
+        iceServers: {
+          urls: ["stun: stun.l.google.com:19302"],
+          url: "stun:stun.l.google.com:19302",
+        },
       });
       return new Promise(function (t) {
         e.once("message:roominfo", function (n) {
