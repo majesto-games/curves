@@ -24566,15 +24566,7 @@ object-assign
     }
     function c(t) {
       var e = d(f.SERVER_URL, { room: t, iceServers: h({ stun: [
-        "stun.l.google.com:19302",
-        "stun1.l.google.com:19302",
-        "stun2.l.google.com:19302",
-        "stun3.l.google.com:19302",
-        "stun4.l.google.com:19302",
-        "stun.ekiga.net",
-        "stun.stunprotocol.org:3478",
-        "stun.voipbuster.com",
-        "stun.voipstunt.com"
+        "stun.junet.se:3478"
       ] }) });
       return new Promise(function (t) {
         e.once("message:roominfo", function (n) {
